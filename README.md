@@ -1,39 +1,132 @@
-# 🚀 START HERE - Clearance Genie Rebuild
+# 🚀 Clearance Genie 2.0 - Complete Rebuild
 
-## Rocky, You Asked for Help - Here’s Everything You Need
+## Three Versions Available
 
-You said your Clearance Genie needs a complete rebuild. I’ve analyzed what went wrong and built you a complete solution that actually works.
+This repository contains three versions of the Clearance Genie app, each with different approaches:
 
 -----
 
-## 📦 What You’ve Got
+## 📦 What's Included
 
-I’ve created **7 files** for you:
+### ⭐ **NEW: clearance-genie-ai.html** - AI-POWERED VERSION
 
-### 1. **clearance-genie-complete.html** ⭐ MAIN APP
+**The most advanced version with automatic object detection!**
 
-**This is the one you want!**
+- **AI Object Detection**: Automatically detects windows, vents, walls, and obstacles
+- **Blue Card Calibration**: Automatic 400mm calibration from blue reference card
+- **Interactive Placement**: Drag-and-drop equipment positioning
+- **Real-time Clearance Checking**: Color-coded zones (green=safe, red=violation)
+- **Cloudflare Worker Integration**: Uses AI vision API for object detection
+- **Equipment Types**: Flue, Boiler, Radiator, Cylinder
+- **Smart Fallback**: Works with mock data if AI unavailable
+
+### Previous Versions:
+
+### 1. **index.html** (clearance-genie-complete.html)
+
+**Manual marking version with comprehensive features**
 
 - Complete working app
 - Handles: Flues, Boilers, Radiators, Cylinders
+- Manual marking of equipment and obstacles
+- Photo upload OR camera capture
 - Single file, ready to deploy
 - No dependencies, no backend needed
-- Just upload and use!
 
-### 2. **START-HERE.md** (this file)
+### 2. **clearance-genie-mvp.html**
 
-Quick overview and deployment guide
+Simplified flue-only version for basic use
 
-### 3. **README-COMPLETE.md**
+### 3. **CLOUDFLARE-WORKER-API.md** 🆕
 
-Complete user guide with:
+Complete API specification and integration guide for the AI Worker
 
-- How to deploy
-- How to use on-site
-- Equipment-specific instructions
-- Troubleshooting guide
+### 4. **README-COMPLETE.md**
 
-### 4. **CLEARANCE_GENIE_REBUILD_PLAN.md**
+User guide for manual version (index.html)
+
+-----
+
+## 🤖 How the AI Version Works
+
+### 6-Step Intelligent Process
+
+**Step 1: Select Equipment Type**
+- Choose: Flue Terminal, Boiler, Radiator, or Cylinder
+- System configures detection parameters automatically
+
+**Step 2: Capture Photo**
+- Take photo with camera OR upload existing
+- **Must include**: Blue calibration card or 400mm plumb line
+- App detects blue pixels automatically
+
+**Step 3: AI Processing**
+- Automatic blue card detection (400mm = calibration)
+- Sends photo to Cloudflare Worker API
+- AI detects relevant obstacles based on equipment type
+  - **Flue**: Windows, vents, doors, pipes, downpipes
+  - **Boiler**: Plug sockets, cupboards, shelves, walls
+  - **Radiator**: Plugs, windows, curtains, furniture
+  - **Cylinder**: Doors, shelves, pumps, valves, ceiling
+
+**Step 4: Review Detections**
+- See all detected objects with bounding boxes
+- Toggle any incorrect detections on/off
+- View confidence scores for each detection
+
+**Step 5: Interactive Placement**
+- Drag and drop equipment icon to desired location
+- Real-time clearance zone visualization:
+  - **Green zones**: Safe clearances ✅
+  - **Red zones**: Violation - too close ❌
+  - **White background** (internal): Service clearances
+- Clearance zones update as you move equipment
+
+**Step 6: Final Result**
+- Compliance status: COMPLIANT or VIOLATION
+- Detailed list of any clearance issues
+- Download annotated photo with clearance zones
+- Professional documentation for Building Control
+
+### Key Differences from Manual Version
+
+| Feature | AI Version | Manual Version |
+|---------|-----------|----------------|
+| Object Detection | Automatic with AI | Manual marking |
+| Calibration | Auto blue card detection | Manual 2-point marking |
+| Speed | 30 seconds | 2-3 minutes |
+| Accuracy | AI + human review | 100% manual |
+| User Effort | Minimal (review + place) | High (mark everything) |
+| Equipment Placement | Interactive drag-drop | Single tap |
+| Real-time Feedback | Yes (live zones) | No (final only) |
+
+-----
+
+## 🔧 Setting Up the Cloudflare Worker
+
+The AI version requires a Cloudflare Worker for object detection. See **CLOUDFLARE-WORKER-API.md** for:
+
+- Complete API specification
+- Request/response formats
+- Example Worker code
+- AI integration options (Cloudflare AI, OpenAI, Google Cloud)
+- CORS configuration
+- Testing instructions
+
+**Quick Start:**
+1. Create Cloudflare Worker at `clearance-genie-worker.martinbibb.workers.dev`
+2. Copy example code from CLOUDFLARE-WORKER-API.md
+3. Add AI model integration (Cloudflare AI recommended)
+4. Deploy and test
+
+**Fallback Mode:**
+If Worker is unavailable, the app generates mock detections for demonstration purposes.
+
+-----
+
+## 📚 Additional Documentation
+
+### 5. **CLEARANCE_GENIE_REBUILD_PLAN.md**
 
 Technical strategy document explaining:
 
