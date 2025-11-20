@@ -66,7 +66,7 @@ export default {
       }
 
       // Call OpenAI Vision API for both object and credit card detection
-      const { objects: detectedObjects, creditCard } = await detectObjectsWithOpenAI(
+      const { objects: detectedObjects, creditCard, brick } = await detectObjectsWithOpenAI(
         image,
         equipmentType,
         detectObjects,
@@ -77,6 +77,8 @@ export default {
       const calibration = {
         creditCardDetected: creditCard !== null,
         creditCardBounds: creditCard,
+        brickDetected: brick !== null,
+        brickBounds: brick,
         pixelsPerMM: null  // Will be calculated on frontend
       };
 
@@ -108,12 +110,21 @@ async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiK
 
   const prompt = `You are an expert computer vision system for heating compliance detection.
 
-TASK 1: Detect a credit card (if present) for calibration
-Look for a credit card or card-shaped object in the image. A credit card has:
+TASK 1: Detect calibration objects for scale measurement
+Look for the following objects in priority order:
+
+A) CREDIT CARD (highest priority):
 - Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
 - Rectangular shape with rounded corners
 - Typically has visible text, numbers, or logos
 - Can be any color or design
+
+B) STANDARD BRICK (fallback if no card found):
+- Standard UK/Imperial brick dimensions: 215mm x 102.5mm x 65mm
+- Red, orange, or clay colored rectangular block
+- Often has mortar between bricks
+- Look for typical brick texture and appearance
+- May be laid horizontally or vertically
 
 TASK 2: Detect compliance objects
 Analyze this image and identify ALL visible objects from this list: ${objectList}
@@ -142,6 +153,12 @@ Return ONLY a JSON object in this exact format:
     "confidence": 0.95,
     "bounds": {"x": 10.0, "y": 80.0, "width": 15.0, "height": 9.5}
   },
+  "brick": {
+    "detected": true,
+    "confidence": 0.90,
+    "bounds": {"x": 20.0, "y": 30.0, "width": 18.0, "height": 8.5},
+    "orientation": "horizontal"
+  },
   "objects": [
     {
       "type": "opening_window",
@@ -156,7 +173,9 @@ Return ONLY a JSON object in this exact format:
   ]
 }
 
-If no credit card is detected, set "creditCard" to null.`;
+If no credit card is detected, set "creditCard" to null.
+If no brick is detected, set "brick" to null.
+For brick orientation: "horizontal" if width > height, "vertical" if height > width.`;
 
   try {
     // Call OpenAI API
@@ -227,6 +246,22 @@ If no credit card is detected, set "creditCard" to null.`;
       };
     }
 
+    // Extract brick detection (fallback calibration)
+    let brick = null;
+    if (result.brick && result.brick.detected) {
+      brick = {
+        confidence: result.brick.confidence,
+        orientation: result.brick.orientation || 'horizontal',
+        bounds: {
+          // Convert percentage to pixel coordinates (assuming 1000x1000 reference)
+          x: Math.round(result.brick.bounds.x * 10),
+          y: Math.round(result.brick.bounds.y * 10),
+          width: Math.round(result.brick.bounds.width * 10),
+          height: Math.round(result.brick.bounds.height * 10)
+        }
+      };
+    }
+
     // Transform objects to our expected format
     // Note: We need to get actual image dimensions, but since we don't have them
     // in the worker, we'll assume a standard size and let the frontend scale
@@ -244,7 +279,7 @@ If no credit card is detected, set "creditCard" to null.`;
       enabled: true
     }));
 
-    return { objects, creditCard };
+    return { objects, creditCard, brick };
 
   } catch (error) {
     console.error('OpenAI detection error:', error);

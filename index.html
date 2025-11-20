@@ -364,13 +364,18 @@
         <!-- AI Detection Section -->
         <div class="instructions">
             <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
-            Place a standard credit card (85.6mm wide × 54mm tall) in your photo and click the button below.
+            Include a reference object in your photo:
+            <ul style="margin: 5px 0 5px 20px;">
+                <li><strong>Credit card</strong> (85.6mm × 54mm) - Best accuracy</li>
+                <li><strong>Standard UK brick</strong> (215mm × 102.5mm) - Good for outdoor photos</li>
+            </ul>
+            Click the button below to let AI find and calibrate automatically.
         </div>
         <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Ensure the card is fully visible, well-lit, flat, and not tilted.
+            💡 <strong>For best results:</strong> Ensure the object is fully visible, well-lit, flat, and not tilted.
         </div>
         <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            🤖 Auto-Detect Credit Card (AI)
+            🤖 Auto-Detect Calibration Object (AI)
         </button>
         <div id="autoDetectStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
@@ -837,8 +842,9 @@
 
             const result = await response.json();
 
-            // Check if credit card was detected
+            // Check what was detected (priority: card > brick > nothing)
             if (result.calibration && result.calibration.creditCardDetected) {
+                // CREDIT CARD DETECTED
                 const cardBounds = result.calibration.creditCardBounds.bounds;
 
                 // Scale factor: API returns coordinates based on 1000x1000 reference
@@ -859,7 +865,10 @@
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.textContent = `✅ Credit card detected! Calibration set to ${state.scale.pixelsPerMM.toFixed(2)} pixels per mm (confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%)`;
+                statusDiv.innerHTML = `✅ <strong>Credit card detected!</strong><br>` +
+                    `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
+                    `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
+                    `Reference: 85mm credit card width`;
 
                 // Auto-advance to next step after 1.5 seconds
                 setTimeout(() => {
@@ -875,19 +884,79 @@
                     setupEquipmentCanvas();
                 }, 1500);
 
+            } else if (result.calibration && result.calibration.brickDetected) {
+                // BRICK DETECTED (FALLBACK)
+                const brickBounds = result.calibration.brickBounds.bounds;
+                const orientation = result.calibration.brickBounds.orientation;
+
+                // Scale factor: API returns coordinates based on 1000x1000 reference
+                const scaleX = state.photoWidth / 1000;
+                const scaleY = state.photoHeight / 1000;
+
+                // Scale brick bounds to actual image dimensions
+                const brickWidthPx = brickBounds.width * scaleX;
+                const brickHeightPx = brickBounds.height * scaleY;
+
+                // Standard UK brick: 215mm x 102.5mm x 65mm
+                // Use the appropriate dimension based on orientation
+                let referenceMM;
+                let actualSizePx;
+                let brickDimension;
+
+                if (orientation === 'horizontal') {
+                    // Width should be ~215mm
+                    actualSizePx = Math.max(brickWidthPx, brickHeightPx);
+                    referenceMM = 215;
+                    brickDimension = 'length (215mm)';
+                } else {
+                    // Height/width might be 102.5mm or 65mm
+                    actualSizePx = Math.max(brickWidthPx, brickHeightPx);
+                    referenceMM = 102.5;
+                    brickDimension = 'width (102.5mm)';
+                }
+
+                // Calculate pixels per mm based on brick
+                state.scale.pixelsPerMM = actualSizePx / referenceMM;
+                state.scale.distanceMM = referenceMM;
+
+                // Show success message
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.innerHTML = `✅ <strong>Brick detected!</strong> (No card found - using brick as reference)<br>` +
+                    `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
+                    `Confidence: ${(result.calibration.brickBounds.confidence * 100).toFixed(0)}%<br>` +
+                    `Reference: Standard UK brick ${brickDimension}`;
+
+                // Auto-advance to next step after 2 seconds (give user time to read)
+                setTimeout(() => {
+                    document.getElementById('step2').classList.add('hidden');
+                    document.getElementById('step3').classList.remove('hidden');
+
+                    // Update step 3 labels
+                    const info = EQUIPMENT_INFO[state.equipmentType];
+                    document.getElementById('equipmentLabel').textContent = info.name;
+                    document.getElementById('equipmentLabel2').textContent = info.name;
+                    document.getElementById('step3Instructions').textContent = info.markingInstruction;
+
+                    setupEquipmentCanvas();
+                }, 2000);
+
             } else {
-                // Card not detected
+                // NOTHING DETECTED - clear message about what AI tried
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
-                statusDiv.innerHTML = '⚠️ <strong>Credit card not detected in your photo</strong><br><br>' +
-                    '<strong>💡 Troubleshooting Tips:</strong><br>' +
-                    '• Make sure the entire card is visible (not cut off)<br>' +
+                statusDiv.innerHTML = '⚠️ <strong>AI Detection: No calibration objects found</strong><br>' +
+                    '<small>Searched for: Credit card, Standard bricks</small><br><br>' +
+                    '<strong>💡 To improve detection:</strong><br>' +
+                    '• Include a credit card (85mm wide) OR standard brick in your photo<br>' +
                     '• Ensure good lighting without glare or shadows<br>' +
-                    '• Card should be flat and not tilted<br>' +
-                    '• Try moving the card to a different position<br><br>' +
+                    '• Object should be fully visible and flat<br>' +
+                    '• Avoid tilted or partially visible objects<br><br>' +
                     '<strong>📏 Or use Manual Calibration below:</strong><br>' +
-                    '1. <strong>Tap two points</strong> on your credit card in the photo (e.g., left and right edges)<br>' +
-                    '2. <strong>Enter "85"</strong> in the distance field (credit card width in mm)<br>' +
+                    '1. <strong>Tap two points</strong> on any known object (card, brick, ruler, etc.)<br>' +
+                    '2. <strong>Enter the distance</strong> between those points in mm<br>' +
+                    '   • Credit card width = <strong>85mm</strong><br>' +
+                    '   • Standard brick length = <strong>215mm</strong><br>' +
                     '3. Click <strong>"Confirm Scale"</strong>';
                 btn.disabled = false;
 
@@ -902,9 +971,11 @@
             console.error('Auto-detection error:', error);
             statusDiv.style.background = '#ffebee';
             statusDiv.style.color = '#c62828';
-            statusDiv.innerHTML = `❌ <strong>Auto-detection failed.</strong><br>` +
-                `Error: ${error.message}<br>` +
-                `📝 Please use manual calibration below by tapping two points on a reference object.`;
+            statusDiv.innerHTML = `❌ <strong>AI Detection System Error</strong><br>` +
+                `The AI detection service encountered an error and could not analyze your photo.<br>` +
+                `Technical details: ${error.message}<br><br>` +
+                `📝 <strong>Please use Manual Calibration below:</strong><br>` +
+                `Tap two points on your credit card (85mm) or brick (215mm) and enter the distance.`;
             btn.disabled = false;
         }
     });
