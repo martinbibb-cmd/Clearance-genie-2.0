@@ -10,10 +10,11 @@ This repository contains three versions of the Clearance Genie app, each with di
 
 ### ⭐ **NEW: clearance-genie-ai.html** - AI-POWERED VERSION
 
-**The most advanced version with automatic object detection!**
+**The most advanced version with automatic object and credit card detection!**
 
 - **AI Object Detection**: Automatically detects windows, vents, walls, and obstacles
-- **Blue Card Calibration**: Automatic 400mm calibration from blue reference card
+- **Auto Credit Card Calibration**: AI automatically detects ANY credit card (any color) for precise calibration
+- **Smart Fallback**: Falls back to blue card detection if needed
 - **Interactive Placement**: Drag-and-drop equipment positioning
 - **Real-time Clearance Checking**: Color-coded zones (green=safe, red=violation)
 - **Cloudflare Worker Integration**: Uses AI vision API for object detection
@@ -57,11 +58,12 @@ User guide for manual version (index.html)
 
 **Step 2: Capture Photo**
 - Take photo with camera OR upload existing
-- **Must include**: Blue credit card-sized card (85mm wide - standard credit card size)
-- App detects blue pixels automatically
+- **Must include**: Credit card (any color - 85mm wide standard size)
+- AI will automatically detect and locate it
 
 **Step 3: AI Processing**
-- Automatic blue card detection (85mm credit card = calibration)
+- Automatic credit card detection using AI vision (any color card)
+- Falls back to blue card pixel detection if needed
 - Sends photo to Cloudflare Worker API
 - AI detects relevant obstacles based on equipment type
   - **Flue**: Windows, vents, doors, pipes, downpipes
@@ -93,10 +95,10 @@ User guide for manual version (index.html)
 | Feature | AI Version | Manual Version |
 |---------|-----------|----------------|
 | Object Detection | Automatic with AI | Manual marking |
-| Calibration | Auto blue card detection | Manual 2-point marking |
+| Calibration | Auto credit card detection (any color) | Optional AI detection OR manual 2-point marking |
 | Speed | 30 seconds | 2-3 minutes |
 | Accuracy | AI + human review | 100% manual |
-| User Effort | Minimal (review + place) | High (mark everything) |
+| User Effort | Minimal (review + place) | Medium (optional AI + marking) |
 | Equipment Placement | Interactive drag-drop | Single tap |
 | Real-time Feedback | Yes (live zones) | No (final only) |
 
