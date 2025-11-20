@@ -366,13 +366,13 @@
             <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
             Include a reference object in your photo:
             <ul style="margin: 5px 0 5px 20px;">
-                <li><strong>Credit card</strong> (85.6mm × 54mm) - Best accuracy</li>
+                <li><strong>🔵 Blue credit/debit card</strong> (85.6mm × 54mm) - Best accuracy</li>
                 <li><strong>Standard UK brick</strong> (215mm × 102.5mm) - Good for outdoor photos</li>
             </ul>
             Click the button below to let AI find and calibrate automatically.
         </div>
         <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Ensure the object is fully visible, well-lit, flat, and not tilted.
+            💡 <strong>For best results:</strong> Use a blue card for highest detection accuracy. Ensure the object is fully visible, well-lit, flat, and not tilted.
         </div>
         <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             🤖 Auto-Detect Calibration Object (AI)
@@ -392,7 +392,7 @@
             <strong style="color: #e65100;">Step 1:</strong> Move mouse/finger over the photo to see magnifying glass<br>
             <strong style="color: #e65100;">Step 2:</strong> Click the 📍 button in the center of the magnifying glass to mark TWO points<br>
             <strong style="color: #e65100;">Step 3:</strong> Enter the distance between those points (85mm for card width)<br>
-            <span style="font-size: 0.9em;">💳 Standard credit card: <strong>Width = 85mm</strong> | Height = 54mm</span>
+            <span style="font-size: 0.9em;">🔵 <strong>Blue card recommended for best results</strong> | Standard card: <strong>Width = 85mm</strong> | Height = 54mm</span>
         </div>
         <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
             <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
@@ -428,7 +428,7 @@
                 <span style="font-weight: bold; color: #666;">millimeters (mm)</span>
             </div>
             <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                Examples: Credit card width = 85mm, Height = 54mm, Phone width ≈ 70-80mm
+                Examples: 🔵 Blue card width = 85mm (best), Height = 54mm, Phone width ≈ 70-80mm
             </div>
         </div>
         <button id="confirmScaleBtn" disabled>✓ Confirm Scale</button>
@@ -1021,7 +1021,8 @@
                     body: JSON.stringify({
                         image: imageBase64,
                         equipmentType: state.equipmentType,
-                        detectObjects: [] // Empty array - we only need card detection
+                        detectObjects: [], // Empty array - we only need card detection
+                        cardColorHint: 'blue' // Hint to AI that calibration card is blue for better detection
                     }),
                     signal: AbortSignal.timeout(30000) // 30 second timeout
                 });
@@ -1073,10 +1074,10 @@
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>Credit card detected!</strong><br>` +
+                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
-                    `Reference: 85mm credit card width`;
+                    `Reference: 85mm blue card width`;
 
                 // Auto-advance to next step after 1.5 seconds
                 setTimeout(() => {
@@ -1160,16 +1161,17 @@
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
                 statusDiv.innerHTML = '⚠️ <strong>AI Detection: No calibration objects found</strong><br>' +
-                    '<small>Searched for: Credit card, Standard bricks</small><br><br>' +
+                    '<small>Searched for: Blue credit card, Standard bricks</small><br><br>' +
                     '<strong>💡 To improve detection:</strong><br>' +
-                    '• Include a credit card (85mm wide) OR standard brick in your photo<br>' +
+                    '• Include a 🔵 <strong>BLUE credit/debit card</strong> (85mm wide) OR standard brick in your photo<br>' +
+                    '• Blue cards provide the highest detection accuracy<br>' +
                     '• Ensure good lighting without glare or shadows<br>' +
                     '• Object should be fully visible and flat<br>' +
                     '• Avoid tilted or partially visible objects<br><br>' +
                     '<strong>📏 Or use Manual Calibration below:</strong><br>' +
-                    '1. <strong>Tap two points</strong> on any known object (card, brick, ruler, etc.)<br>' +
+                    '1. <strong>Tap two points</strong> on any known object (🔵 blue card recommended, brick, ruler, etc.)<br>' +
                     '2. <strong>Enter the distance</strong> between those points in mm<br>' +
-                    '   • Credit card width = <strong>85mm</strong><br>' +
+                    '   • Blue card width = <strong>85mm</strong> (best accuracy)<br>' +
                     '   • Standard brick length = <strong>215mm</strong><br>' +
                     '3. Click <strong>"Confirm Scale"</strong>';
                 btn.disabled = false;
@@ -1210,7 +1212,7 @@
             statusDiv.innerHTML = `❌ <strong>AI Detection Failed</strong><br><br>` +
                 guidance +
                 `📝 <strong>Solution: Use Manual Calibration below</strong><br>` +
-                `1. <strong>Tap two points</strong> on a credit card (85mm) or brick (215mm)<br>` +
+                `1. <strong>Tap two points</strong> on a 🔵 blue card (85mm, best) or brick (215mm)<br>` +
                 `2. <strong>Enter the distance</strong> in the field below<br>` +
                 `3. <strong>Click "Confirm Scale"</strong> to continue`;
             btn.disabled = false;
