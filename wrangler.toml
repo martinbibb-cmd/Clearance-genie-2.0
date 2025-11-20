@@ -1,4 +1,4 @@
-name = "clearance-genie-ai-worker"
+name = "clearance"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
@@ -11,8 +11,3 @@ WORKER_ENV = "production"
 
 # Secrets (set using: wrangler secret put OPENAI_API_KEY)
 # OPENAI_API_KEY will be set as a secret
-
-# Custom domain routing
-[[routes]]
-pattern = "clearance.martinbibb.workers.dev/*"
-zone_name = "martinbibb.workers.dev"
