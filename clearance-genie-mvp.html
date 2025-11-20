@@ -253,11 +253,18 @@
 ```
     <!-- Step 1: Upload Photo -->
     <div class="step" id="step1">
-        <h2><span class="step-number">1</span> Upload Photo</h2>
-        <label for="photoInput" class="file-upload-btn">
-            📸 Tap to Select Photo
+        <h2><span class="step-number">1</span> Add Photo</h2>
+        <div class="instructions">
+            Choose how you want to add a photo:
+        </div>
+        <label for="photoCameraInput" class="file-upload-btn" style="margin-bottom: 10px;">
+            📸 Take Photo with Camera
         </label>
-        <input type="file" id="photoInput" accept="image/*" capture="environment">
+        <input type="file" id="photoCameraInput" accept="image/*" capture="environment">
+        <label for="photoUploadInput" class="file-upload-btn">
+            📁 Upload Existing Photo
+        </label>
+        <input type="file" id="photoUploadInput" accept="image/*">
     </div>
 
     <!-- Step 2: Set Scale -->
@@ -455,11 +462,11 @@
         };
     }
 
-    // Step 1: Photo Upload
-    document.getElementById('photoInput').addEventListener('change', function(e) {
+    // Step 1: Photo Upload (handles both camera and file upload)
+    function handlePhotoUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = function(event) {
             const img = new Image();
@@ -467,7 +474,7 @@
                 state.photo = img;
                 state.photoWidth = img.width;
                 state.photoHeight = img.height;
-                
+
                 // Move to step 2
                 document.getElementById('step1').classList.add('hidden');
                 document.getElementById('step2').classList.remove('hidden');
@@ -476,7 +483,10 @@
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
-    });
+    }
+
+    document.getElementById('photoCameraInput').addEventListener('change', handlePhotoUpload);
+    document.getElementById('photoUploadInput').addEventListener('change', handlePhotoUpload);
 
     // Step 2: Scale Calibration
     function setupScaleCanvas() {
