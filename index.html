@@ -121,7 +121,10 @@
         background: #d5dbdb;
     }
 
-    #photoCanvas {
+    #photoCanvas,
+    #photoCanvas2,
+    #photoCanvas3,
+    #photoCanvas4 {
         width: 100%;
         max-width: 100%;
         border: 2px solid #3498db;
@@ -358,8 +361,11 @@
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
         <div class="instructions">
-            <strong>Option 1:</strong> Use AI to automatically detect a credit card in your photo.<br>
-            <strong>Option 2:</strong> Manually tap two points on your reference card and enter the distance.
+            <strong>Option 1:</strong> Use AI to automatically detect a credit card in your photo (standard 85.6mm × 54mm card).<br>
+            <strong>Option 2:</strong> Manually tap two points on any reference object and enter the distance.
+        </div>
+        <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
+            💡 <strong>Tip:</strong> For best AI detection, ensure the credit card is fully visible, well-lit, and flat in the photo.
         </div>
         <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             🤖 Auto-Detect Credit Card (AI)
@@ -377,7 +383,10 @@
     <!-- Step 3: Mark Equipment -->
     <div class="step hidden" id="step3">
         <h2><span class="step-number">3</span> Mark <span id="equipmentLabel">Equipment</span> Position</h2>
-        <div class="instructions" id="step3Instructions">
+        <div class="instructions">
+            <strong>📍 Find your <span id="equipmentLabel2" style="color: #e74c3c; font-size: 1.1em;">Equipment</span> in the photo below</strong>
+        </div>
+        <div class="instructions" id="step3Instructions" style="background: #fff3cd; border-left: 4px solid #ffc107;">
             Tap the center of the equipment on the photo.
         </div>
         <canvas id="photoCanvas2"></canvas>
@@ -813,6 +822,7 @@
                     // Update step 3 labels
                     const info = EQUIPMENT_INFO[state.equipmentType];
                     document.getElementById('equipmentLabel').textContent = info.name;
+                    document.getElementById('equipmentLabel2').textContent = info.name;
                     document.getElementById('step3Instructions').textContent = info.markingInstruction;
 
                     setupEquipmentCanvas();
@@ -822,7 +832,11 @@
                 // Card not detected
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
-                statusDiv.textContent = '⚠️ Credit card not detected. Please use manual calibration or try with a clearer image.';
+                statusDiv.innerHTML = '⚠️ <strong>Credit card not detected.</strong><br>' +
+                    '📝 <strong>Using Manual Calibration instead:</strong><br>' +
+                    '1. Tap two points on any visible object in the photo<br>' +
+                    '2. Enter the distance between those points in millimeters<br>' +
+                    '(Tip: A credit card is 85mm wide)';
                 btn.disabled = false;
             }
 
@@ -830,7 +844,9 @@
             console.error('Auto-detection error:', error);
             statusDiv.style.background = '#ffebee';
             statusDiv.style.color = '#c62828';
-            statusDiv.textContent = `❌ Error: ${error.message}. Please use manual calibration.`;
+            statusDiv.innerHTML = `❌ <strong>Auto-detection failed.</strong><br>` +
+                `Error: ${error.message}<br>` +
+                `📝 Please use manual calibration below by tapping two points on a reference object.`;
             btn.disabled = false;
         }
     });
@@ -856,6 +872,7 @@
         // Update step 3 labels
         const info = EQUIPMENT_INFO[state.equipmentType];
         document.getElementById('equipmentLabel').textContent = info.name;
+        document.getElementById('equipmentLabel2').textContent = info.name;
         document.getElementById('step3Instructions').textContent = info.markingInstruction;
         
         setupEquipmentCanvas();
