@@ -1,0 +1,23 @@
+{
+  "name": "clearance-genie-ai-worker",
+  "version": "1.0.0",
+  "description": "AI-powered object detection worker for Clearance Genie heating compliance app",
+  "main": "src/index.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "ai",
+    "object-detection",
+    "openai",
+    "heating-compliance"
+  ],
+  "author": "Martin Bibb",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
