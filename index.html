@@ -360,24 +360,51 @@
     <!-- Step 2: Set Scale -->
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
+
+        <!-- AI Detection Section -->
         <div class="instructions">
-            <strong>Option 1:</strong> Use AI to automatically detect a credit card in your photo (standard 85.6mm × 54mm card).<br>
-            <strong>Option 2:</strong> Manually tap two points on any reference object and enter the distance.
+            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
+            Place a standard credit card (85.6mm wide × 54mm tall) in your photo and click the button below.
         </div>
         <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>Tip:</strong> For best AI detection, ensure the credit card is fully visible, well-lit, and flat in the photo.
+            💡 <strong>For best results:</strong> Ensure the card is fully visible, well-lit, flat, and not tilted.
         </div>
         <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             🤖 Auto-Detect Credit Card (AI)
         </button>
         <div id="autoDetectStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        <!-- Manual Calibration Section -->
+        <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;">
+            <strong>📏 Option 2: Manual Calibration</strong><br>
+            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; font-family: monospace; text-align: center;">
+                <strong>Example: Measuring credit card width</strong><br>
+                <div style="margin: 10px 0; font-size: 18px;">
+                    📍<span style="color: #2e7d32;">───────────────────────</span>📍<br>
+                    <span style="font-size: 12px;">👆 Point 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 85mm &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Point 2 👆</span>
+                </div>
+            </div>
+            <strong style="color: #e65100;">Step 1:</strong> Tap TWO points on your credit card in the photo below<br>
+            <strong style="color: #e65100;">Step 2:</strong> Enter the distance between those points (85mm for card width)<br>
+            <span style="font-size: 0.9em;">💳 Standard credit card: <strong>Width = 85mm</strong> | Height = 54mm</span>
+        </div>
+        <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
+            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Tap on the photo</span><br>
+            <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
+        </div>
         <canvas id="photoCanvas"></canvas>
         <div class="input-group">
-            <label for="knownDistance">Distance between points (mm):</label>
-            <input type="number" id="knownDistance" placeholder="85" value="85" min="1">
+            <label for="knownDistance"><strong>Distance between the two points you tapped:</strong></label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="number" id="knownDistance" placeholder="85" value="85" min="1" style="flex: 1;">
+                <span style="font-weight: bold; color: #666;">millimeters (mm)</span>
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                Examples: Credit card width = 85mm, Height = 54mm, Phone width ≈ 70-80mm
+            </div>
         </div>
-        <button id="confirmScaleBtn" disabled>Confirm Scale</button>
-        <button class="secondary" id="resetScaleBtn">Reset Points</button>
+        <button id="confirmScaleBtn" disabled>✓ Confirm Scale</button>
+        <button class="secondary" id="resetScaleBtn">↻ Reset Points & Try Again</button>
     </div>
 
     <!-- Step 3: Mark Equipment -->
@@ -697,13 +724,25 @@
     }
 
     function handleScalePoint(coords) {
+        // Show the manual calibration guide when user starts tapping
+        const guide = document.getElementById('manualCalibrationGuide');
+        guide.style.display = 'block';
+
         if (!state.scale.point1) {
             state.scale.point1 = coords;
+            // Update status
+            document.getElementById('point1Status').textContent = '✓ Set';
+            document.getElementById('point1Status').style.color = '#2e7d32';
+            document.getElementById('point2Status').textContent = 'Tap second point on the photo';
+            document.getElementById('point2Status').style.color = '#e74c3c';
         } else if (!state.scale.point2) {
             state.scale.point2 = coords;
             document.getElementById('confirmScaleBtn').disabled = false;
+            // Update status
+            document.getElementById('point2Status').textContent = '✓ Set';
+            document.getElementById('point2Status').style.color = '#2e7d32';
         }
-        
+
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
         drawPhotoAndPoints(ctx);
@@ -745,6 +784,14 @@
         state.scale.point1 = null;
         state.scale.point2 = null;
         document.getElementById('confirmScaleBtn').disabled = true;
+
+        // Reset the guide status
+        document.getElementById('manualCalibrationGuide').style.display = 'none';
+        document.getElementById('point1Status').textContent = 'Not set - Tap on the photo';
+        document.getElementById('point1Status').style.color = '#e74c3c';
+        document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+        document.getElementById('point2Status').style.color = '#95a5a6';
+
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
         drawPhotoAndPoints(ctx);
@@ -832,12 +879,23 @@
                 // Card not detected
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
-                statusDiv.innerHTML = '⚠️ <strong>Credit card not detected.</strong><br>' +
-                    '📝 <strong>Using Manual Calibration instead:</strong><br>' +
-                    '1. Tap two points on any visible object in the photo<br>' +
-                    '2. Enter the distance between those points in millimeters<br>' +
-                    '(Tip: A credit card is 85mm wide)';
+                statusDiv.innerHTML = '⚠️ <strong>Credit card not detected in your photo</strong><br><br>' +
+                    '<strong>💡 Troubleshooting Tips:</strong><br>' +
+                    '• Make sure the entire card is visible (not cut off)<br>' +
+                    '• Ensure good lighting without glare or shadows<br>' +
+                    '• Card should be flat and not tilted<br>' +
+                    '• Try moving the card to a different position<br><br>' +
+                    '<strong>📏 Or use Manual Calibration below:</strong><br>' +
+                    '1. <strong>Tap two points</strong> on your credit card in the photo (e.g., left and right edges)<br>' +
+                    '2. <strong>Enter "85"</strong> in the distance field (credit card width in mm)<br>' +
+                    '3. Click <strong>"Confirm Scale"</strong>';
                 btn.disabled = false;
+
+                // Show the manual calibration guide
+                setTimeout(() => {
+                    const canvas = document.getElementById('photoCanvas');
+                    canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
             }
 
         } catch (error) {
