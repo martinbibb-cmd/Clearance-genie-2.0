@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clearance Genie - Service & Installation Clearance Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+```
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f5f5;
+        color: #333;
+        overflow-x: hidden;
+    }
+
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 24px;
+        margin: 20px 0;
+        text-align: center;
+        color: #2c3e50;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .step {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .step h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #34495e;
+        display: flex;
+        align-items: center;
+    }
+
+    .step-number {
+        background: #3498db;
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 10px;
+        font-weight: 600;
+    }
+
+    button:active {
+        background: #2980b9;
+    }
+
+    button:disabled {
+        background: #95a5a6;
+        cursor: not-allowed;
+    }
+
+    button.secondary {
+        background: #95a5a6;
+    }
+
+    button.danger {
+        background: #e74c3c;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .file-upload-btn {
+        display: block;
+        text-align: center;
+        padding: 40px;
+        border: 2px dashed #3498db;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #ecf0f1;
+    }
+
+    .file-upload-btn:hover {
+        background: #d5dbdb;
+    }
+
+    #photoCanvas {
+        width: 100%;
+        max-width: 100%;
+        border: 2px solid #3498db;
+        border-radius: 8px;
+        margin: 10px 0;
+        display: block;
+        touch-action: none;
+    }
+
+    .input-group {
+        margin: 15px 0;
+    }
+
+    .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .input-group input,
+    .input-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+
+    .instructions {
+        background: #e8f4f8;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .equipment-type-selector {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin: 15px 0;
+    }
+
+    .equipment-type-btn {
+        padding: 40px 20px;
+        border: 3px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+    .equipment-type-btn:hover {
+        border-color: #3498db;
+    }
+
+    .equipment-type-btn.active {
+        border-color: #3498db;
+        background: #e8f4f8;
+    }
+
+    .equipment-type-btn .icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+    }
+
+    .equipment-type-btn .label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .obstacle-list {
+        margin: 15px 0;
+    }
+
+    .obstacle-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 6px;
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .obstacle-item button {
+        width: auto;
+        padding: 6px 12px;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .compliance-result {
+        padding: 20px;
+        border-radius: 8px;
+        margin: 15px 0;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .compliance-pass {
+        background: #d4edda;
+        color: #155724;
+        border: 2px solid #c3e6cb;
+    }
+
+    .compliance-fail {
+        background: #f8d7da;
+        color: #721c24;
+        border: 2px solid #f5c6cb;
+    }
+
+    .violation-list {
+        list-style: none;
+        margin-top: 10px;
+        text-align: left;
+    }
+
+    .violation-list li {
+        padding: 8px;
+        margin: 5px 0;
+        background: rgba(255,255,255,0.5);
+        border-radius: 4px;
+    }
+
+    .legend {
+        display: flex;
+        justify-content: space-around;
+        margin: 15px 0;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 5px;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
+    }
+
+    .info-box {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 14px;
+    }
+
+    .info-box strong {
+        color: #856404;
+    }
+
+    @media (max-width: 600px) {
+        .container {
+            padding: 5px;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        
+        .step {
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .equipment-type-selector {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Clearance Genie</h1>
+        <div class="subtitle">Service & Installation Clearance Checker</div>
+
+```
+    <!-- Step 0: Select Equipment Type -->
+    <div class="step" id="step0">
+        <h2><span class="step-number">0</span> Select Equipment Type</h2>
+        <div class="equipment-type-selector">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('flue')">
+                <div class="icon">🌬️</div>
+                <div class="label">Flue Terminal</div>
+            </div>
+            <div class="equipment-type-btn" onclick="selectEquipmentType('boiler')">
+                <div class="icon">🔥</div>
+                <div class="label">Boiler</div>
+            </div>
+            <div class="equipment-type-btn" onclick="selectEquipmentType('radiator')">
+                <div class="icon">♨️</div>
+                <div class="label">Radiator</div>
+            </div>
+            <div class="equipment-type-btn" onclick="selectEquipmentType('cylinder')">
+                <div class="icon">🛢️</div>
+                <div class="label">Cylinder</div>
+            </div>
+        </div>
+        <div class="info-box" id="equipmentInfo">
+            Select the type of equipment you're checking clearances for.
+        </div>
+    </div>
+
+    <!-- Step 1: Upload Photo -->
+    <div class="step hidden" id="step1">
+        <h2><span class="step-number">1</span> Upload Photo</h2>
+        <label for="photoInput" class="file-upload-btn">
+            📸 Tap to Select Photo
+        </label>
+        <input type="file" id="photoInput" accept="image/*" capture="environment">
+    </div>
+
+    <!-- Step 2: Set Scale -->
+    <div class="step hidden" id="step2">
+        <h2><span class="step-number">2</span> Set Scale</h2>
+        <div class="instructions">
+            Tap two points on your reference card (e.g., opposite corners). Then enter the actual distance between those points.
+        </div>
+        <canvas id="photoCanvas"></canvas>
+        <div class="input-group">
+            <label for="knownDistance">Distance between points (mm):</label>
+            <input type="number" id="knownDistance" placeholder="85" value="85" min="1">
+        </div>
+        <button id="confirmScaleBtn" disabled>Confirm Scale</button>
+        <button class="secondary" id="resetScaleBtn">Reset Points</button>
+    </div>
+
+    <!-- Step 3: Mark Equipment -->
+    <div class="step hidden" id="step3">
+        <h2><span class="step-number">3</span> Mark <span id="equipmentLabel">Equipment</span> Position</h2>
+        <div class="instructions" id="step3Instructions">
+            Tap the center of the equipment on the photo.
+        </div>
+        <canvas id="photoCanvas2"></canvas>
+        <button id="confirmEquipmentBtn" disabled>Confirm Position</button>
+    </div>
+
+    <!-- Step 4: Mark Obstacles -->
+    <div class="step hidden" id="step4">
+        <h2><span class="step-number">4</span> Mark Clearance Obstacles</h2>
+        <div class="instructions" id="step4Instructions">
+            Draw rectangles around walls, windows, doors, and other obstacles.
+        </div>
+        <canvas id="photoCanvas3"></canvas>
+        <div class="input-group">
+            <label for="obstacleType">Obstacle Type:</label>
+            <select id="obstacleType">
+                <!-- Will be populated based on equipment type -->
+            </select>
+        </div>
+        <div class="obstacle-list" id="obstacleList"></div>
+        <button id="nextToRulesBtn">Continue to Clearance Check</button>
+    </div>
+
+    <!-- Step 5: Select Brand & Generate -->
+    <div class="step hidden" id="step5">
+        <h2><span class="step-number">5</span> Select Manufacturer & Check</h2>
+        <div class="input-group" id="brandSelectGroup">
+            <label for="brand">Manufacturer:</label>
+            <select id="brand">
+                <!-- Will be populated based on equipment type -->
+            </select>
+        </div>
+        <button id="generateBtn">Generate Clearance Overlay</button>
+    </div>
+
+    <!-- Step 6: Results -->
+    <div class="step hidden" id="step6">
+        <h2><span class="step-number">6</span> Results</h2>
+        <canvas id="photoCanvas4"></canvas>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255,0,0,0.3);"></div>
+                <span>Prohibited</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255,165,0,0.3);"></div>
+                <span>Warning</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(0,255,0,0.3);"></div>
+                <span>Service Access</span>
+            </div>
+        </div>
+        
+        <div id="complianceResult"></div>
+        
+        <button id="downloadBtn">Download Annotated Photo</button>
+        <button class="secondary" id="startOverBtn">Start Over</button>
+    </div>
+</div>
+
+<script>
+    // Application state
+    const state = {
+        equipmentType: null,
+        photo: null,
+        photoWidth: 0,
+        photoHeight: 0,
+        scale: {
+            point1: null,
+            point2: null,
+            distanceMM: 85,
+            pixelsPerMM: 0
+        },
+        equipment: null,
+        obstacles: [],
+        brand: null,
+        currentObstacleStart: null
+    };
+
+    // Equipment type configurations
+    const EQUIPMENT_INFO = {
+        flue: {
+            name: "Flue Terminal",
+            icon: "🌬️",
+            description: "Check clearances around boiler flue terminals to windows, doors, vents, and building features.",
+            markingInstruction: "Tap the center of the flue terminal.",
+            obstacles: ['opening_window', 'non_opening_window', 'vent', 'door', 'corner', 'ground']
+        },
+        boiler: {
+            name: "Boiler",
+            icon: "🔥",
+            description: "Check service clearances around the boiler for maintenance access and ventilation.",
+            markingInstruction: "Tap the center of the boiler.",
+            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window']
+        },
+        radiator: {
+            name: "Radiator",
+            icon: "♨️",
+            description: "Check clearances around radiators for air circulation, curtains, and furniture.",
+            markingInstruction: "Tap the center of the radiator.",
+            obstacles: ['wall', 'floor', 'window', 'curtain_rail', 'furniture', 'socket']
+        },
+        cylinder: {
+            name: "Cylinder",
+            icon: "🛢️",
+            description: "Check service clearances around hot water cylinders for maintenance and safety valve access.",
+            markingInstruction: "Tap the center of the cylinder.",
+            obstacles: ['wall', 'ceiling', 'floor', 'door', 'corner']
+        }
+    };
+
+    // Comprehensive clearance rules database
+    const CLEARANCE_RULES = {
+        // FLUE RULES
+        flue: {
+            worcester_bosch: {
+                name: "Worcester Bosch",
+                rules: [
+                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                ]
+            },
+            vaillant: {
+                name: "Vaillant",
+                rules: [
+                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                ]
+            },
+            ideal: {
+                name: "Ideal",
+                rules: [
+                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                ]
+            }
+        },
+        
+        // BOILER RULES
+        boiler: {
+            worcester_bosch: {
+                name: "Worcester Bosch",
+                rules: [
+                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                ]
+            },
+            vaillant: {
+                name: "Vaillant",
+                rules: [
+                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                ]
+            },
+            ideal: {
+                name: "Ideal",
+                rules: [
+                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                ]
+            }
+        },
+        
+        // RADIATOR RULES
+        radiator: {
+            general: {
+                name: "General Standards",
+                rules: [
+                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                    { obstacle_type: 'floor', clearances: { above: 0, below: 150, sides: 0 }, zone_type: 'circulation', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'window', clearances: { above: 50, below: 0, sides: 50 }, zone_type: 'recommended', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'curtain_rail', clearances: { above: 100, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                    { obstacle_type: 'furniture', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                    { obstacle_type: 'socket', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'safety', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                ]
+            }
+        },
+        
+        // CYLINDER RULES
+        cylinder: {
+            general: {
+                name: "General Standards",
+                rules: [
+                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'ceiling', clearances: { above: 450, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 400 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                    { obstacle_type: 'corner', clearances: { above: 450, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                ]
+            }
+        }
+    };
+
+    // Obstacle type labels
+    const OBSTACLE_LABELS = {
+        opening_window: "Opening Window",
+        non_opening_window: "Non-Opening Window",
+        vent: "Vent / Air Brick",
+        door: "Door",
+        corner: "Building Corner",
+        ground: "Ground Level",
+        wall: "Wall",
+        ceiling: "Ceiling",
+        floor: "Floor",
+        window: "Window",
+        curtain_rail: "Curtain Rail",
+        furniture: "Furniture",
+        socket: "Electrical Socket"
+    };
+
+    // Step 0: Equipment Type Selection
+    window.selectEquipmentType = function(type) {
+        state.equipmentType = type;
+        
+        // Update active button
+        document.querySelectorAll('.equipment-type-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.closest('.equipment-type-btn').classList.add('active');
+        
+        // Update info box
+        const info = EQUIPMENT_INFO[type];
+        document.getElementById('equipmentInfo').innerHTML = `
+            <strong>${info.icon} ${info.name}:</strong> ${info.description}
+        `;
+        
+        // Show next step button
+        setTimeout(() => {
+            document.getElementById('step0').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }, 500);
+    };
+
+    // Utility: Get canvas coordinates from touch/click event
+    function getCanvasCoordinates(canvas, event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    // Step 1: Photo Upload
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                state.photo = img;
+                state.photoWidth = img.width;
+                state.photoHeight = img.height;
+                
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+                setupScaleCanvas();
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Step 2: Scale Calibration
+    function setupScaleCanvas() {
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = state.photoWidth;
+        canvas.height = state.photoHeight;
+        
+        drawPhotoAndPoints(ctx);
+        
+        canvas.addEventListener('click', handleScaleClick);
+        canvas.addEventListener('touchstart', handleScaleTouchStart);
+    }
+
+    function handleScaleClick(e) {
+        const canvas = document.getElementById('photoCanvas');
+        const coords = getCanvasCoordinates(canvas, e);
+        handleScalePoint(coords);
+    }
+
+    function handleScaleTouchStart(e) {
+        e.preventDefault();
+        const canvas = document.getElementById('photoCanvas');
+        const coords = getCanvasCoordinates(canvas, e);
+        handleScalePoint(coords);
+    }
+
+    function handleScalePoint(coords) {
+        if (!state.scale.point1) {
+            state.scale.point1 = coords;
+        } else if (!state.scale.point2) {
+            state.scale.point2 = coords;
+            document.getElementById('confirmScaleBtn').disabled = false;
+        }
+        
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    }
+
+    function drawPhotoAndPoints(ctx) {
+        ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
+        ctx.drawImage(state.photo, 0, 0);
+        
+        if (state.scale.point1) {
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        
+        if (state.scale.point2) {
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
+            ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+            ctx.stroke();
+        }
+    }
+
+    document.getElementById('resetScaleBtn').addEventListener('click', () => {
+        state.scale.point1 = null;
+        state.scale.point2 = null;
+        document.getElementById('confirmScaleBtn').disabled = true;
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    });
+
+    document.getElementById('confirmScaleBtn').addEventListener('click', () => {
+        const distanceMM = parseFloat(document.getElementById('knownDistance').value);
+        if (!distanceMM || distanceMM <= 0) {
+            alert('Please enter a valid distance');
+            return;
+        }
+        
+        const pixelDistance = Math.sqrt(
+            Math.pow(state.scale.point2.x - state.scale.point1.x, 2) +
+            Math.pow(state.scale.point2.y - state.scale.point1.y, 2)
+        );
+        
+        state.scale.distanceMM = distanceMM;
+        state.scale.pixelsPerMM = pixelDistance / distanceMM;
+        
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('step3').classList.remove('hidden');
+        
+        // Update step 3 labels
+        const info = EQUIPMENT_INFO[state.equipmentType];
+        document.getElementById('equipmentLabel').textContent = info.name;
+        document.getElementById('step3Instructions').textContent = info.markingInstruction;
+        
+        setupEquipmentCanvas();
+    });
+
+    // Step 3: Mark Equipment
+    function setupEquipmentCanvas() {
+        const canvas = document.getElementById('photoCanvas2');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = state.photoWidth;
+        canvas.height = state.photoHeight;
+        
+        drawPhotoWithEquipment(ctx);
+        
+        canvas.addEventListener('click', handleEquipmentClick);
+        canvas.addEventListener('touchstart', handleEquipmentTouchStart);
+    }
+
+    function handleEquipmentClick(e) {
+        const canvas = document.getElementById('photoCanvas2');
+        const coords = getCanvasCoordinates(canvas, e);
+        state.equipment = coords;
+        document.getElementById('confirmEquipmentBtn').disabled = false;
+        const ctx = canvas.getContext('2d');
+        drawPhotoWithEquipment(ctx);
+    }
+
+    function handleEquipmentTouchStart(e) {
+        e.preventDefault();
+        const canvas = document.getElementById('photoCanvas2');
+        const coords = getCanvasCoordinates(canvas, e);
+        state.equipment = coords;
+        document.getElementById('confirmEquipmentBtn').disabled = false;
+        const ctx = canvas.getContext('2d');
+        drawPhotoWithEquipment(ctx);
+    }
+
+    function drawPhotoWithEquipment(ctx) {
+        ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
+        ctx.drawImage(state.photo, 0, 0);
+        
+        if (state.equipment) {
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+    }
+
+    document.getElementById('confirmEquipmentBtn').addEventListener('click', () => {
+        document.getElementById('step3').classList.add('hidden');
+        document.getElementById('step4').classList.remove('hidden');
+        
+        // Populate obstacle types
+        const info = EQUIPMENT_INFO[state.equipmentType];
+        const select = document.getElementById('obstacleType');
+        select.innerHTML = '';
+        info.obstacles.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = OBSTACLE_LABELS[type];
+            select.appendChild(option);
+        });
+        
+        setupObstacleCanvas();
+    });
+
+    // Step 4: Mark Obstacles
+    function setupObstacleCanvas() {
+        const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = state.photoWidth;
+        canvas.height = state.photoHeight;
+        
+        drawPhotoWithObstacles(ctx);
+        
+        canvas.addEventListener('mousedown', handleObstacleMouseDown);
+        canvas.addEventListener('mousemove', handleObstacleMouseMove);
+        canvas.addEventListener('mouseup', handleObstacleMouseUp);
+        
+        canvas.addEventListener('touchstart', handleObstacleTouchStart);
+        canvas.addEventListener('touchmove', handleObstacleTouchMove);
+        canvas.addEventListener('touchend', handleObstacleTouchEnd);
+    }
+
+    function handleObstacleMouseDown(e) {
+        const canvas = document.getElementById('photoCanvas3');
+        state.currentObstacleStart = getCanvasCoordinates(canvas, e);
+    }
+
+    function handleObstacleMouseMove(e) {
+        if (!state.currentObstacleStart) return;
+        const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+        const current = getCanvasCoordinates(canvas, e);
+        
+        drawPhotoWithObstacles(ctx);
+        
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+            state.currentObstacleStart.x,
+            state.currentObstacleStart.y,
+            current.x - state.currentObstacleStart.x,
+            current.y - state.currentObstacleStart.y
+        );
+    }
+
+    function handleObstacleMouseUp(e) {
+        if (!state.currentObstacleStart) return;
+        const canvas = document.getElementById('photoCanvas3');
+        const current = getCanvasCoordinates(canvas, e);
+        
+        const obstacleType = document.getElementById('obstacleType').value;
+        
+        state.obstacles.push({
+            type: obstacleType,
+            bounds: {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            }
+        });
+        
+        state.currentObstacleStart = null;
+        updateObstacleList();
+        drawPhotoWithObstacles(canvas.getContext('2d'));
+    }
+
+    function handleObstacleTouchStart(e) {
+        e.preventDefault();
+        const canvas = document.getElementById('photoCanvas3');
+        state.currentObstacleStart = getCanvasCoordinates(canvas, e);
+    }
+
+    function handleObstacleTouchMove(e) {
+        e.preventDefault();
+        if (!state.currentObstacleStart) return;
+        const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+        const current = getCanvasCoordinates(canvas, e);
+        
+        drawPhotoWithObstacles(ctx);
+        
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+            state.currentObstacleStart.x,
+            state.currentObstacleStart.y,
+            current.x - state.currentObstacleStart.x,
+            current.y - state.currentObstacleStart.y
+        );
+    }
+
+    function handleObstacleTouchEnd(e) {
+        e.preventDefault();
+        if (!state.currentObstacleStart) return;
+        const canvas = document.getElementById('photoCanvas3');
+        const touch = e.changedTouches[0];
+        const current = getCanvasCoordinates(canvas, { clientX: touch.clientX, clientY: touch.clientY });
+        
+        const obstacleType = document.getElementById('obstacleType').value;
+        
+        state.obstacles.push({
+            type: obstacleType,
+            bounds: {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            }
+        });
+        
+        state.currentObstacleStart = null;
+        updateObstacleList();
+        drawPhotoWithObstacles(canvas.getContext('2d'));
+    }
+
+    function drawPhotoWithObstacles(ctx) {
+        ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
+        ctx.drawImage(state.photo, 0, 0);
+        
+        if (state.equipment) {
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        state.obstacles.forEach((obstacle, index) => {
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                obstacle.bounds.x,
+                obstacle.bounds.y,
+                obstacle.bounds.width,
+                obstacle.bounds.height
+            );
+            
+            ctx.fillStyle = '#00ff00';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(`${index + 1}`, obstacle.bounds.x + 10, obstacle.bounds.y + 30);
+        });
+    }
+
+    function updateObstacleList() {
+        const list = document.getElementById('obstacleList');
+        list.innerHTML = '<h3 style="margin: 10px 0;">Marked Obstacles:</h3>';
+        
+        state.obstacles.forEach((obstacle, index) => {
+            const item = document.createElement('div');
+            item.className = 'obstacle-item';
+            item.innerHTML = `
+                <span>${index + 1}. ${OBSTACLE_LABELS[obstacle.type]}</span>
+                <button onclick="removeObstacle(${index})">Remove</button>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    window.removeObstacle = function(index) {
+        state.obstacles.splice(index, 1);
+        updateObstacleList();
+        const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+        drawPhotoWithObstacles(ctx);
+    };
+
+    document.getElementById('nextToRulesBtn').addEventListener('click', () => {
+        if (state.obstacles.length === 0) {
+            alert('Please mark at least one obstacle');
+            return;
+        }
+        
+        document.getElementById('step4').classList.add('hidden');
+        document.getElementById('step5').classList.remove('hidden');
+        
+        // Populate manufacturer options
+        const brandSelect = document.getElementById('brand');
+        brandSelect.innerHTML = '';
+        const manufacturers = CLEARANCE_RULES[state.equipmentType];
+        Object.keys(manufacturers).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = manufacturers[key].name;
+            brandSelect.appendChild(option);
+        });
+    });
+
+    // Step 5: Generate Clearance Overlay
+    document.getElementById('generateBtn').addEventListener('click', () => {
+        state.brand = document.getElementById('brand').value;
+        
+        document.getElementById('step5').classList.add('hidden');
+        document.getElementById('step6').classList.remove('hidden');
+        
+        generateClearanceOverlay();
+    });
+
+    function generateClearanceOverlay() {
+        const canvas = document.getElementById('photoCanvas4');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = state.photoWidth;
+        canvas.height = state.photoHeight;
+        
+        ctx.drawImage(state.photo, 0, 0);
+        
+        const rules = CLEARANCE_RULES[state.equipmentType][state.brand].rules;
+        const violations = [];
+        
+        state.obstacles.forEach(obstacle => {
+            const rule = rules.find(r => r.obstacle_type === obstacle.type);
+            if (!rule) return;
+            
+            const clearancePx = {
+                above: rule.clearances.above * state.scale.pixelsPerMM,
+                below: rule.clearances.below * state.scale.pixelsPerMM,
+                sides: rule.clearances.sides * state.scale.pixelsPerMM
+            };
+            
+            ctx.fillStyle = rule.color;
+            ctx.fillRect(
+                obstacle.bounds.x - clearancePx.sides,
+                obstacle.bounds.y - clearancePx.above,
+                obstacle.bounds.width + (2 * clearancePx.sides),
+                obstacle.bounds.height + clearancePx.above + clearancePx.below
+            );
+            
+            ctx.strokeStyle = rule.stroke;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                obstacle.bounds.x - clearancePx.sides,
+                obstacle.bounds.y - clearancePx.above,
+                obstacle.bounds.width + (2 * clearancePx.sides),
+                obstacle.bounds.height + clearancePx.above + clearancePx.below
+            );
+            
+            if (state.equipment.x >= obstacle.bounds.x - clearancePx.sides &&
+                state.equipment.x <= obstacle.bounds.x + obstacle.bounds.width + clearancePx.sides &&
+                state.equipment.y >= obstacle.bounds.y - clearancePx.above &&
+                state.equipment.y <= obstacle.bounds.y + obstacle.bounds.height + clearancePx.below) {
+                violations.push({ obstacle, rule });
+            }
+        });
+        
+        ctx.fillStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
+        ctx.beginPath();
+        ctx.arc(state.equipment.x, state.equipment.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        
+        displayComplianceResult(violations);
+    }
+
+    function displayComplianceResult(violations) {
+        const resultDiv = document.getElementById('complianceResult');
+        
+        if (violations.length === 0) {
+            resultDiv.className = 'compliance-result compliance-pass';
+            resultDiv.innerHTML = `✅ COMPLIANT<br>${EQUIPMENT_INFO[state.equipmentType].name} position meets all clearance requirements.`;
+        } else {
+            resultDiv.className = 'compliance-result compliance-fail';
+            let html = '❌ NON-COMPLIANT<br><ul class="violation-list">';
+            violations.forEach(v => {
+                const typeLabel = OBSTACLE_LABELS[v.obstacle.type];
+                html += `<li>Too close to ${typeLabel} (requires ${Math.max(v.rule.clearances.above, v.rule.clearances.sides, v.rule.clearances.below)}mm clearance)</li>`;
+            });
+            html += '</ul>';
+            resultDiv.innerHTML = html;
+        }
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+        const canvas = document.getElementById('photoCanvas4');
+        const link = document.createElement('a');
+        link.download = `clearance-check-${state.equipmentType}-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+
+    document.getElementById('startOverBtn').addEventListener('click', () => {
+        location.reload();
+    });
+</script>
+```
+
+</body>
+</html>
