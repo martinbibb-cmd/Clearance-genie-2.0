@@ -133,7 +133,7 @@ The worker should return a JSON response with detected objects:
   - **confidence** (number): Detection confidence (0.0 to 1.0)
   - **enabled** (boolean): Whether object is included (default: true)
 - **calibration** (object, optional): Calibration data
-  - **blueCardDetected** (boolean): If blue calibration card was found
+  - **blueCardDetected** (boolean): If blue calibration card was found (credit card size - 85mm x 54mm)
   - **pixelsPerMM** (number): Calculated pixels per millimeter
 
 ## Error Response Format

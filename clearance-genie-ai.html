@@ -387,12 +387,12 @@
         <div class="card hidden" id="step2">
             <h2>Step 2: Upload Photo</h2>
             <div class="instructions">
-                <strong>Important:</strong> Include a blue card or plumb line (400mm) in your photo for accurate calibration.
+                <strong>Important:</strong> Include a blue credit card-sized card (85mm wide) in your photo for accurate calibration.
             </div>
             <div class="upload-area" onclick="document.getElementById('cameraInput').click()">
                 <div class="icon">📸</div>
                 <div><strong>Take Photo with Camera</strong></div>
-                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Include blue calibration card (400mm)</div>
+                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Include blue calibration card (credit card size - 85mm)</div>
             </div>
             <input type="file" id="cameraInput" accept="image/*" capture="environment">
             <div class="upload-area" onclick="document.getElementById('uploadInput').click()">
@@ -616,7 +616,7 @@
             }
         }
 
-        // Detect Blue Card for Calibration
+        // Detect Blue Card for Calibration (Credit Card Size - 85mm x 54mm)
         async function detectBlueCard() {
             return new Promise((resolve) => {
                 // Create temporary canvas for blue card detection
@@ -653,15 +653,19 @@
                     const minY = Math.min(...ys);
                     const maxY = Math.max(...ys);
 
-                    // Assume the longest dimension is 400mm
+                    // Credit card dimensions: 85mm x 54mm
+                    // Use width (85mm) as the standard measurement
                     const widthPx = maxX - minX;
                     const heightPx = maxY - minY;
-                    const longestDimension = Math.max(widthPx, heightPx);
 
-                    state.scale.pixelsPerMM = longestDimension / 400;
+                    // Determine which dimension is width (should be larger for credit card)
+                    const cardWidthPx = Math.max(widthPx, heightPx);
+
+                    // Calculate pixels per mm based on 85mm credit card width
+                    state.scale.pixelsPerMM = cardWidthPx / 85;
                     state.scale.calibrationComplete = true;
 
-                    console.log(`Calibration: ${state.scale.pixelsPerMM} pixels per mm`);
+                    console.log(`Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels per mm (blue card: ${cardWidthPx}px = 85mm)`);
                 } else {
                     // Fallback: use default calibration
                     console.warn('Blue card not detected, using default calibration');

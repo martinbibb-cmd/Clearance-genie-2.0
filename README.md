@@ -57,11 +57,11 @@ User guide for manual version (index.html)
 
 **Step 2: Capture Photo**
 - Take photo with camera OR upload existing
-- **Must include**: Blue calibration card or 400mm plumb line
+- **Must include**: Blue credit card-sized card (85mm wide - standard credit card size)
 - App detects blue pixels automatically
 
 **Step 3: AI Processing**
-- Automatic blue card detection (400mm = calibration)
+- Automatic blue card detection (85mm credit card = calibration)
 - Sends photo to Cloudflare Worker API
 - AI detects relevant obstacles based on equipment type
   - **Flue**: Windows, vents, doors, pipes, downpipes
