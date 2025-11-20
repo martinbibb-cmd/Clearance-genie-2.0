@@ -389,27 +389,36 @@
                     <span style="font-size: 12px;">👆 Point 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 85mm &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Point 2 👆</span>
                 </div>
             </div>
-            <strong style="color: #e65100;">Step 1:</strong> Tap TWO points on your credit card in the photo below<br>
-            <strong style="color: #e65100;">Step 2:</strong> Enter the distance between those points (85mm for card width)<br>
+            <strong style="color: #e65100;">Step 1:</strong> Move mouse/finger over the photo to see magnifying glass<br>
+            <strong style="color: #e65100;">Step 2:</strong> Click the 📍 button in the center of the magnifying glass to mark TWO points<br>
+            <strong style="color: #e65100;">Step 3:</strong> Enter the distance between those points (85mm for card width)<br>
             <span style="font-size: 0.9em;">💳 Standard credit card: <strong>Width = 85mm</strong> | Height = 54mm</span>
         </div>
         <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
-            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Tap on the photo</span>
+            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
             <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
             <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
             <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
             <br>
             <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px;">
-                🔍 <strong>Magnifying glass active</strong> - Move your mouse/finger over the photo to zoom in for precise point selection
+                🔍 <strong>Magnifying glass active</strong> - Move your mouse/finger over the photo to see the magnifying glass. Use the zoom slider to adjust magnification. Click the 📍 button in the center to mark precise positions.
             </div>
         </div>
         <div style="position: relative; margin: 10px 0;">
             <canvas id="photoCanvas"></canvas>
             <!-- Magnifying Glass -->
-            <div id="magnifyingGlass" style="display: none; position: absolute; width: 150px; height: 150px; border: 3px solid #3498db; border-radius: 50%; pointer-events: none; box-shadow: 0 0 15px rgba(0,0,0,0.5); overflow: hidden; z-index: 1000; background: white;">
+            <div id="magnifyingGlass" style="display: none; position: absolute; width: 150px; height: 150px; border: 3px solid #3498db; border-radius: 50%; pointer-events: none; box-shadow: 0 0 15px rgba(0,0,0,0.5); overflow: visible; z-index: 1000; background: white;">
                 <canvas id="magnifyCanvas" width="150" height="150"></canvas>
-                <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #e74c3c; transform: translate(-50%, -50%);"></div>
-                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 2px; background: #e74c3c; transform: translate(-50%, -50%);"></div>
+                <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 2px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
+                <!-- Center button for marking positions -->
+                <button id="markPositionBtn" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(52, 152, 219, 0.8); border: 2px solid white; color: white; font-size: 20px; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; padding: 0; font-weight: bold; z-index: 1001;">📍</button>
+            </div>
+            <!-- Zoom Slider -->
+            <div id="zoomSliderContainer" style="display: none; position: absolute; background: rgba(255, 255, 255, 0.95); padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 999; pointer-events: auto;">
+                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #333;">Zoom Level</label>
+                <input type="range" id="zoomSlider" min="2" max="8" step="0.5" value="3" style="width: 150px; cursor: pointer;">
+                <div style="text-align: center; font-size: 12px; color: #666; margin-top: 3px;"><span id="zoomValue">3</span>x</div>
             </div>
         </div>
         <div class="input-group">
@@ -511,7 +520,8 @@
         equipment: null,
         obstacles: [],
         brand: null,
-        currentObstacleStart: null
+        currentObstacleStart: null,
+        currentMagnifierPosition: null
     };
 
     // Equipment type configurations
@@ -725,22 +735,37 @@
 
         drawPhotoAndPoints(ctx);
 
-        canvas.addEventListener('click', handleScaleClick);
-        canvas.addEventListener('touchstart', handleScaleTouchStart);
-
-        // Add magnifying glass on hover/touch
+        // Add magnifying glass on hover/touch (no click handlers - only button marks positions)
         canvas.addEventListener('mousemove', handleMagnifyMove);
         canvas.addEventListener('mouseenter', showMagnifier);
         canvas.addEventListener('mouseleave', hideMagnifier);
         canvas.addEventListener('touchmove', handleMagnifyTouch);
+        canvas.addEventListener('touchstart', showMagnifierTouch);
+        canvas.addEventListener('touchend', hideMagnifier);
+
+        // Add button click handler for marking positions
+        document.getElementById('markPositionBtn').addEventListener('click', handleMarkPositionClick);
+
+        // Add zoom slider handler
+        const zoomSlider = document.getElementById('zoomSlider');
+        zoomSlider.addEventListener('input', (e) => {
+            document.getElementById('zoomValue').textContent = e.target.value;
+        });
     }
 
     function showMagnifier() {
         document.getElementById('magnifyingGlass').style.display = 'block';
+        document.getElementById('zoomSliderContainer').style.display = 'block';
     }
 
     function hideMagnifier() {
         document.getElementById('magnifyingGlass').style.display = 'none';
+        document.getElementById('zoomSliderContainer').style.display = 'none';
+    }
+
+    function showMagnifierTouch(e) {
+        // Don't prevent default here - let touchmove handle it
+        showMagnifier();
     }
 
     function handleMagnifyMove(e) {
@@ -748,21 +773,31 @@
         const magnifier = document.getElementById('magnifyingGlass');
         const magnifyCanvas = document.getElementById('magnifyCanvas');
         const magnifyCtx = magnifyCanvas.getContext('2d');
+        const zoomSliderContainer = document.getElementById('zoomSliderContainer');
 
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
         // Position magnifier near cursor (offset to avoid blocking view)
-        magnifier.style.left = (e.clientX - rect.left + 20) + 'px';
-        magnifier.style.top = (e.clientY - rect.top - 80) + 'px';
+        const magnifierLeft = e.clientX - rect.left + 20;
+        const magnifierTop = e.clientY - rect.top - 80;
+        magnifier.style.left = magnifierLeft + 'px';
+        magnifier.style.top = magnifierTop + 'px';
+
+        // Position zoom slider below magnifier
+        zoomSliderContainer.style.left = magnifierLeft + 'px';
+        zoomSliderContainer.style.top = (magnifierTop + 160) + 'px';
 
         // Get canvas coordinates
         const canvasX = (x * canvas.width) / rect.width;
         const canvasY = (y * canvas.height) / rect.height;
 
-        // Draw magnified portion (3x zoom)
-        const zoom = 3;
+        // Store current canvas position for button click handler
+        state.currentMagnifierPosition = { canvasX, canvasY };
+
+        // Draw magnified portion (use zoom slider value)
+        const zoom = parseFloat(document.getElementById('zoomSlider').value);
         const magRadius = 75; // Half of magnifier size
         const sourceSize = magRadius / zoom;
 
@@ -784,6 +819,7 @@
             const magnifier = document.getElementById('magnifyingGlass');
             const magnifyCanvas = document.getElementById('magnifyCanvas');
             const magnifyCtx = magnifyCanvas.getContext('2d');
+            const zoomSliderContainer = document.getElementById('zoomSliderContainer');
 
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
@@ -792,17 +828,27 @@
 
             // Show magnifier
             magnifier.style.display = 'block';
+            zoomSliderContainer.style.display = 'block';
 
             // Position magnifier above touch point
-            magnifier.style.left = (touch.clientX - rect.left + 20) + 'px';
-            magnifier.style.top = (touch.clientY - rect.top - 180) + 'px';
+            const magnifierLeft = touch.clientX - rect.left + 20;
+            const magnifierTop = touch.clientY - rect.top - 180;
+            magnifier.style.left = magnifierLeft + 'px';
+            magnifier.style.top = magnifierTop + 'px';
+
+            // Position zoom slider below magnifier (but above touch point)
+            zoomSliderContainer.style.left = magnifierLeft + 'px';
+            zoomSliderContainer.style.top = (magnifierTop + 160) + 'px';
 
             // Get canvas coordinates
             const canvasX = (x * canvas.width) / rect.width;
             const canvasY = (y * canvas.height) / rect.height;
 
-            // Draw magnified portion (3x zoom)
-            const zoom = 3;
+            // Store current canvas position for button click handler
+            state.currentMagnifierPosition = { canvasX, canvasY };
+
+            // Draw magnified portion (use zoom slider value)
+            const zoom = parseFloat(document.getElementById('zoomSlider').value);
             const magRadius = 75;
             const sourceSize = magRadius / zoom;
 
@@ -818,21 +864,24 @@
         }
     }
 
-    function handleScaleClick(e) {
-        const canvas = document.getElementById('photoCanvas');
-        const coords = getCanvasCoordinates(canvas, e);
-        handleScalePoint(coords);
-    }
+    // Mark position button click handler (triggered when user clicks the center button)
+    function handleMarkPositionClick(e) {
+        e.stopPropagation(); // Prevent event bubbling
 
-    function handleScaleTouchStart(e) {
-        e.preventDefault();
-        const canvas = document.getElementById('photoCanvas');
-        const coords = getCanvasCoordinates(canvas, e);
+        if (!state.currentMagnifierPosition) {
+            return; // No position stored yet
+        }
+
+        const coords = {
+            x: state.currentMagnifierPosition.canvasX,
+            y: state.currentMagnifierPosition.canvasY
+        };
+
         handleScalePoint(coords);
     }
 
     function handleScalePoint(coords) {
-        // Show the manual calibration guide when user starts tapping
+        // Show the manual calibration guide when user starts clicking button
         const guide = document.getElementById('manualCalibrationGuide');
         guide.style.display = 'block';
 
@@ -842,7 +891,7 @@
             document.getElementById('point1Status').textContent = '✓ Set';
             document.getElementById('point1Status').style.color = '#2e7d32';
             document.getElementById('undoPoint1Btn').style.display = 'inline-block';
-            document.getElementById('point2Status').textContent = 'Tap second point on the photo';
+            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
             document.getElementById('point2Status').style.color = '#e74c3c';
         } else if (!state.scale.point2) {
             state.scale.point2 = coords;
@@ -863,7 +912,7 @@
         if (pointNumber === 1) {
             state.scale.point1 = null;
             state.scale.point2 = null; // Also reset point 2 if undoing point 1
-            document.getElementById('point1Status').textContent = 'Not set - Tap on the photo';
+            document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
             document.getElementById('point1Status').style.color = '#e74c3c';
             document.getElementById('undoPoint1Btn').style.display = 'none';
             document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
@@ -872,7 +921,7 @@
             document.getElementById('confirmScaleBtn').disabled = true;
         } else if (pointNumber === 2) {
             state.scale.point2 = null;
-            document.getElementById('point2Status').textContent = 'Tap second point on the photo';
+            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
             document.getElementById('point2Status').style.color = '#e74c3c';
             document.getElementById('undoPoint2Btn').style.display = 'none';
             document.getElementById('confirmScaleBtn').disabled = true;
@@ -922,7 +971,7 @@
 
         // Reset the guide status
         document.getElementById('manualCalibrationGuide').style.display = 'none';
-        document.getElementById('point1Status').textContent = 'Not set - Tap on the photo';
+        document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
         document.getElementById('point1Status').style.color = '#e74c3c';
         document.getElementById('undoPoint1Btn').style.display = 'none';
         document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
