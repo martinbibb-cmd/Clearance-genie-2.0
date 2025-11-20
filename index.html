@@ -394,10 +394,24 @@
             <span style="font-size: 0.9em;">💳 Standard credit card: <strong>Width = 85mm</strong> | Height = 54mm</span>
         </div>
         <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
-            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Tap on the photo</span><br>
+            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Tap on the photo</span>
+            <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
             <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
+            <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
+            <br>
+            <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px;">
+                🔍 <strong>Magnifying glass active</strong> - Move your mouse/finger over the photo to zoom in for precise point selection
+            </div>
         </div>
-        <canvas id="photoCanvas"></canvas>
+        <div style="position: relative; margin: 10px 0;">
+            <canvas id="photoCanvas"></canvas>
+            <!-- Magnifying Glass -->
+            <div id="magnifyingGlass" style="display: none; position: absolute; width: 150px; height: 150px; border: 3px solid #3498db; border-radius: 50%; pointer-events: none; box-shadow: 0 0 15px rgba(0,0,0,0.5); overflow: hidden; z-index: 1000; background: white;">
+                <canvas id="magnifyCanvas" width="150" height="150"></canvas>
+                <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #e74c3c; transform: translate(-50%, -50%);"></div>
+                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 2px; background: #e74c3c; transform: translate(-50%, -50%);"></div>
+            </div>
+        </div>
         <div class="input-group">
             <label for="knownDistance"><strong>Distance between the two points you tapped:</strong></label>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -705,14 +719,103 @@
     function setupScaleCanvas() {
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = state.photoWidth;
         canvas.height = state.photoHeight;
-        
+
         drawPhotoAndPoints(ctx);
-        
+
         canvas.addEventListener('click', handleScaleClick);
         canvas.addEventListener('touchstart', handleScaleTouchStart);
+
+        // Add magnifying glass on hover/touch
+        canvas.addEventListener('mousemove', handleMagnifyMove);
+        canvas.addEventListener('mouseenter', showMagnifier);
+        canvas.addEventListener('mouseleave', hideMagnifier);
+        canvas.addEventListener('touchmove', handleMagnifyTouch);
+    }
+
+    function showMagnifier() {
+        document.getElementById('magnifyingGlass').style.display = 'block';
+    }
+
+    function hideMagnifier() {
+        document.getElementById('magnifyingGlass').style.display = 'none';
+    }
+
+    function handleMagnifyMove(e) {
+        const canvas = document.getElementById('photoCanvas');
+        const magnifier = document.getElementById('magnifyingGlass');
+        const magnifyCanvas = document.getElementById('magnifyCanvas');
+        const magnifyCtx = magnifyCanvas.getContext('2d');
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Position magnifier near cursor (offset to avoid blocking view)
+        magnifier.style.left = (e.clientX - rect.left + 20) + 'px';
+        magnifier.style.top = (e.clientY - rect.top - 80) + 'px';
+
+        // Get canvas coordinates
+        const canvasX = (x * canvas.width) / rect.width;
+        const canvasY = (y * canvas.height) / rect.height;
+
+        // Draw magnified portion (3x zoom)
+        const zoom = 3;
+        const magRadius = 75; // Half of magnifier size
+        const sourceSize = magRadius / zoom;
+
+        magnifyCtx.clearRect(0, 0, 150, 150);
+        magnifyCtx.drawImage(
+            state.photo,
+            Math.max(0, canvasX - sourceSize),
+            Math.max(0, canvasY - sourceSize),
+            sourceSize * 2,
+            sourceSize * 2,
+            0, 0, 150, 150
+        );
+    }
+
+    function handleMagnifyTouch(e) {
+        e.preventDefault();
+        if (e.touches.length > 0) {
+            const canvas = document.getElementById('photoCanvas');
+            const magnifier = document.getElementById('magnifyingGlass');
+            const magnifyCanvas = document.getElementById('magnifyCanvas');
+            const magnifyCtx = magnifyCanvas.getContext('2d');
+
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+
+            // Show magnifier
+            magnifier.style.display = 'block';
+
+            // Position magnifier above touch point
+            magnifier.style.left = (touch.clientX - rect.left + 20) + 'px';
+            magnifier.style.top = (touch.clientY - rect.top - 180) + 'px';
+
+            // Get canvas coordinates
+            const canvasX = (x * canvas.width) / rect.width;
+            const canvasY = (y * canvas.height) / rect.height;
+
+            // Draw magnified portion (3x zoom)
+            const zoom = 3;
+            const magRadius = 75;
+            const sourceSize = magRadius / zoom;
+
+            magnifyCtx.clearRect(0, 0, 150, 150);
+            magnifyCtx.drawImage(
+                state.photo,
+                Math.max(0, canvasX - sourceSize),
+                Math.max(0, canvasY - sourceSize),
+                sourceSize * 2,
+                sourceSize * 2,
+                0, 0, 150, 150
+            );
+        }
     }
 
     function handleScaleClick(e) {
@@ -738,6 +841,7 @@
             // Update status
             document.getElementById('point1Status').textContent = '✓ Set';
             document.getElementById('point1Status').style.color = '#2e7d32';
+            document.getElementById('undoPoint1Btn').style.display = 'inline-block';
             document.getElementById('point2Status').textContent = 'Tap second point on the photo';
             document.getElementById('point2Status').style.color = '#e74c3c';
         } else if (!state.scale.point2) {
@@ -746,6 +850,32 @@
             // Update status
             document.getElementById('point2Status').textContent = '✓ Set';
             document.getElementById('point2Status').style.color = '#2e7d32';
+            document.getElementById('undoPoint2Btn').style.display = 'inline-block';
+        }
+
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    }
+
+    // Undo point function
+    function undoPoint(pointNumber) {
+        if (pointNumber === 1) {
+            state.scale.point1 = null;
+            state.scale.point2 = null; // Also reset point 2 if undoing point 1
+            document.getElementById('point1Status').textContent = 'Not set - Tap on the photo';
+            document.getElementById('point1Status').style.color = '#e74c3c';
+            document.getElementById('undoPoint1Btn').style.display = 'none';
+            document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+            document.getElementById('point2Status').style.color = '#95a5a6';
+            document.getElementById('undoPoint2Btn').style.display = 'none';
+            document.getElementById('confirmScaleBtn').disabled = true;
+        } else if (pointNumber === 2) {
+            state.scale.point2 = null;
+            document.getElementById('point2Status').textContent = 'Tap second point on the photo';
+            document.getElementById('point2Status').style.color = '#e74c3c';
+            document.getElementById('undoPoint2Btn').style.display = 'none';
+            document.getElementById('confirmScaleBtn').disabled = true;
         }
 
         const canvas = document.getElementById('photoCanvas');
@@ -794,8 +924,10 @@
         document.getElementById('manualCalibrationGuide').style.display = 'none';
         document.getElementById('point1Status').textContent = 'Not set - Tap on the photo';
         document.getElementById('point1Status').style.color = '#e74c3c';
+        document.getElementById('undoPoint1Btn').style.display = 'none';
         document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
         document.getElementById('point2Status').style.color = '#95a5a6';
+        document.getElementById('undoPoint2Btn').style.display = 'none';
 
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
