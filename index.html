@@ -358,8 +358,13 @@
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
         <div class="instructions">
-            Tap two points on your reference card (e.g., opposite corners). Then enter the actual distance between those points.
+            <strong>Option 1:</strong> Use AI to automatically detect a credit card in your photo.<br>
+            <strong>Option 2:</strong> Manually tap two points on your reference card and enter the distance.
         </div>
+        <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            🤖 Auto-Detect Credit Card (AI)
+        </button>
+        <div id="autoDetectStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
         <canvas id="photoCanvas"></canvas>
         <div class="input-group">
             <label for="knownDistance">Distance between points (mm):</label>
@@ -734,6 +739,100 @@
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
         drawPhotoAndPoints(ctx);
+    });
+
+    // Auto-Detect Credit Card using AI
+    document.getElementById('autoDetectBtn').addEventListener('click', async () => {
+        const statusDiv = document.getElementById('autoDetectStatus');
+        const btn = document.getElementById('autoDetectBtn');
+
+        // Show loading status
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#e3f2fd';
+        statusDiv.style.color = '#1976d2';
+        statusDiv.textContent = '🔍 Detecting credit card with AI...';
+        btn.disabled = true;
+
+        try {
+            // Convert image to base64
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = state.photoWidth;
+            canvas.height = state.photoHeight;
+            ctx.drawImage(state.photo, 0, 0);
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI Worker (use minimal object detection to save API costs)
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageBase64,
+                    equipmentType: state.equipmentType,
+                    detectObjects: [] // Empty array - we only need card detection
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
+
+            const result = await response.json();
+
+            // Check if credit card was detected
+            if (result.calibration && result.calibration.creditCardDetected) {
+                const cardBounds = result.calibration.creditCardBounds.bounds;
+
+                // Scale factor: API returns coordinates based on 1000x1000 reference
+                const scaleX = state.photoWidth / 1000;
+                const scaleY = state.photoHeight / 1000;
+
+                // Scale card bounds to actual image dimensions
+                const cardWidthPx = cardBounds.width * scaleX;
+                const cardHeightPx = cardBounds.height * scaleY;
+
+                // Determine which dimension is width (should be larger for credit card)
+                const actualCardWidthPx = Math.max(cardWidthPx, cardHeightPx);
+
+                // Calculate pixels per mm based on 85mm credit card width
+                state.scale.pixelsPerMM = actualCardWidthPx / 85;
+                state.scale.distanceMM = 85; // Credit card width
+
+                // Show success message
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.textContent = `✅ Credit card detected! Calibration set to ${state.scale.pixelsPerMM.toFixed(2)} pixels per mm (confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%)`;
+
+                // Auto-advance to next step after 1.5 seconds
+                setTimeout(() => {
+                    document.getElementById('step2').classList.add('hidden');
+                    document.getElementById('step3').classList.remove('hidden');
+
+                    // Update step 3 labels
+                    const info = EQUIPMENT_INFO[state.equipmentType];
+                    document.getElementById('equipmentLabel').textContent = info.name;
+                    document.getElementById('step3Instructions').textContent = info.markingInstruction;
+
+                    setupEquipmentCanvas();
+                }, 1500);
+
+            } else {
+                // Card not detected
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.color = '#e65100';
+                statusDiv.textContent = '⚠️ Credit card not detected. Please use manual calibration or try with a clearer image.';
+                btn.disabled = false;
+            }
+
+        } catch (error) {
+            console.error('Auto-detection error:', error);
+            statusDiv.style.background = '#ffebee';
+            statusDiv.style.color = '#c62828';
+            statusDiv.textContent = `❌ Error: ${error.message}. Please use manual calibration.`;
+            btn.disabled = false;
+        }
     });
 
     document.getElementById('confirmScaleBtn').addEventListener('click', () => {

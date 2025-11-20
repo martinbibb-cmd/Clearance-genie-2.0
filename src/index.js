@@ -65,16 +65,20 @@ export default {
         }, 500);
       }
 
-      // Call OpenAI Vision API
-      const detectedObjects = await detectObjectsWithOpenAI(
+      // Call OpenAI Vision API for both object and credit card detection
+      const { objects: detectedObjects, creditCard } = await detectObjectsWithOpenAI(
         image,
         equipmentType,
         detectObjects,
         env.OPENAI_API_KEY
       );
 
-      // Optional: Detect blue calibration card
-      const calibration = detectBlueCard(image);
+      // Build calibration response
+      const calibration = {
+        creditCardDetected: creditCard !== null,
+        creditCardBounds: creditCard,
+        pixelsPerMM: null  // Will be calculated on frontend
+      };
 
       // Return successful response
       return jsonResponse({
@@ -99,11 +103,19 @@ export default {
  * Detect objects using OpenAI Vision API (GPT-4 Vision)
  */
 async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiKey) {
-  // Build a detailed prompt for object detection
+  // Build a detailed prompt for object detection AND credit card detection
   const objectList = detectObjects.join(', ');
 
   const prompt = `You are an expert computer vision system for heating compliance detection.
 
+TASK 1: Detect a credit card (if present) for calibration
+Look for a credit card or card-shaped object in the image. A credit card has:
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+TASK 2: Detect compliance objects
 Analyze this image and identify ALL visible objects from this list: ${objectList}
 
 For EACH object you detect, provide:
@@ -123,19 +135,28 @@ Important guidelines:
 - Only return objects from the provided list
 - Provide accurate bounding boxes that tightly fit each object
 
-Return ONLY a JSON array in this exact format:
-[
-  {
-    "type": "opening_window",
+Return ONLY a JSON object in this exact format:
+{
+  "creditCard": {
+    "detected": true,
     "confidence": 0.95,
-    "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0}
+    "bounds": {"x": 10.0, "y": 80.0, "width": 15.0, "height": 9.5}
   },
-  {
-    "type": "air_vent",
-    "confidence": 0.88,
-    "bounds": {"x": 15.0, "y": 60.0, "width": 15.0, "height": 15.0}
-  }
-]`;
+  "objects": [
+    {
+      "type": "opening_window",
+      "confidence": 0.95,
+      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0}
+    },
+    {
+      "type": "air_vent",
+      "confidence": 0.88,
+      "bounds": {"x": 15.0, "y": 60.0, "width": 15.0, "height": 15.0}
+    }
+  ]
+}
+
+If no credit card is detected, set "creditCard" to null.`;
 
   try {
     // Call OpenAI API
@@ -189,12 +210,27 @@ Return ONLY a JSON array in this exact format:
       jsonStr = jsonStr.replace(/^```\n/, '').replace(/\n```$/, '');
     }
 
-    const detections = JSON.parse(jsonStr);
+    const result = JSON.parse(jsonStr);
 
-    // Transform to our expected format
+    // Extract credit card detection
+    let creditCard = null;
+    if (result.creditCard && result.creditCard.detected) {
+      creditCard = {
+        confidence: result.creditCard.confidence,
+        bounds: {
+          // Convert percentage to pixel coordinates (assuming 1000x1000 reference)
+          x: Math.round(result.creditCard.bounds.x * 10),
+          y: Math.round(result.creditCard.bounds.y * 10),
+          width: Math.round(result.creditCard.bounds.width * 10),
+          height: Math.round(result.creditCard.bounds.height * 10)
+        }
+      };
+    }
+
+    // Transform objects to our expected format
     // Note: We need to get actual image dimensions, but since we don't have them
     // in the worker, we'll assume a standard size and let the frontend scale
-    const objects = detections.map(det => ({
+    const objects = (result.objects || []).map(det => ({
       type: det.type,
       label: det.type.toUpperCase().replace(/_/g, ' '),
       bounds: {
@@ -208,7 +244,7 @@ Return ONLY a JSON array in this exact format:
       enabled: true
     }));
 
-    return objects;
+    return { objects, creditCard };
 
   } catch (error) {
     console.error('OpenAI detection error:', error);

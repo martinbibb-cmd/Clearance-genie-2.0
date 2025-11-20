@@ -387,12 +387,12 @@
         <div class="card hidden" id="step2">
             <h2>Step 2: Upload Photo</h2>
             <div class="instructions">
-                <strong>Important:</strong> Include a blue credit card-sized card (85mm wide) in your photo for accurate calibration.
+                <strong>Important:</strong> Include a credit card (any color) in your photo for automatic calibration. The AI will detect it automatically!
             </div>
             <div class="upload-area" onclick="document.getElementById('cameraInput').click()">
                 <div class="icon">📸</div>
                 <div><strong>Take Photo with Camera</strong></div>
-                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Include blue calibration card (credit card size - 85mm)</div>
+                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Include a credit card for automatic AI calibration (85mm × 54mm standard size)</div>
             </div>
             <input type="file" id="cameraInput" accept="image/*" capture="environment">
             <div class="upload-area" onclick="document.getElementById('uploadInput').click()">
@@ -596,15 +596,16 @@
         async function processPhoto() {
             try {
                 // Update processing message
-                document.getElementById('processingMessage').textContent = 'Detecting blue calibration card...';
+                document.getElementById('processingMessage').textContent = 'Detecting objects and calibration card with AI...';
 
-                // Detect and calibrate with blue card (400mm)
-                await detectBlueCard();
-
-                document.getElementById('processingMessage').textContent = 'Detecting objects with AI...';
-
-                // Detect objects using Cloudflare Worker
+                // Detect objects and credit card using AI Worker (returns both)
                 await detectObjects();
+
+                // If AI didn't detect a credit card, try blue card detection as fallback
+                if (!state.scale.calibrationComplete) {
+                    document.getElementById('processingMessage').textContent = 'AI card detection failed, trying blue card detection...';
+                    await detectBlueCard();
+                }
 
                 // Move to review step
                 goToStep(4);
@@ -707,7 +708,42 @@
                 }
 
                 const result = await response.json();
-                state.detectedObjects = result.objects || [];
+
+                // Scale factor: API returns coordinates based on 1000x1000 reference
+                const scaleX = state.photoWidth / 1000;
+                const scaleY = state.photoHeight / 1000;
+
+                // Process detected objects and scale to actual image dimensions
+                state.detectedObjects = (result.objects || []).map(obj => ({
+                    ...obj,
+                    bounds: {
+                        x: obj.bounds.x * scaleX,
+                        y: obj.bounds.y * scaleY,
+                        width: obj.bounds.width * scaleX,
+                        height: obj.bounds.height * scaleY
+                    }
+                }));
+
+                // Process credit card calibration if detected
+                if (result.calibration && result.calibration.creditCardDetected) {
+                    const cardBounds = result.calibration.creditCardBounds.bounds;
+
+                    // Scale card bounds to actual image dimensions
+                    const cardWidthPx = cardBounds.width * scaleX;
+                    const cardHeightPx = cardBounds.height * scaleY;
+
+                    // Determine which dimension is width (should be larger for credit card)
+                    const actualCardWidthPx = Math.max(cardWidthPx, cardHeightPx);
+
+                    // Calculate pixels per mm based on 85mm credit card width
+                    state.scale.pixelsPerMM = actualCardWidthPx / 85;
+                    state.scale.calibrationComplete = true;
+
+                    console.log(`AI Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels per mm (credit card: ${actualCardWidthPx.toFixed(0)}px = 85mm)`);
+                    console.log(`Credit card confidence: ${result.calibration.creditCardBounds.confidence.toFixed(2)}`);
+                } else {
+                    console.log('Credit card not detected by AI, will try fallback methods');
+                }
 
             } catch (error) {
                 console.error('AI Detection Error:', error);

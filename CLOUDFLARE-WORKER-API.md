@@ -1,5 +1,18 @@
 # Cloudflare Worker API Specification
 
+## 🆕 New Feature: Auto Credit Card Detection
+
+The API now automatically detects credit cards (any color) in photos for precise calibration! The AI vision model identifies standard credit cards (85mm × 54mm) and returns their location, enabling automatic scale calculation without manual input.
+
+**Benefits:**
+- No need for blue-colored cards specifically
+- Works with any credit card design or color
+- Higher accuracy through AI vision
+- Fallback to blue card pixel detection if needed
+- Seamless user experience
+
+---
+
 ## Endpoint
 `https://clearance-genie-worker.martinbibb.workers.dev`
 
@@ -113,8 +126,17 @@ The worker should return a JSON response with detected objects:
     }
   ],
   "calibration": {
-    "blueCardDetected": true,
-    "pixelsPerMM": 2.5
+    "creditCardDetected": true,
+    "creditCardBounds": {
+      "confidence": 0.95,
+      "bounds": {
+        "x": 100,
+        "y": 800,
+        "width": 150,
+        "height": 95
+      }
+    },
+    "pixelsPerMM": null
   }
 }
 ```
@@ -126,15 +148,18 @@ The worker should return a JSON response with detected objects:
   - **type** (string): Object type from the `detectObjects` list
   - **label** (string): Human-readable label (used in UI)
   - **bounds** (object): Bounding box coordinates
-    - **x** (number): Left position in pixels
-    - **y** (number): Top position in pixels
-    - **width** (number): Width in pixels
-    - **height** (number): Height in pixels
+    - **x** (number): Left position in pixels (based on 1000x1000 reference)
+    - **y** (number): Top position in pixels (based on 1000x1000 reference)
+    - **width** (number): Width in pixels (based on 1000x1000 reference)
+    - **height** (number): Height in pixels (based on 1000x1000 reference)
   - **confidence** (number): Detection confidence (0.0 to 1.0)
   - **enabled** (boolean): Whether object is included (default: true)
-- **calibration** (object, optional): Calibration data
-  - **blueCardDetected** (boolean): If blue calibration card was found (credit card size - 85mm x 54mm)
-  - **pixelsPerMM** (number): Calculated pixels per millimeter
+- **calibration** (object): Calibration data
+  - **creditCardDetected** (boolean): If credit card was auto-detected by AI (any color, standard size 85mm x 54mm)
+  - **creditCardBounds** (object, optional): Credit card location and confidence
+    - **confidence** (number): Detection confidence (0.0 to 1.0)
+    - **bounds** (object): Bounding box of detected credit card (based on 1000x1000 reference)
+  - **pixelsPerMM** (number, null): Calculated pixels per millimeter (null = frontend calculates)
 
 ## Error Response Format
 
