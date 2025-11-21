@@ -451,9 +451,26 @@
     <!-- Step 4: Mark Obstacles -->
     <div class="step hidden" id="step4">
         <h2><span class="step-number">4</span> Mark Clearance Obstacles</h2>
-        <div class="instructions" id="step4Instructions">
+
+        <!-- AI Detection Section -->
+        <div class="instructions">
+            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
+            Let AI detect obstacles in your photo automatically.
+        </div>
+        <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
+            💡 <strong>For best results:</strong> Ensure good lighting and clear visibility of windows, doors, walls, and other obstacles.
+        </div>
+        <button id="autoDetectObstaclesBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            🤖 Auto-Detect Obstacles (AI)
+        </button>
+        <div id="autoDetectObstaclesStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        <!-- Manual Marking Section -->
+        <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;" id="step4Instructions">
+            <strong>📏 Option 2: Manual Marking</strong><br>
             Draw rectangles around walls, windows, doors, and other obstacles.
         </div>
+
         <canvas id="photoCanvas3"></canvas>
         <div class="input-group">
             <label for="obstacleType">Obstacle Type:</label>
@@ -1300,7 +1317,7 @@
     document.getElementById('confirmEquipmentBtn').addEventListener('click', () => {
         document.getElementById('step3').classList.add('hidden');
         document.getElementById('step4').classList.remove('hidden');
-        
+
         // Populate obstacle types
         const info = EQUIPMENT_INFO[state.equipmentType];
         const select = document.getElementById('obstacleType');
@@ -1311,8 +1328,106 @@
             option.textContent = OBSTACLE_LABELS[type];
             select.appendChild(option);
         });
-        
+
         setupObstacleCanvas();
+    });
+
+    // Auto-Detect Obstacles using AI
+    document.getElementById('autoDetectObstaclesBtn').addEventListener('click', async () => {
+        const statusDiv = document.getElementById('autoDetectObstaclesStatus');
+        const btn = document.getElementById('autoDetectObstaclesBtn');
+
+        // Show loading status
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#e3f2fd';
+        statusDiv.style.color = '#1976d2';
+        statusDiv.textContent = '🔍 Detecting obstacles with AI...';
+        btn.disabled = true;
+
+        try {
+            // Convert image to base64
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = state.photoWidth;
+            canvas.height = state.photoHeight;
+            ctx.drawImage(state.photo, 0, 0);
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Get obstacle types for this equipment
+            const info = EQUIPMENT_INFO[state.equipmentType];
+            const detectObjects = info.obstacles; // e.g., ['opening_window', 'door', 'wall']
+
+            // Call AI Worker for object detection
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageBase64,
+                    equipmentType: state.equipmentType,
+                    detectObjects: detectObjects, // Request AI to detect these obstacles
+                    cardColorHint: 'blue'
+                }),
+                signal: AbortSignal.timeout(60000) // 60 second timeout for obstacle detection
+            });
+
+            if (!response.ok) {
+                throw new Error(`API returned error status ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Check if obstacles were detected
+            if (result.obstacles && result.obstacles.length > 0) {
+                // Scale factor: API returns coordinates based on 1000x1000 reference
+                const scaleX = state.photoWidth / 1000;
+                const scaleY = state.photoHeight / 1000;
+
+                // Add detected obstacles to state
+                result.obstacles.forEach(obstacle => {
+                    state.obstacles.push({
+                        type: obstacle.type,
+                        bounds: {
+                            x: obstacle.bounds.x * scaleX,
+                            y: obstacle.bounds.y * scaleY,
+                            width: obstacle.bounds.width * scaleX,
+                            height: obstacle.bounds.height * scaleY
+                        }
+                    });
+                });
+
+                // Show success message
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.innerHTML = `✅ <strong>Detected ${result.obstacles.length} obstacle(s)!</strong><br>` +
+                    `<small>${result.obstacles.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
+                    `You can add more obstacles manually if needed.`;
+
+                // Update obstacle list and canvas
+                updateObstacleList();
+                const canvas3 = document.getElementById('photoCanvas3');
+                const ctx3 = canvas3.getContext('2d');
+                drawPhotoWithObstacles(ctx3);
+            } else {
+                // No obstacles detected
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.color = '#e65100';
+                statusDiv.innerHTML = '⚠️ <strong>No obstacles detected</strong><br>' +
+                    'Use manual marking below to draw rectangles around obstacles.';
+            }
+
+            btn.disabled = false;
+
+        } catch (error) {
+            console.error('Auto-detection error:', error);
+            statusDiv.style.background = '#ffebee';
+            statusDiv.style.color = '#c62828';
+            statusDiv.innerHTML = `❌ <strong>AI Detection Failed</strong><br>` +
+                `${error.message}<br><br>` +
+                `<strong>Solution: Use Manual Marking below</strong>`;
+            btn.disabled = false;
+        }
     });
 
     // Step 4: Mark Obstacles
