@@ -305,6 +305,25 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Magnifying glass mark position button - Enhanced for mobile touch */
+    #markPositionBtn:hover {
+        background: rgba(52, 152, 219, 1);
+        transform: translate(-50%, -50%) scale(1.05);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    #markPositionBtn:active {
+        background: rgba(41, 128, 185, 1);
+        transform: translate(-50%, -50%) scale(0.95);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Ensure button is accessible on touch devices */
+    #markPositionBtn {
+        min-width: 56px;
+        min-height: 56px;
+    }
 </style>
 ```
 
@@ -417,8 +436,8 @@
                 <canvas id="magnifyCanvas" width="150" height="150"></canvas>
                 <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
                 <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 2px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
-                <!-- Center button for marking positions -->
-                <button id="markPositionBtn" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(52, 152, 219, 0.8); border: 2px solid white; color: white; font-size: 20px; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; padding: 0; font-weight: bold; z-index: 1001;">📍</button>
+                <!-- Center button for marking positions - Optimized for mobile touch -->
+                <button id="markPositionBtn" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; background: rgba(52, 152, 219, 0.9); border: 3px solid white; color: white; font-size: 24px; cursor: pointer; pointer-events: auto; box-shadow: 0 3px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 0; font-weight: bold; z-index: 1001; touch-action: manipulation; -webkit-tap-highlight-color: rgba(52, 152, 219, 0.3); transition: all 0.15s ease;">📍</button>
             </div>
             <!-- Zoom Slider -->
             <div id="zoomSliderContainer" style="display: none; position: absolute; background: rgba(255, 255, 255, 0.95); padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 999; pointer-events: auto;">
@@ -769,8 +788,28 @@
         canvas.addEventListener('touchstart', showMagnifierTouch);
         // Note: No touchend handler - magnifier stays visible for button click
 
-        // Add button click handler for marking positions
-        document.getElementById('markPositionBtn').addEventListener('click', handleMarkPositionClick);
+        // Add button click/touch handlers for marking positions
+        // Support both touch and click events for better mobile reliability
+        const markBtn = document.getElementById('markPositionBtn');
+        let touchHandled = false;
+
+        markBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            touchHandled = true;
+            handleMarkPositionClick(e);
+            // Reset flag after a short delay to allow click event filtering
+            setTimeout(() => { touchHandled = false; }, 300);
+        });
+
+        markBtn.addEventListener('click', (e) => {
+            // Prevent double-firing on devices that emit both touch and click
+            if (touchHandled) {
+                e.preventDefault();
+                return;
+            }
+            handleMarkPositionClick(e);
+        });
 
         // Add zoom slider handler
         const zoomSlider = document.getElementById('zoomSlider');
@@ -1161,25 +1200,51 @@
     // Detect Card in Lasso Region using AI
     document.getElementById('detectInLassoBtn').addEventListener('click', async () => {
         const statusDiv = document.getElementById('lassoStatus');
-        const btn = document.getElementById('autoDetectBtn');
+        const btn = document.getElementById('detectInLassoBtn');
 
         // Show loading status
         statusDiv.style.display = 'block';
         statusDiv.style.background = '#e3f2fd';
         statusDiv.style.color = '#1976d2';
-        statusDiv.textContent = '🔍 Detecting credit card with AI...';
+        statusDiv.textContent = '🔍 Analyzing selected region with AI...';
         btn.disabled = true;
 
         try {
-            // Convert image to base64
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = state.photoWidth;
-            canvas.height = state.photoHeight;
-            ctx.drawImage(state.photo, 0, 0);
-            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            // Calculate bounding box from lasso points
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            state.lassoPoints.forEach(point => {
+                minX = Math.min(minX, point.x);
+                minY = Math.min(minY, point.y);
+                maxX = Math.max(maxX, point.x);
+                maxY = Math.max(maxY, point.y);
+            });
 
-            // Call AI Worker (use minimal object detection to save API costs)
+            // Add padding (20%) to bounding box
+            const padding = 0.2;
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const paddedMinX = Math.max(0, minX - width * padding);
+            const paddedMinY = Math.max(0, minY - height * padding);
+            const paddedMaxX = Math.min(state.photoWidth, maxX + width * padding);
+            const paddedMaxY = Math.min(state.photoHeight, maxY + height * padding);
+            const paddedWidth = paddedMaxX - paddedMinX;
+            const paddedHeight = paddedMaxY - paddedMinY;
+
+            // Crop image to lasso region
+            const cropCanvas = document.createElement('canvas');
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCanvas.width = paddedWidth;
+            cropCanvas.height = paddedHeight;
+            cropCtx.drawImage(
+                state.photo,
+                paddedMinX, paddedMinY, paddedWidth, paddedHeight,
+                0, 0, paddedWidth, paddedHeight
+            );
+
+            // Convert cropped image to base64
+            const croppedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI Worker with cropped image and crop metadata
             let response;
             try {
                 response = await fetch('https://clearance.martinbibb.workers.dev', {
@@ -1188,19 +1253,27 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        image: imageBase64,
+                        image: croppedImageBase64,
                         equipmentType: state.equipmentType,
-                        detectObjects: [], // Empty array - we only need card detection
-                        cardColorHint: 'blue' // Hint to AI that calibration card is blue for better detection
+                        detectObjects: [],
+                        cardColorHint: 'blue',
+                        cropMetadata: {
+                            originX: paddedMinX,
+                            originY: paddedMinY,
+                            width: paddedWidth,
+                            height: paddedHeight,
+                            fullImageWidth: state.photoWidth,
+                            fullImageHeight: state.photoHeight
+                        },
+                        useHybridDetection: true // Flag to tell AI this is a user-hinted crop
                     }),
-                    signal: AbortSignal.timeout(30000) // 30 second timeout
+                    signal: AbortSignal.timeout(30000)
                 });
             } catch (fetchError) {
-                // Network error or timeout
                 if (fetchError.name === 'TimeoutError') {
-                    throw new Error('Request timed out after 30 seconds. The image may be too large or the service is slow. Try a smaller image.');
+                    throw new Error('Request timed out. Try drawing a smaller lasso around just the card.');
                 } else if (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('Load failed')) {
-                    throw new Error('Cannot connect to AI service. Check your internet connection or the service may be temporarily unavailable.');
+                    throw new Error('Cannot connect to AI service. Check your internet connection.');
                 }
                 throw new Error(`Network error: ${fetchError.message}`);
             }
@@ -1212,24 +1285,22 @@
                     if (errorData.error) {
                         errorMessage = errorData.error;
                     }
-                } catch (e) {
-                    // Could not parse error response
-                }
+                } catch (e) {}
                 throw new Error(errorMessage);
             }
 
             const result = await response.json();
 
-            // Check what was detected (priority: card > brick > nothing)
+            // Check what was detected in the cropped region
             if (result.calibration && result.calibration.creditCardDetected) {
-                // CREDIT CARD DETECTED
+                // CREDIT CARD DETECTED in crop
                 const cardBounds = result.calibration.creditCardBounds.bounds;
 
-                // Scale factor: API returns coordinates based on 1000x1000 reference
-                const scaleX = state.photoWidth / 1000;
-                const scaleY = state.photoHeight / 1000;
+                // Scale factor: API returns coordinates based on 1000x1000 reference of CROPPED image
+                const scaleX = paddedWidth / 1000;
+                const scaleY = paddedHeight / 1000;
 
-                // Scale card bounds to actual image dimensions
+                // Scale card bounds to cropped image dimensions
                 const cardWidthPx = cardBounds.width * scaleX;
                 const cardHeightPx = cardBounds.height * scaleY;
 
@@ -1240,10 +1311,18 @@
                 state.scale.pixelsPerMM = actualCardWidthPx / 85;
                 state.scale.distanceMM = 85; // Credit card width
 
+                // Reset lasso UI
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+                document.getElementById('startLassoBtn').style.display = 'inline-block';
+                document.getElementById('cancelLassoBtn').style.display = 'none';
+                document.getElementById('detectInLassoBtn').style.display = 'none';
+
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected!</strong><br>` +
+                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
                     `Reference: 85mm blue card width`;
@@ -1266,31 +1345,28 @@
                 }, 1500);
 
             } else if (result.calibration && result.calibration.brickDetected) {
-                // BRICK DETECTED (FALLBACK)
+                // BRICK DETECTED (FALLBACK) in cropped region
                 const brickBounds = result.calibration.brickBounds.bounds;
                 const orientation = result.calibration.brickBounds.orientation;
 
-                // Scale factor: API returns coordinates based on 1000x1000 reference
-                const scaleX = state.photoWidth / 1000;
-                const scaleY = state.photoHeight / 1000;
+                // Scale factor: API returns coordinates based on 1000x1000 reference of CROPPED image
+                const scaleX = paddedWidth / 1000;
+                const scaleY = paddedHeight / 1000;
 
-                // Scale brick bounds to actual image dimensions
+                // Scale brick bounds to cropped image dimensions
                 const brickWidthPx = brickBounds.width * scaleX;
                 const brickHeightPx = brickBounds.height * scaleY;
 
                 // Standard UK brick: 215mm x 102.5mm x 65mm
-                // Use the appropriate dimension based on orientation
                 let referenceMM;
                 let actualSizePx;
                 let brickDimension;
 
                 if (orientation === 'horizontal') {
-                    // Width should be ~215mm
                     actualSizePx = Math.max(brickWidthPx, brickHeightPx);
                     referenceMM = 215;
                     brickDimension = 'length (215mm)';
                 } else {
-                    // Height/width might be 102.5mm or 65mm
                     actualSizePx = Math.max(brickWidthPx, brickHeightPx);
                     referenceMM = 102.5;
                     brickDimension = 'width (102.5mm)';
@@ -1300,23 +1376,28 @@
                 state.scale.pixelsPerMM = actualSizePx / referenceMM;
                 state.scale.distanceMM = referenceMM;
 
+                // Reset lasso UI
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+                document.getElementById('startLassoBtn').style.display = 'inline-block';
+                document.getElementById('cancelLassoBtn').style.display = 'none';
+                document.getElementById('detectInLassoBtn').style.display = 'none';
+
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>Brick detected!</strong> (No card found - using brick as reference)<br>` +
+                statusDiv.innerHTML = `✅ <strong>Brick detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.brickBounds.confidence * 100).toFixed(0)}%<br>` +
                     `Reference: Standard UK brick ${brickDimension}`;
 
-                // Auto-advance to next step after 2 seconds (give user time to read)
+                // Auto-advance to next step
                 setTimeout(() => {
-                    // Hide magnifier when moving to next step
                     hideMagnifier();
-
                     document.getElementById('step2').classList.add('hidden');
                     document.getElementById('step3').classList.remove('hidden');
 
-                    // Update step 3 labels
                     const info = EQUIPMENT_INFO[state.equipmentType];
                     document.getElementById('equipmentLabel').textContent = info.name;
                     document.getElementById('equipmentLabel2').textContent = info.name;
@@ -1326,23 +1407,16 @@
                 }, 2000);
 
             } else {
-                // NOTHING DETECTED - clear message about what AI tried
+                // NOTHING DETECTED in lasso region
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
-                statusDiv.innerHTML = '⚠️ <strong>AI Detection: No calibration objects found</strong><br>' +
-                    '<small>Searched for: Blue credit card, Standard bricks</small><br><br>' +
-                    '<strong>💡 To improve detection:</strong><br>' +
-                    '• Include a 🔵 <strong>BLUE credit/debit card</strong> (85mm wide) OR standard brick in your photo<br>' +
-                    '• Blue cards provide the highest detection accuracy<br>' +
-                    '• Ensure good lighting without glare or shadows<br>' +
-                    '• Object should be fully visible and flat<br>' +
-                    '• Avoid tilted or partially visible objects<br><br>' +
-                    '<strong>📏 Or use Manual Calibration below:</strong><br>' +
-                    '1. <strong>Tap two points</strong> on any known object (🔵 blue card recommended, brick, ruler, etc.)<br>' +
-                    '2. <strong>Enter the distance</strong> between those points in mm<br>' +
-                    '   • Blue card width = <strong>85mm</strong> (best accuracy)<br>' +
-                    '   • Standard brick length = <strong>215mm</strong><br>' +
-                    '3. Click <strong>"Confirm Scale"</strong>';
+                statusDiv.innerHTML = '⚠️ <strong>No card/brick found in lasso region</strong><br><br>' +
+                    '<strong>💡 Try again:</strong><br>' +
+                    '• Draw lasso closer around the card/brick<br>' +
+                    '• Make sure the card is fully visible in the lasso<br>' +
+                    '• Ensure good lighting without glare<br>' +
+                    '• 🔵 Blue cards work best!<br><br>' +
+                    '<strong>Or use Manual Calibration below instead</strong>';
                 btn.disabled = false;
 
                 // Show the manual calibration guide
