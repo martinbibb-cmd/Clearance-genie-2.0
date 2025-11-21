@@ -1850,53 +1850,113 @@
         generateClearanceOverlay();
     });
 
+    // Draw rounded rectangle (rectangle with 90° arc corners)
+    function drawRoundedRect(ctx, x, y, width, height, radius, fill = true, stroke = true) {
+        // Ensure radius doesn't exceed half of width or height
+        const maxRadius = Math.min(width, height) / 2;
+        const r = Math.min(radius, maxRadius);
+
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + width - r, y);
+        ctx.arc(x + width - r, y + r, r, Math.PI * 1.5, Math.PI * 2); // Top-right corner
+        ctx.lineTo(x + width, y + height - r);
+        ctx.arc(x + width - r, y + height - r, r, 0, Math.PI * 0.5); // Bottom-right corner
+        ctx.lineTo(x + r, y + height);
+        ctx.arc(x + r, y + height - r, r, Math.PI * 0.5, Math.PI); // Bottom-left corner
+        ctx.lineTo(x, y + r);
+        ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5); // Top-left corner
+        ctx.closePath();
+
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+    }
+
+    // Check if point is inside rounded rectangle clearance zone
+    function isPointInRoundedRect(px, py, x, y, width, height, radius) {
+        const maxRadius = Math.min(width, height) / 2;
+        const r = Math.min(radius, maxRadius);
+
+        // Check if point is within the overall bounding box
+        if (px < x || px > x + width || py < y || py > y + height) {
+            return false;
+        }
+
+        // Check corner regions
+        // Top-left corner
+        if (px < x + r && py < y + r) {
+            const dx = px - (x + r);
+            const dy = py - (y + r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Top-right corner
+        if (px > x + width - r && py < y + r) {
+            const dx = px - (x + width - r);
+            const dy = py - (y + r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Bottom-left corner
+        if (px < x + r && py > y + height - r) {
+            const dx = px - (x + r);
+            const dy = py - (y + height - r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Bottom-right corner
+        if (px > x + width - r && py > y + height - r) {
+            const dx = px - (x + width - r);
+            const dy = py - (y + height - r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+
+        // Point is in main rectangular region
+        return true;
+    }
+
     function generateClearanceOverlay() {
         const canvas = document.getElementById('photoCanvas4');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = state.photoWidth;
         canvas.height = state.photoHeight;
-        
+
         ctx.drawImage(state.photo, 0, 0);
-        
+
         const rules = CLEARANCE_RULES[state.equipmentType][state.brand].rules;
         const violations = [];
-        
+
         state.obstacles.forEach(obstacle => {
             const rule = rules.find(r => r.obstacle_type === obstacle.type);
             if (!rule) return;
-            
+
             const clearancePx = {
                 above: rule.clearances.above * state.scale.pixelsPerMM,
                 below: rule.clearances.below * state.scale.pixelsPerMM,
                 sides: rule.clearances.sides * state.scale.pixelsPerMM
             };
-            
+
+            // Calculate clearance zone bounds
+            const zoneX = obstacle.bounds.x - clearancePx.sides;
+            const zoneY = obstacle.bounds.y - clearancePx.above;
+            const zoneWidth = obstacle.bounds.width + (2 * clearancePx.sides);
+            const zoneHeight = obstacle.bounds.height + clearancePx.above + clearancePx.below;
+
+            // Corner radius for 90° arcs - use the smaller of the clearances for natural rounding
+            const cornerRadius = Math.min(clearancePx.above, clearancePx.below, clearancePx.sides);
+
+            // Draw clearance zone with rounded corners (90° arcs)
             ctx.fillStyle = rule.color;
-            ctx.fillRect(
-                obstacle.bounds.x - clearancePx.sides,
-                obstacle.bounds.y - clearancePx.above,
-                obstacle.bounds.width + (2 * clearancePx.sides),
-                obstacle.bounds.height + clearancePx.above + clearancePx.below
-            );
-            
             ctx.strokeStyle = rule.stroke;
             ctx.lineWidth = 3;
-            ctx.strokeRect(
-                obstacle.bounds.x - clearancePx.sides,
-                obstacle.bounds.y - clearancePx.above,
-                obstacle.bounds.width + (2 * clearancePx.sides),
-                obstacle.bounds.height + clearancePx.above + clearancePx.below
-            );
-            
-            if (state.equipment.x >= obstacle.bounds.x - clearancePx.sides &&
-                state.equipment.x <= obstacle.bounds.x + obstacle.bounds.width + clearancePx.sides &&
-                state.equipment.y >= obstacle.bounds.y - clearancePx.above &&
-                state.equipment.y <= obstacle.bounds.y + obstacle.bounds.height + clearancePx.below) {
+
+            drawRoundedRect(ctx, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius, true, true);
+
+            // Check if equipment point is in clearance zone using rounded rectangle collision
+            if (isPointInRoundedRect(state.equipment.x, state.equipment.y, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius)) {
                 violations.push({ obstacle, rule });
             }
         });
-        
+
+        // Draw equipment position marker
         ctx.fillStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
         ctx.beginPath();
         ctx.arc(state.equipment.x, state.equipment.y, 20, 0, Math.PI * 2);
@@ -1904,7 +1964,7 @@
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 4;
         ctx.stroke();
-        
+
         displayComplianceResult(violations);
     }
 
