@@ -420,10 +420,35 @@
             <span style="font-size: 0.9em;">🔵 <strong>Blue card recommended for best results</strong> | Standard card: <strong>Width = 85mm</strong> | Height = 54mm</span>
         </div>
         <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
-            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
-            <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
-            <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
-            <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
+            <div style="margin-bottom: 10px;">
+                <strong>Calibration Mode:</strong>
+                <button id="twoPointModeBtn" style="padding: 5px 12px; font-size: 12px; margin-left: 5px; background: #3498db;" onclick="setCalibrationMode('two-point')">2-Point (Fast)</button>
+                <button id="fourPointModeBtn" style="padding: 5px 12px; font-size: 12px; margin-left: 5px; background: #95a5a6;" onclick="setCalibrationMode('four-point')">4-Point (Accurate)</button>
+            </div>
+            <div id="twoPointInstructions">
+                <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
+                <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
+                <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
+                <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
+            </div>
+            <div id="fourPointInstructions" style="display: none;">
+                <div style="margin-bottom: 8px; padding: 6px; background: #fff3e0; border-radius: 4px; font-size: 13px;">
+                    ℹ️ <strong>Mark all 4 corners</strong> of a 🔵 blue card clockwise: Top-Left → Top-Right → Bottom-Right → Bottom-Left
+                </div>
+                <strong>📌 Corner 1 (Top-Left):</strong> <span id="point1Status4pt" style="color: #e74c3c;">Not set</span>
+                <button id="undoPoint1Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
+                <strong>📌 Corner 2 (Top-Right):</strong> <span id="point2Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint2Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button><br>
+                <strong>📌 Corner 3 (Bottom-Right):</strong> <span id="point3Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint3Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(3)">↶ Undo</button><br>
+                <strong>📌 Corner 4 (Bottom-Left):</strong> <span id="point4Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint4Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(4)">↶ Undo</button>
+            </div>
+            <div id="perspectiveWarningDiv" style="display: none; margin-top: 10px; padding: 8px; background: #fff3e0; border-radius: 5px; border-left: 4px solid #ff9800;">
+                <strong>⚠️ Perspective Distortion Detected</strong><br>
+                <span style="font-size: 12px;">The photo appears to be taken at an angle. Scale variation: <span id="scaleVariation"></span>%<br>
+                For best accuracy, retake the photo more straight-on or accept the averaged scale.</span>
+            </div>
             <br>
             <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px;">
                 🔍 <strong>Magnifying glass active</strong> - Move your mouse/finger over the photo to position the magnifying glass, then release. The magnifier stays visible so you can adjust the zoom slider and click the 📍 button to mark the exact position.
@@ -556,8 +581,12 @@
         scale: {
             point1: null,
             point2: null,
+            point3: null,
+            point4: null,
+            calibrationMode: 'two-point', // 'two-point' or 'four-point'
             distanceMM: 85,
-            pixelsPerMM: 0
+            pixelsPerMM: 0,
+            perspectiveWarning: false
         },
         equipment: null,
         obstacles: [],
@@ -948,26 +977,120 @@
         // User can reposition by touching/moving on the canvas again
     }
 
+    // Set calibration mode (2-point or 4-point)
+    function setCalibrationMode(mode) {
+        state.scale.calibrationMode = mode;
+
+        // Reset all points
+        state.scale.point1 = null;
+        state.scale.point2 = null;
+        state.scale.point3 = null;
+        state.scale.point4 = null;
+        state.scale.perspectiveWarning = false;
+
+        // Update UI
+        if (mode === 'two-point') {
+            document.getElementById('twoPointModeBtn').style.background = '#3498db';
+            document.getElementById('fourPointModeBtn').style.background = '#95a5a6';
+            document.getElementById('twoPointInstructions').style.display = 'block';
+            document.getElementById('fourPointInstructions').style.display = 'none';
+            document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            document.getElementById('knownDistance').parentElement.parentElement.style.display = 'block';
+        } else {
+            document.getElementById('twoPointModeBtn').style.background = '#95a5a6';
+            document.getElementById('fourPointModeBtn').style.background = '#3498db';
+            document.getElementById('twoPointInstructions').style.display = 'none';
+            document.getElementById('fourPointInstructions').style.display = 'block';
+            document.getElementById('knownDistance').parentElement.parentElement.style.display = 'none';
+        }
+
+        // Reset UI states
+        resetCalibrationUI();
+
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    }
+
+    function resetCalibrationUI() {
+        // 2-point mode
+        document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
+        document.getElementById('point1Status').style.color = '#e74c3c';
+        document.getElementById('undoPoint1Btn').style.display = 'none';
+        document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+        document.getElementById('point2Status').style.color = '#95a5a6';
+        document.getElementById('undoPoint2Btn').style.display = 'none';
+
+        // 4-point mode
+        document.getElementById('point1Status4pt').textContent = 'Not set';
+        document.getElementById('point1Status4pt').style.color = '#e74c3c';
+        document.getElementById('undoPoint1Btn4pt').style.display = 'none';
+        document.getElementById('point2Status4pt').textContent = 'Waiting...';
+        document.getElementById('point2Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint2Btn4pt').style.display = 'none';
+        document.getElementById('point3Status4pt').textContent = 'Waiting...';
+        document.getElementById('point3Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+        document.getElementById('point4Status4pt').textContent = 'Waiting...';
+        document.getElementById('point4Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+
+        document.getElementById('confirmScaleBtn').disabled = true;
+    }
+
     function handleScalePoint(coords) {
         // Show the manual calibration guide when user starts clicking button
         const guide = document.getElementById('manualCalibrationGuide');
         guide.style.display = 'block';
 
-        if (!state.scale.point1) {
-            state.scale.point1 = coords;
-            // Update status
-            document.getElementById('point1Status').textContent = '✓ Set';
-            document.getElementById('point1Status').style.color = '#2e7d32';
-            document.getElementById('undoPoint1Btn').style.display = 'inline-block';
-            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
-            document.getElementById('point2Status').style.color = '#e74c3c';
-        } else if (!state.scale.point2) {
-            state.scale.point2 = coords;
-            document.getElementById('confirmScaleBtn').disabled = false;
-            // Update status
-            document.getElementById('point2Status').textContent = '✓ Set';
-            document.getElementById('point2Status').style.color = '#2e7d32';
-            document.getElementById('undoPoint2Btn').style.display = 'inline-block';
+        if (state.scale.calibrationMode === 'two-point') {
+            // 2-POINT MODE
+            if (!state.scale.point1) {
+                state.scale.point1 = coords;
+                document.getElementById('point1Status').textContent = '✓ Set';
+                document.getElementById('point1Status').style.color = '#2e7d32';
+                document.getElementById('undoPoint1Btn').style.display = 'inline-block';
+                document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
+                document.getElementById('point2Status').style.color = '#e74c3c';
+            } else if (!state.scale.point2) {
+                state.scale.point2 = coords;
+                document.getElementById('confirmScaleBtn').disabled = false;
+                document.getElementById('point2Status').textContent = '✓ Set';
+                document.getElementById('point2Status').style.color = '#2e7d32';
+                document.getElementById('undoPoint2Btn').style.display = 'inline-block';
+            }
+        } else {
+            // 4-POINT MODE (corners of credit card)
+            if (!state.scale.point1) {
+                state.scale.point1 = coords;
+                document.getElementById('point1Status4pt').textContent = '✓ Set';
+                document.getElementById('point1Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint1Btn4pt').style.display = 'inline-block';
+                document.getElementById('point2Status4pt').textContent = 'Mark top-right corner';
+                document.getElementById('point2Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point2) {
+                state.scale.point2 = coords;
+                document.getElementById('point2Status4pt').textContent = '✓ Set';
+                document.getElementById('point2Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint2Btn4pt').style.display = 'inline-block';
+                document.getElementById('point3Status4pt').textContent = 'Mark bottom-right corner';
+                document.getElementById('point3Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point3) {
+                state.scale.point3 = coords;
+                document.getElementById('point3Status4pt').textContent = '✓ Set';
+                document.getElementById('point3Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'inline-block';
+                document.getElementById('point4Status4pt').textContent = 'Mark bottom-left corner';
+                document.getElementById('point4Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point4) {
+                state.scale.point4 = coords;
+                document.getElementById('point4Status4pt').textContent = '✓ Set';
+                document.getElementById('point4Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'inline-block';
+
+                // Calculate scale from 4 corners
+                calculate4PointScale();
+            }
         }
 
         const canvas = document.getElementById('photoCanvas');
@@ -977,27 +1100,130 @@
 
     // Undo point function
     function undoPoint(pointNumber) {
-        if (pointNumber === 1) {
-            state.scale.point1 = null;
-            state.scale.point2 = null; // Also reset point 2 if undoing point 1
-            document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
-            document.getElementById('point1Status').style.color = '#e74c3c';
-            document.getElementById('undoPoint1Btn').style.display = 'none';
-            document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
-            document.getElementById('point2Status').style.color = '#95a5a6';
-            document.getElementById('undoPoint2Btn').style.display = 'none';
-            document.getElementById('confirmScaleBtn').disabled = true;
-        } else if (pointNumber === 2) {
-            state.scale.point2 = null;
-            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
-            document.getElementById('point2Status').style.color = '#e74c3c';
-            document.getElementById('undoPoint2Btn').style.display = 'none';
-            document.getElementById('confirmScaleBtn').disabled = true;
+        if (state.scale.calibrationMode === 'two-point') {
+            if (pointNumber === 1) {
+                state.scale.point1 = null;
+                state.scale.point2 = null;
+                document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
+                document.getElementById('point1Status').style.color = '#e74c3c';
+                document.getElementById('undoPoint1Btn').style.display = 'none';
+                document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+                document.getElementById('point2Status').style.color = '#95a5a6';
+                document.getElementById('undoPoint2Btn').style.display = 'none';
+                document.getElementById('confirmScaleBtn').disabled = true;
+            } else if (pointNumber === 2) {
+                state.scale.point2 = null;
+                document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
+                document.getElementById('point2Status').style.color = '#e74c3c';
+                document.getElementById('undoPoint2Btn').style.display = 'none';
+                document.getElementById('confirmScaleBtn').disabled = true;
+            }
+        } else {
+            // 4-point mode
+            if (pointNumber === 1) {
+                state.scale.point1 = null;
+                state.scale.point2 = null;
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                resetCalibrationUI();
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 2) {
+                state.scale.point2 = null;
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                document.getElementById('point2Status4pt').textContent = 'Mark top-right corner';
+                document.getElementById('point2Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint2Btn4pt').style.display = 'none';
+                document.getElementById('point3Status4pt').textContent = 'Waiting...';
+                document.getElementById('point3Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+                document.getElementById('point4Status4pt').textContent = 'Waiting...';
+                document.getElementById('point4Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 3) {
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                document.getElementById('point3Status4pt').textContent = 'Mark bottom-right corner';
+                document.getElementById('point3Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+                document.getElementById('point4Status4pt').textContent = 'Waiting...';
+                document.getElementById('point4Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 4) {
+                state.scale.point4 = null;
+                document.getElementById('point4Status4pt').textContent = 'Mark bottom-left corner';
+                document.getElementById('point4Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            }
         }
 
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
         drawPhotoAndPoints(ctx);
+    }
+
+    // Calculate scale from 4 corners of credit card (85.6mm x 54mm)
+    function calculate4PointScale() {
+        const p1 = state.scale.point1; // Top-left
+        const p2 = state.scale.point2; // Top-right
+        const p3 = state.scale.point3; // Bottom-right
+        const p4 = state.scale.point4; // Bottom-left
+
+        // Calculate distances
+        const topWidthPx = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        const bottomWidthPx = Math.sqrt(Math.pow(p3.x - p4.x, 2) + Math.pow(p3.y - p4.y, 2));
+        const leftHeightPx = Math.sqrt(Math.pow(p4.x - p1.x, 2) + Math.pow(p4.y - p1.y, 2));
+        const rightHeightPx = Math.sqrt(Math.pow(p3.x - p2.x, 2) + Math.pow(p3.y - p2.y, 2));
+
+        // Credit card dimensions
+        const cardWidthMM = 85.6;
+        const cardHeightMM = 54;
+
+        // Calculate scale from each measurement
+        const scaleFromTopWidth = topWidthPx / cardWidthMM;
+        const scaleFromBottomWidth = bottomWidthPx / cardWidthMM;
+        const scaleFromLeftHeight = leftHeightPx / cardHeightMM;
+        const scaleFromRightHeight = rightHeightPx / cardHeightMM;
+
+        // Calculate average scale
+        const avgScale = (scaleFromTopWidth + scaleFromBottomWidth + scaleFromLeftHeight + scaleFromRightHeight) / 4;
+
+        // Calculate variation (to detect perspective distortion)
+        const scales = [scaleFromTopWidth, scaleFromBottomWidth, scaleFromLeftHeight, scaleFromRightHeight];
+        const maxScale = Math.max(...scales);
+        const minScale = Math.min(...scales);
+        const variation = ((maxScale - minScale) / avgScale) * 100;
+
+        // Set the scale
+        state.scale.pixelsPerMM = avgScale;
+        state.scale.distanceMM = cardWidthMM; // For reference
+
+        // Show warning if significant perspective distortion (>10% variation)
+        if (variation > 10) {
+            state.scale.perspectiveWarning = true;
+            document.getElementById('perspectiveWarningDiv').style.display = 'block';
+            document.getElementById('scaleVariation').textContent = variation.toFixed(1);
+        } else {
+            state.scale.perspectiveWarning = false;
+            document.getElementById('perspectiveWarningDiv').style.display = 'none';
+        }
+
+        // Auto-advance to next step
+        setTimeout(() => {
+            hideMagnifier();
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+
+            const info = EQUIPMENT_INFO[state.equipmentType];
+            document.getElementById('equipmentLabel').textContent = info.name;
+            document.getElementById('equipmentLabel2').textContent = info.name;
+            document.getElementById('step3Instructions').textContent = info.markingInstruction;
+
+            setupEquipmentCanvas();
+        }, state.scale.perspectiveWarning ? 3000 : 1500); // Give more time to read warning if present
     }
 
     function drawPhotoAndPoints(ctx) {
@@ -1027,37 +1253,86 @@
             }
         }
 
-        if (state.scale.point1) {
-            ctx.fillStyle = '#00ff00';
-            ctx.beginPath();
-            ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
+        // Draw calibration points based on mode
+        if (state.scale.calibrationMode === 'two-point') {
+            // 2-POINT MODE: Draw two points and a line
+            if (state.scale.point1) {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
 
-        if (state.scale.point2) {
-            ctx.fillStyle = '#00ff00';
-            ctx.beginPath();
-            ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            if (state.scale.point2) {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
 
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
-            ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
-            ctx.stroke();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
+                ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+                ctx.stroke();
+            }
+        } else {
+            // 4-POINT MODE: Draw all 4 corners and card outline
+            const points = [state.scale.point1, state.scale.point2, state.scale.point3, state.scale.point4];
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ff00ff']; // Red, Green, Blue, Magenta
+            const labels = ['TL', 'TR', 'BR', 'BL']; // Top-Left, Top-Right, Bottom-Right, Bottom-Left
+
+            points.forEach((point, index) => {
+                if (point) {
+                    // Draw point circle
+                    ctx.fillStyle = colors[index];
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Draw label
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(labels[index], point.x, point.y);
+                }
+            });
+
+            // Draw card outline if all 4 points are set
+            if (state.scale.point1 && state.scale.point2 && state.scale.point3 && state.scale.point4) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
+                ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+                ctx.lineTo(state.scale.point3.x, state.scale.point3.y);
+                ctx.lineTo(state.scale.point4.x, state.scale.point4.y);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Fill with semi-transparent overlay
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                ctx.fill();
+            }
         }
     }
 
     document.getElementById('resetScaleBtn').addEventListener('click', () => {
         state.scale.point1 = null;
         state.scale.point2 = null;
+        state.scale.point3 = null;
+        state.scale.point4 = null;
+        state.scale.perspectiveWarning = false;
         document.getElementById('confirmScaleBtn').disabled = true;
 
         // Hide magnifier when resetting
@@ -1070,12 +1345,8 @@
 
         // Reset the guide status
         document.getElementById('manualCalibrationGuide').style.display = 'none';
-        document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
-        document.getElementById('point1Status').style.color = '#e74c3c';
-        document.getElementById('undoPoint1Btn').style.display = 'none';
-        document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
-        document.getElementById('point2Status').style.color = '#95a5a6';
-        document.getElementById('undoPoint2Btn').style.display = 'none';
+        resetCalibrationUI();
+        document.getElementById('perspectiveWarningDiv').style.display = 'none';
 
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
