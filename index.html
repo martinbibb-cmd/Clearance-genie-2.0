@@ -361,23 +361,29 @@
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
 
-        <!-- AI Detection Section -->
+        <!-- AI Detection with Lasso Section -->
         <div class="instructions">
-            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
-            Include a reference object in your photo:
+            <strong>🤖 Option 1: AI-Assisted Detection (Recommended)</strong><br>
+            <strong>Step 1:</strong> Draw a rough lasso around your reference object (🔵 blue card or brick)<br>
+            <strong>Step 2:</strong> AI will find exact edges within that area
             <ul style="margin: 5px 0 5px 20px;">
                 <li><strong>🔵 Blue credit/debit card</strong> (85.6mm × 54mm) - Best accuracy</li>
                 <li><strong>Standard UK brick</strong> (215mm × 102.5mm) - Good for outdoor photos</li>
             </ul>
-            Click the button below to let AI find and calibrate automatically.
         </div>
         <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Use a blue card for highest detection accuracy. Ensure the object is fully visible, well-lit, flat, and not tilted.
+            💡 <strong>How it works:</strong> You roughly circle the card, AI refines the exact edges. Much more reliable than auto-detect!
         </div>
-        <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            🤖 Auto-Detect Calibration Object (AI)
+        <button id="startLassoBtn" style="margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            ✏️ Draw Lasso Around Card/Brick
         </button>
-        <div id="autoDetectStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+        <button id="detectInLassoBtn" style="margin-bottom: 20px; display: none; background: #2e7d32;">
+            🤖 Detect Card in Selected Area
+        </button>
+        <button id="cancelLassoBtn" style="margin-bottom: 20px; display: none; background: #e74c3c;">
+            ✖ Cancel Lasso
+        </button>
+        <div id="lassoStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
         <!-- Manual Calibration Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;">
@@ -538,7 +544,10 @@
         obstacles: [],
         brand: null,
         currentObstacleStart: null,
-        currentMagnifierPosition: null
+        currentMagnifierPosition: null,
+        lassoMode: false,
+        lassoPoints: [],
+        lassoComplete: false
     };
 
     // Equipment type configurations
@@ -955,7 +964,30 @@
     function drawPhotoAndPoints(ctx) {
         ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
         ctx.drawImage(state.photo, 0, 0);
-        
+
+        // Draw lasso if in lasso mode
+        if (state.lassoPoints.length > 0) {
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            for (let i = 1; i < state.lassoPoints.length; i++) {
+                ctx.lineTo(state.lassoPoints[i].x, state.lassoPoints[i].y);
+            }
+            if (state.lassoComplete) {
+                ctx.closePath();
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Fill semi-transparent if complete
+            if (state.lassoComplete) {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+                ctx.fill();
+            }
+        }
+
         if (state.scale.point1) {
             ctx.fillStyle = '#00ff00';
             ctx.beginPath();
@@ -965,7 +997,7 @@
             ctx.lineWidth = 2;
             ctx.stroke();
         }
-        
+
         if (state.scale.point2) {
             ctx.fillStyle = '#00ff00';
             ctx.beginPath();
@@ -974,7 +1006,7 @@
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
-            
+
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -992,6 +1024,11 @@
         // Hide magnifier when resetting
         hideMagnifier();
 
+        // Reset lasso
+        state.lassoMode = false;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
         // Reset the guide status
         document.getElementById('manualCalibrationGuide').style.display = 'none';
         document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
@@ -1006,9 +1043,124 @@
         drawPhotoAndPoints(ctx);
     });
 
-    // Auto-Detect Credit Card using AI
-    document.getElementById('autoDetectBtn').addEventListener('click', async () => {
-        const statusDiv = document.getElementById('autoDetectStatus');
+    // Lasso Tool Functionality
+    document.getElementById('startLassoBtn').addEventListener('click', () => {
+        state.lassoMode = true;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
+        // Hide magnifier during lasso
+        hideMagnifier();
+
+        // Update UI
+        document.getElementById('startLassoBtn').style.display = 'none';
+        document.getElementById('cancelLassoBtn').style.display = 'inline-block';
+        document.getElementById('lassoStatus').style.display = 'block';
+        document.getElementById('lassoStatus').style.background = '#e3f2fd';
+        document.getElementById('lassoStatus').style.color = '#1976d2';
+        document.getElementById('lassoStatus').textContent = '✏️ Draw around the card or brick, then release to finish';
+
+        // Enable lasso drawing on canvas
+        const canvas = document.getElementById('photoCanvas');
+        canvas.style.cursor = 'crosshair';
+    });
+
+    document.getElementById('cancelLassoBtn').addEventListener('click', () => {
+        state.lassoMode = false;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
+        // Reset UI
+        document.getElementById('startLassoBtn').style.display = 'inline-block';
+        document.getElementById('cancelLassoBtn').style.display = 'none';
+        document.getElementById('detectInLassoBtn').style.display = 'none';
+        document.getElementById('lassoStatus').style.display = 'none';
+
+        const canvas = document.getElementById('photoCanvas');
+        canvas.style.cursor = 'default';
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    });
+
+    // Add lasso drawing to canvas
+    function setupLassoDrawing() {
+        const canvas = document.getElementById('photoCanvas');
+
+        let isDrawing = false;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!state.lassoMode) return;
+            isDrawing = true;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!state.lassoMode || !isDrawing) return;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!state.lassoMode || !isDrawing) return;
+            isDrawing = false;
+            state.lassoComplete = true;
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+
+            // Show detect button
+            document.getElementById('detectInLassoBtn').style.display = 'inline-block';
+            document.getElementById('lassoStatus').textContent = '✅ Lasso complete! Click "Detect Card" to find edges with AI';
+            document.getElementById('lassoStatus').style.background = '#e8f5e9';
+            document.getElementById('lassoStatus').style.color = '#2e7d32';
+        });
+
+        // Touch support for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            if (!state.lassoMode) return;
+            e.preventDefault();
+            isDrawing = true;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!state.lassoMode || !isDrawing) return;
+            e.preventDefault();
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+        });
+
+        canvas.addEventListener('touchend', () => {
+            if (!state.lassoMode || !isDrawing) return;
+            isDrawing = false;
+            state.lassoComplete = true;
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+
+            // Show detect button
+            document.getElementById('detectInLassoBtn').style.display = 'inline-block';
+            document.getElementById('lassoStatus').textContent = '✅ Lasso complete! Click "Detect Card" to find edges with AI';
+            document.getElementById('lassoStatus').style.background = '#e8f5e9';
+            document.getElementById('lassoStatus').style.color = '#2e7d32';
+        });
+    }
+
+    // Call setup after canvas is ready
+    setTimeout(() => {
+        const canvas = document.getElementById('photoCanvas');
+        if (canvas) {
+            setupLassoDrawing();
+        }
+    }, 100);
+
+    // Detect Card in Lasso Region using AI
+    document.getElementById('detectInLassoBtn').addEventListener('click', async () => {
+        const statusDiv = document.getElementById('lassoStatus');
         const btn = document.getElementById('autoDetectBtn');
 
         // Show loading status
