@@ -324,6 +324,22 @@
         min-width: 56px;
         min-height: 56px;
     }
+
+    /* Tool buttons styling */
+    .tool-btn {
+        transition: all 0.2s ease;
+    }
+
+    .tool-btn:active, .tool-btn.active {
+        border-color: #2ecc71 !important;
+        background: #2ecc71 !important;
+        transform: scale(0.98);
+    }
+
+    .tool-btn:hover:not(.active) {
+        opacity: 0.9;
+        transform: scale(1.02);
+    }
 </style>
 ```
 
@@ -518,7 +534,25 @@
         <!-- Manual Marking Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;" id="step4Instructions">
             <strong>📏 Option 2: Manual Marking</strong><br>
-            Draw rectangles around walls, windows, doors, and other obstacles.
+            Choose a marking tool and draw obstacles on the photo.
+        </div>
+
+        <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+            <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
+                </button>
+                <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
+                </button>
+                <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
+                </button>
+            </div>
+            <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
+                <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
+            </div>
         </div>
 
         <canvas id="photoCanvas3"></canvas>
@@ -595,7 +629,8 @@
         currentMagnifierPosition: null,
         lassoMode: false,
         lassoPoints: [],
-        lassoComplete: false
+        lassoComplete: false,
+        drawingTool: 'rectangle' // 'rectangle', 'line', or 'circle'
     };
 
     // Equipment type configurations
@@ -1927,20 +1962,51 @@
         }
     });
 
+    // Tool selection handlers
+    function setDrawingTool(tool) {
+        state.drawingTool = tool;
+
+        // Update button styles
+        document.getElementById('rectangleToolBtn').classList.remove('active');
+        document.getElementById('lineToolBtn').classList.remove('active');
+        document.getElementById('circleToolBtn').classList.remove('active');
+
+        const instructions = document.getElementById('toolInstructions');
+
+        if (tool === 'rectangle') {
+            document.getElementById('rectangleToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle';
+        } else if (tool === 'line') {
+            document.getElementById('lineToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>📏 Line Tool:</strong> Tap two points to draw a line (obstacle extends perpendicular from line)';
+        } else if (tool === 'circle') {
+            document.getElementById('circleToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>⭕ Circle Tool:</strong> Tap center then drag to set radius of circular obstacle';
+        }
+    }
+
     // Step 4: Mark Obstacles
     function setupObstacleCanvas() {
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = state.photoWidth;
         canvas.height = state.photoHeight;
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
+        // Tool button handlers
+        document.getElementById('rectangleToolBtn').addEventListener('click', () => setDrawingTool('rectangle'));
+        document.getElementById('lineToolBtn').addEventListener('click', () => setDrawingTool('line'));
+        document.getElementById('circleToolBtn').addEventListener('click', () => setDrawingTool('circle'));
+
+        // Initialize with rectangle tool
+        setDrawingTool('rectangle');
+
         canvas.addEventListener('mousedown', handleObstacleMouseDown);
         canvas.addEventListener('mousemove', handleObstacleMouseMove);
         canvas.addEventListener('mouseup', handleObstacleMouseUp);
-        
+
         canvas.addEventListener('touchstart', handleObstacleTouchStart);
         canvas.addEventListener('touchmove', handleObstacleTouchMove);
         canvas.addEventListener('touchend', handleObstacleTouchEnd);
@@ -1956,36 +2022,95 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
         ctx.strokeStyle = '#ffff00';
         ctx.lineWidth = 3;
-        ctx.strokeRect(
-            state.currentObstacleStart.x,
-            state.currentObstacleStart.y,
-            current.x - state.currentObstacleStart.x,
-            current.y - state.currentObstacleStart.y
-        );
+        ctx.setLineDash([5, 5]);
+
+        if (state.drawingTool === 'rectangle') {
+            // Draw preview rectangle
+            ctx.strokeRect(
+                state.currentObstacleStart.x,
+                state.currentObstacleStart.y,
+                current.x - state.currentObstacleStart.x,
+                current.y - state.currentObstacleStart.y
+            );
+        } else if (state.drawingTool === 'line') {
+            // Draw preview line
+            ctx.beginPath();
+            ctx.moveTo(state.currentObstacleStart.x, state.currentObstacleStart.y);
+            ctx.lineTo(current.x, current.y);
+            ctx.stroke();
+        } else if (state.drawingTool === 'circle') {
+            // Draw preview circle
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            ctx.beginPath();
+            ctx.arc(state.currentObstacleStart.x, state.currentObstacleStart.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
     }
 
     function handleObstacleMouseUp(e) {
         if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         const obstacleType = document.getElementById('obstacleType').value;
-        
-        state.obstacles.push({
+
+        const obstacle = {
             type: obstacleType,
-            bounds: {
+            shape: state.drawingTool
+        };
+
+        if (state.drawingTool === 'rectangle') {
+            obstacle.bounds = {
                 x: Math.min(state.currentObstacleStart.x, current.x),
                 y: Math.min(state.currentObstacleStart.y, current.y),
                 width: Math.abs(current.x - state.currentObstacleStart.x),
                 height: Math.abs(current.y - state.currentObstacleStart.y)
-            }
-        });
-        
+            };
+        } else if (state.drawingTool === 'line') {
+            obstacle.line = {
+                x1: state.currentObstacleStart.x,
+                y1: state.currentObstacleStart.y,
+                x2: current.x,
+                y2: current.y
+            };
+            // For clearance calculation, create bounding box
+            obstacle.bounds = {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            };
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            obstacle.circle = {
+                centerX: state.currentObstacleStart.x,
+                centerY: state.currentObstacleStart.y,
+                radius: radius
+            };
+            // For clearance calculation, create bounding box
+            obstacle.bounds = {
+                x: state.currentObstacleStart.x - radius,
+                y: state.currentObstacleStart.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            };
+        }
+
+        state.obstacles.push(obstacle);
+
         state.currentObstacleStart = null;
         updateObstacleList();
         drawPhotoWithObstacles(canvas.getContext('2d'));
@@ -2003,17 +2128,36 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
         ctx.strokeStyle = '#ffff00';
         ctx.lineWidth = 3;
-        ctx.strokeRect(
-            state.currentObstacleStart.x,
-            state.currentObstacleStart.y,
-            current.x - state.currentObstacleStart.x,
-            current.y - state.currentObstacleStart.y
-        );
+        ctx.setLineDash([5, 5]);
+
+        if (state.drawingTool === 'rectangle') {
+            ctx.strokeRect(
+                state.currentObstacleStart.x,
+                state.currentObstacleStart.y,
+                current.x - state.currentObstacleStart.x,
+                current.y - state.currentObstacleStart.y
+            );
+        } else if (state.drawingTool === 'line') {
+            ctx.beginPath();
+            ctx.moveTo(state.currentObstacleStart.x, state.currentObstacleStart.y);
+            ctx.lineTo(current.x, current.y);
+            ctx.stroke();
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            ctx.beginPath();
+            ctx.arc(state.currentObstacleStart.x, state.currentObstacleStart.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
     }
 
     function handleObstacleTouchEnd(e) {
@@ -2022,19 +2166,54 @@
         const canvas = document.getElementById('photoCanvas3');
         const touch = e.changedTouches[0];
         const current = getCanvasCoordinates(canvas, { clientX: touch.clientX, clientY: touch.clientY });
-        
+
         const obstacleType = document.getElementById('obstacleType').value;
-        
-        state.obstacles.push({
+
+        const obstacle = {
             type: obstacleType,
-            bounds: {
+            shape: state.drawingTool
+        };
+
+        if (state.drawingTool === 'rectangle') {
+            obstacle.bounds = {
                 x: Math.min(state.currentObstacleStart.x, current.x),
                 y: Math.min(state.currentObstacleStart.y, current.y),
                 width: Math.abs(current.x - state.currentObstacleStart.x),
                 height: Math.abs(current.y - state.currentObstacleStart.y)
-            }
-        });
-        
+            };
+        } else if (state.drawingTool === 'line') {
+            obstacle.line = {
+                x1: state.currentObstacleStart.x,
+                y1: state.currentObstacleStart.y,
+                x2: current.x,
+                y2: current.y
+            };
+            obstacle.bounds = {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            };
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            obstacle.circle = {
+                centerX: state.currentObstacleStart.x,
+                centerY: state.currentObstacleStart.y,
+                radius: radius
+            };
+            obstacle.bounds = {
+                x: state.currentObstacleStart.x - radius,
+                y: state.currentObstacleStart.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            };
+        }
+
+        state.obstacles.push(obstacle);
+
         state.currentObstacleStart = null;
         updateObstacleList();
         drawPhotoWithObstacles(canvas.getContext('2d'));
@@ -2043,24 +2222,54 @@
     function drawPhotoWithObstacles(ctx) {
         ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
         ctx.drawImage(state.photo, 0, 0);
-        
+
         if (state.equipment) {
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
             ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         state.obstacles.forEach((obstacle, index) => {
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 3;
-            ctx.strokeRect(
-                obstacle.bounds.x,
-                obstacle.bounds.y,
-                obstacle.bounds.width,
-                obstacle.bounds.height
-            );
-            
+
+            // Draw based on shape type
+            if (obstacle.shape === 'rectangle' || !obstacle.shape) {
+                // Rectangle (default for legacy obstacles)
+                ctx.strokeRect(
+                    obstacle.bounds.x,
+                    obstacle.bounds.y,
+                    obstacle.bounds.width,
+                    obstacle.bounds.height
+                );
+            } else if (obstacle.shape === 'line' && obstacle.line) {
+                // Line
+                ctx.beginPath();
+                ctx.moveTo(obstacle.line.x1, obstacle.line.y1);
+                ctx.lineTo(obstacle.line.x2, obstacle.line.y2);
+                ctx.stroke();
+                // Draw small circles at endpoints
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(obstacle.line.x1, obstacle.line.y1, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(obstacle.line.x2, obstacle.line.y2, 5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (obstacle.shape === 'circle' && obstacle.circle) {
+                // Circle
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                // Draw center point
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw label number
             ctx.fillStyle = '#00ff00';
             ctx.font = 'bold 20px Arial';
             ctx.fillText(`${index + 1}`, obstacle.bounds.x + 10, obstacle.bounds.y + 30);
@@ -2070,12 +2279,13 @@
     function updateObstacleList() {
         const list = document.getElementById('obstacleList');
         list.innerHTML = '<h3 style="margin: 10px 0;">Marked Obstacles:</h3>';
-        
+
         state.obstacles.forEach((obstacle, index) => {
+            const shapeIcon = obstacle.shape === 'line' ? '📏' : obstacle.shape === 'circle' ? '⭕' : '📐';
             const item = document.createElement('div');
             item.className = 'obstacle-item';
             item.innerHTML = `
-                <span>${index + 1}. ${OBSTACLE_LABELS[obstacle.type]}</span>
+                <span>${index + 1}. ${OBSTACLE_LABELS[obstacle.type]} ${shapeIcon}</span>
                 <button onclick="removeObstacle(${index})">Remove</button>
             `;
             list.appendChild(item);
