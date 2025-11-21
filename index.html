@@ -305,6 +305,41 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Magnifying glass mark position button - Enhanced for mobile touch */
+    #markPositionBtn:hover {
+        background: rgba(52, 152, 219, 1);
+        transform: translate(-50%, -50%) scale(1.05);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    #markPositionBtn:active {
+        background: rgba(41, 128, 185, 1);
+        transform: translate(-50%, -50%) scale(0.95);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Ensure button is accessible on touch devices */
+    #markPositionBtn {
+        min-width: 56px;
+        min-height: 56px;
+    }
+
+    /* Tool buttons styling */
+    .tool-btn {
+        transition: all 0.2s ease;
+    }
+
+    .tool-btn:active, .tool-btn.active {
+        border-color: #2ecc71 !important;
+        background: #2ecc71 !important;
+        transform: scale(0.98);
+    }
+
+    .tool-btn:hover:not(.active) {
+        opacity: 0.9;
+        transform: scale(1.02);
+    }
 </style>
 ```
 
@@ -361,23 +396,29 @@
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
 
-        <!-- AI Detection Section -->
+        <!-- AI Detection with Lasso Section -->
         <div class="instructions">
-            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
-            Include a reference object in your photo:
+            <strong>🤖 Option 1: AI-Assisted Detection (Recommended)</strong><br>
+            <strong>Step 1:</strong> Draw a rough lasso around your reference object (🔵 blue card or brick)<br>
+            <strong>Step 2:</strong> AI will find exact edges within that area
             <ul style="margin: 5px 0 5px 20px;">
                 <li><strong>🔵 Blue credit/debit card</strong> (85.6mm × 54mm) - Best accuracy</li>
                 <li><strong>Standard UK brick</strong> (215mm × 102.5mm) - Good for outdoor photos</li>
             </ul>
-            Click the button below to let AI find and calibrate automatically.
         </div>
         <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Use a blue card for highest detection accuracy. Ensure the object is fully visible, well-lit, flat, and not tilted.
+            💡 <strong>How it works:</strong> You roughly circle the card, AI refines the exact edges. Much more reliable than auto-detect!
         </div>
-        <button id="autoDetectBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            🤖 Auto-Detect Calibration Object (AI)
+        <button id="startLassoBtn" style="margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            ✏️ Draw Lasso Around Card/Brick
         </button>
-        <div id="autoDetectStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+        <button id="detectInLassoBtn" style="margin-bottom: 20px; display: none; background: #2e7d32;">
+            🤖 Detect Card in Selected Area
+        </button>
+        <button id="cancelLassoBtn" style="margin-bottom: 20px; display: none; background: #e74c3c;">
+            ✖ Cancel Lasso
+        </button>
+        <div id="lassoStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
         <!-- Manual Calibration Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;">
@@ -395,10 +436,35 @@
             <span style="font-size: 0.9em;">🔵 <strong>Blue card recommended for best results</strong> | Standard card: <strong>Width = 85mm</strong> | Height = 54mm</span>
         </div>
         <div id="manualCalibrationGuide" style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 14px; display: none;">
-            <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
-            <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
-            <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
-            <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
+            <div style="margin-bottom: 10px;">
+                <strong>Calibration Mode:</strong>
+                <button id="twoPointModeBtn" style="padding: 5px 12px; font-size: 12px; margin-left: 5px; background: #3498db;" onclick="setCalibrationMode('two-point')">2-Point (Fast)</button>
+                <button id="fourPointModeBtn" style="padding: 5px 12px; font-size: 12px; margin-left: 5px; background: #95a5a6;" onclick="setCalibrationMode('four-point')">4-Point (Accurate)</button>
+            </div>
+            <div id="twoPointInstructions">
+                <strong>📌 Point 1:</strong> <span id="point1Status" style="color: #e74c3c;">Not set - Click the 📍 button in magnifying glass</span>
+                <button id="undoPoint1Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
+                <strong>📌 Point 2:</strong> <span id="point2Status" style="color: #95a5a6;">Waiting for Point 1...</span>
+                <button id="undoPoint2Btn" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button>
+            </div>
+            <div id="fourPointInstructions" style="display: none;">
+                <div style="margin-bottom: 8px; padding: 6px; background: #fff3e0; border-radius: 4px; font-size: 13px;">
+                    ℹ️ <strong>Mark all 4 corners</strong> of a 🔵 blue card clockwise: Top-Left → Top-Right → Bottom-Right → Bottom-Left
+                </div>
+                <strong>📌 Corner 1 (Top-Left):</strong> <span id="point1Status4pt" style="color: #e74c3c;">Not set</span>
+                <button id="undoPoint1Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(1)">↶ Undo</button><br>
+                <strong>📌 Corner 2 (Top-Right):</strong> <span id="point2Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint2Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(2)">↶ Undo</button><br>
+                <strong>📌 Corner 3 (Bottom-Right):</strong> <span id="point3Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint3Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(3)">↶ Undo</button><br>
+                <strong>📌 Corner 4 (Bottom-Left):</strong> <span id="point4Status4pt" style="color: #95a5a6;">Waiting...</span>
+                <button id="undoPoint4Btn4pt" style="display: none; padding: 3px 10px; font-size: 12px; margin-left: 10px; background: #e74c3c;" onclick="undoPoint(4)">↶ Undo</button>
+            </div>
+            <div id="perspectiveWarningDiv" style="display: none; margin-top: 10px; padding: 8px; background: #fff3e0; border-radius: 5px; border-left: 4px solid #ff9800;">
+                <strong>⚠️ Perspective Distortion Detected</strong><br>
+                <span style="font-size: 12px;">The photo appears to be taken at an angle. Scale variation: <span id="scaleVariation"></span>%<br>
+                For best accuracy, retake the photo more straight-on or accept the averaged scale.</span>
+            </div>
             <br>
             <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px;">
                 🔍 <strong>Magnifying glass active</strong> - Move your mouse/finger over the photo to position the magnifying glass, then release. The magnifier stays visible so you can adjust the zoom slider and click the 📍 button to mark the exact position.
@@ -411,8 +477,8 @@
                 <canvas id="magnifyCanvas" width="150" height="150"></canvas>
                 <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
                 <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 2px; background: #e74c3c; transform: translate(-50%, -50%); pointer-events: none;"></div>
-                <!-- Center button for marking positions -->
-                <button id="markPositionBtn" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(52, 152, 219, 0.8); border: 2px solid white; color: white; font-size: 20px; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; padding: 0; font-weight: bold; z-index: 1001;">📍</button>
+                <!-- Center button for marking positions - Optimized for mobile touch -->
+                <button id="markPositionBtn" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; background: rgba(52, 152, 219, 0.9); border: 3px solid white; color: white; font-size: 24px; cursor: pointer; pointer-events: auto; box-shadow: 0 3px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 0; font-weight: bold; z-index: 1001; touch-action: manipulation; -webkit-tap-highlight-color: rgba(52, 152, 219, 0.3); transition: all 0.15s ease;">📍</button>
             </div>
             <!-- Zoom Slider -->
             <div id="zoomSliderContainer" style="display: none; position: absolute; background: rgba(255, 255, 255, 0.95); padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 999; pointer-events: auto;">
@@ -468,7 +534,25 @@
         <!-- Manual Marking Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;" id="step4Instructions">
             <strong>📏 Option 2: Manual Marking</strong><br>
-            Draw rectangles around walls, windows, doors, and other obstacles.
+            Choose a marking tool and draw obstacles on the photo.
+        </div>
+
+        <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+            <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
+                </button>
+                <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
+                </button>
+                <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
+                </button>
+            </div>
+            <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
+                <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
+            </div>
         </div>
 
         <canvas id="photoCanvas3"></canvas>
@@ -531,14 +615,22 @@
         scale: {
             point1: null,
             point2: null,
+            point3: null,
+            point4: null,
+            calibrationMode: 'two-point', // 'two-point' or 'four-point'
             distanceMM: 85,
-            pixelsPerMM: 0
+            pixelsPerMM: 0,
+            perspectiveWarning: false
         },
         equipment: null,
         obstacles: [],
         brand: null,
         currentObstacleStart: null,
-        currentMagnifierPosition: null
+        currentMagnifierPosition: null,
+        lassoMode: false,
+        lassoPoints: [],
+        lassoComplete: false,
+        drawingTool: 'rectangle' // 'rectangle', 'line', or 'circle'
     };
 
     // Equipment type configurations
@@ -760,8 +852,28 @@
         canvas.addEventListener('touchstart', showMagnifierTouch);
         // Note: No touchend handler - magnifier stays visible for button click
 
-        // Add button click handler for marking positions
-        document.getElementById('markPositionBtn').addEventListener('click', handleMarkPositionClick);
+        // Add button click/touch handlers for marking positions
+        // Support both touch and click events for better mobile reliability
+        const markBtn = document.getElementById('markPositionBtn');
+        let touchHandled = false;
+
+        markBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            touchHandled = true;
+            handleMarkPositionClick(e);
+            // Reset flag after a short delay to allow click event filtering
+            setTimeout(() => { touchHandled = false; }, 300);
+        });
+
+        markBtn.addEventListener('click', (e) => {
+            // Prevent double-firing on devices that emit both touch and click
+            if (touchHandled) {
+                e.preventDefault();
+                return;
+            }
+            handleMarkPositionClick(e);
+        });
 
         // Add zoom slider handler
         const zoomSlider = document.getElementById('zoomSlider');
@@ -900,26 +1012,120 @@
         // User can reposition by touching/moving on the canvas again
     }
 
+    // Set calibration mode (2-point or 4-point)
+    function setCalibrationMode(mode) {
+        state.scale.calibrationMode = mode;
+
+        // Reset all points
+        state.scale.point1 = null;
+        state.scale.point2 = null;
+        state.scale.point3 = null;
+        state.scale.point4 = null;
+        state.scale.perspectiveWarning = false;
+
+        // Update UI
+        if (mode === 'two-point') {
+            document.getElementById('twoPointModeBtn').style.background = '#3498db';
+            document.getElementById('fourPointModeBtn').style.background = '#95a5a6';
+            document.getElementById('twoPointInstructions').style.display = 'block';
+            document.getElementById('fourPointInstructions').style.display = 'none';
+            document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            document.getElementById('knownDistance').parentElement.parentElement.style.display = 'block';
+        } else {
+            document.getElementById('twoPointModeBtn').style.background = '#95a5a6';
+            document.getElementById('fourPointModeBtn').style.background = '#3498db';
+            document.getElementById('twoPointInstructions').style.display = 'none';
+            document.getElementById('fourPointInstructions').style.display = 'block';
+            document.getElementById('knownDistance').parentElement.parentElement.style.display = 'none';
+        }
+
+        // Reset UI states
+        resetCalibrationUI();
+
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    }
+
+    function resetCalibrationUI() {
+        // 2-point mode
+        document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
+        document.getElementById('point1Status').style.color = '#e74c3c';
+        document.getElementById('undoPoint1Btn').style.display = 'none';
+        document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+        document.getElementById('point2Status').style.color = '#95a5a6';
+        document.getElementById('undoPoint2Btn').style.display = 'none';
+
+        // 4-point mode
+        document.getElementById('point1Status4pt').textContent = 'Not set';
+        document.getElementById('point1Status4pt').style.color = '#e74c3c';
+        document.getElementById('undoPoint1Btn4pt').style.display = 'none';
+        document.getElementById('point2Status4pt').textContent = 'Waiting...';
+        document.getElementById('point2Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint2Btn4pt').style.display = 'none';
+        document.getElementById('point3Status4pt').textContent = 'Waiting...';
+        document.getElementById('point3Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+        document.getElementById('point4Status4pt').textContent = 'Waiting...';
+        document.getElementById('point4Status4pt').style.color = '#95a5a6';
+        document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+
+        document.getElementById('confirmScaleBtn').disabled = true;
+    }
+
     function handleScalePoint(coords) {
         // Show the manual calibration guide when user starts clicking button
         const guide = document.getElementById('manualCalibrationGuide');
         guide.style.display = 'block';
 
-        if (!state.scale.point1) {
-            state.scale.point1 = coords;
-            // Update status
-            document.getElementById('point1Status').textContent = '✓ Set';
-            document.getElementById('point1Status').style.color = '#2e7d32';
-            document.getElementById('undoPoint1Btn').style.display = 'inline-block';
-            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
-            document.getElementById('point2Status').style.color = '#e74c3c';
-        } else if (!state.scale.point2) {
-            state.scale.point2 = coords;
-            document.getElementById('confirmScaleBtn').disabled = false;
-            // Update status
-            document.getElementById('point2Status').textContent = '✓ Set';
-            document.getElementById('point2Status').style.color = '#2e7d32';
-            document.getElementById('undoPoint2Btn').style.display = 'inline-block';
+        if (state.scale.calibrationMode === 'two-point') {
+            // 2-POINT MODE
+            if (!state.scale.point1) {
+                state.scale.point1 = coords;
+                document.getElementById('point1Status').textContent = '✓ Set';
+                document.getElementById('point1Status').style.color = '#2e7d32';
+                document.getElementById('undoPoint1Btn').style.display = 'inline-block';
+                document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
+                document.getElementById('point2Status').style.color = '#e74c3c';
+            } else if (!state.scale.point2) {
+                state.scale.point2 = coords;
+                document.getElementById('confirmScaleBtn').disabled = false;
+                document.getElementById('point2Status').textContent = '✓ Set';
+                document.getElementById('point2Status').style.color = '#2e7d32';
+                document.getElementById('undoPoint2Btn').style.display = 'inline-block';
+            }
+        } else {
+            // 4-POINT MODE (corners of credit card)
+            if (!state.scale.point1) {
+                state.scale.point1 = coords;
+                document.getElementById('point1Status4pt').textContent = '✓ Set';
+                document.getElementById('point1Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint1Btn4pt').style.display = 'inline-block';
+                document.getElementById('point2Status4pt').textContent = 'Mark top-right corner';
+                document.getElementById('point2Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point2) {
+                state.scale.point2 = coords;
+                document.getElementById('point2Status4pt').textContent = '✓ Set';
+                document.getElementById('point2Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint2Btn4pt').style.display = 'inline-block';
+                document.getElementById('point3Status4pt').textContent = 'Mark bottom-right corner';
+                document.getElementById('point3Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point3) {
+                state.scale.point3 = coords;
+                document.getElementById('point3Status4pt').textContent = '✓ Set';
+                document.getElementById('point3Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'inline-block';
+                document.getElementById('point4Status4pt').textContent = 'Mark bottom-left corner';
+                document.getElementById('point4Status4pt').style.color = '#e74c3c';
+            } else if (!state.scale.point4) {
+                state.scale.point4 = coords;
+                document.getElementById('point4Status4pt').textContent = '✓ Set';
+                document.getElementById('point4Status4pt').style.color = '#2e7d32';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'inline-block';
+
+                // Calculate scale from 4 corners
+                calculate4PointScale();
+            }
         }
 
         const canvas = document.getElementById('photoCanvas');
@@ -929,22 +1135,64 @@
 
     // Undo point function
     function undoPoint(pointNumber) {
-        if (pointNumber === 1) {
-            state.scale.point1 = null;
-            state.scale.point2 = null; // Also reset point 2 if undoing point 1
-            document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
-            document.getElementById('point1Status').style.color = '#e74c3c';
-            document.getElementById('undoPoint1Btn').style.display = 'none';
-            document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
-            document.getElementById('point2Status').style.color = '#95a5a6';
-            document.getElementById('undoPoint2Btn').style.display = 'none';
-            document.getElementById('confirmScaleBtn').disabled = true;
-        } else if (pointNumber === 2) {
-            state.scale.point2 = null;
-            document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
-            document.getElementById('point2Status').style.color = '#e74c3c';
-            document.getElementById('undoPoint2Btn').style.display = 'none';
-            document.getElementById('confirmScaleBtn').disabled = true;
+        if (state.scale.calibrationMode === 'two-point') {
+            if (pointNumber === 1) {
+                state.scale.point1 = null;
+                state.scale.point2 = null;
+                document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
+                document.getElementById('point1Status').style.color = '#e74c3c';
+                document.getElementById('undoPoint1Btn').style.display = 'none';
+                document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
+                document.getElementById('point2Status').style.color = '#95a5a6';
+                document.getElementById('undoPoint2Btn').style.display = 'none';
+                document.getElementById('confirmScaleBtn').disabled = true;
+            } else if (pointNumber === 2) {
+                state.scale.point2 = null;
+                document.getElementById('point2Status').textContent = 'Click the 📍 button for second point';
+                document.getElementById('point2Status').style.color = '#e74c3c';
+                document.getElementById('undoPoint2Btn').style.display = 'none';
+                document.getElementById('confirmScaleBtn').disabled = true;
+            }
+        } else {
+            // 4-point mode
+            if (pointNumber === 1) {
+                state.scale.point1 = null;
+                state.scale.point2 = null;
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                resetCalibrationUI();
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 2) {
+                state.scale.point2 = null;
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                document.getElementById('point2Status4pt').textContent = 'Mark top-right corner';
+                document.getElementById('point2Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint2Btn4pt').style.display = 'none';
+                document.getElementById('point3Status4pt').textContent = 'Waiting...';
+                document.getElementById('point3Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+                document.getElementById('point4Status4pt').textContent = 'Waiting...';
+                document.getElementById('point4Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 3) {
+                state.scale.point3 = null;
+                state.scale.point4 = null;
+                document.getElementById('point3Status4pt').textContent = 'Mark bottom-right corner';
+                document.getElementById('point3Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint3Btn4pt').style.display = 'none';
+                document.getElementById('point4Status4pt').textContent = 'Waiting...';
+                document.getElementById('point4Status4pt').style.color = '#95a5a6';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            } else if (pointNumber === 4) {
+                state.scale.point4 = null;
+                document.getElementById('point4Status4pt').textContent = 'Mark bottom-left corner';
+                document.getElementById('point4Status4pt').style.color = '#e74c3c';
+                document.getElementById('undoPoint4Btn4pt').style.display = 'none';
+                document.getElementById('perspectiveWarningDiv').style.display = 'none';
+            }
         }
 
         const canvas = document.getElementById('photoCanvas');
@@ -952,82 +1200,357 @@
         drawPhotoAndPoints(ctx);
     }
 
+    // Calculate scale from 4 corners of credit card (85.6mm x 54mm)
+    function calculate4PointScale() {
+        const p1 = state.scale.point1; // Top-left
+        const p2 = state.scale.point2; // Top-right
+        const p3 = state.scale.point3; // Bottom-right
+        const p4 = state.scale.point4; // Bottom-left
+
+        // Calculate distances
+        const topWidthPx = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        const bottomWidthPx = Math.sqrt(Math.pow(p3.x - p4.x, 2) + Math.pow(p3.y - p4.y, 2));
+        const leftHeightPx = Math.sqrt(Math.pow(p4.x - p1.x, 2) + Math.pow(p4.y - p1.y, 2));
+        const rightHeightPx = Math.sqrt(Math.pow(p3.x - p2.x, 2) + Math.pow(p3.y - p2.y, 2));
+
+        // Credit card dimensions
+        const cardWidthMM = 85.6;
+        const cardHeightMM = 54;
+
+        // Calculate scale from each measurement
+        const scaleFromTopWidth = topWidthPx / cardWidthMM;
+        const scaleFromBottomWidth = bottomWidthPx / cardWidthMM;
+        const scaleFromLeftHeight = leftHeightPx / cardHeightMM;
+        const scaleFromRightHeight = rightHeightPx / cardHeightMM;
+
+        // Calculate average scale
+        const avgScale = (scaleFromTopWidth + scaleFromBottomWidth + scaleFromLeftHeight + scaleFromRightHeight) / 4;
+
+        // Calculate variation (to detect perspective distortion)
+        const scales = [scaleFromTopWidth, scaleFromBottomWidth, scaleFromLeftHeight, scaleFromRightHeight];
+        const maxScale = Math.max(...scales);
+        const minScale = Math.min(...scales);
+        const variation = ((maxScale - minScale) / avgScale) * 100;
+
+        // Set the scale
+        state.scale.pixelsPerMM = avgScale;
+        state.scale.distanceMM = cardWidthMM; // For reference
+
+        // Show warning if significant perspective distortion (>10% variation)
+        if (variation > 10) {
+            state.scale.perspectiveWarning = true;
+            document.getElementById('perspectiveWarningDiv').style.display = 'block';
+            document.getElementById('scaleVariation').textContent = variation.toFixed(1);
+        } else {
+            state.scale.perspectiveWarning = false;
+            document.getElementById('perspectiveWarningDiv').style.display = 'none';
+        }
+
+        // Auto-advance to next step
+        setTimeout(() => {
+            hideMagnifier();
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+
+            const info = EQUIPMENT_INFO[state.equipmentType];
+            document.getElementById('equipmentLabel').textContent = info.name;
+            document.getElementById('equipmentLabel2').textContent = info.name;
+            document.getElementById('step3Instructions').textContent = info.markingInstruction;
+
+            setupEquipmentCanvas();
+        }, state.scale.perspectiveWarning ? 3000 : 1500); // Give more time to read warning if present
+    }
+
     function drawPhotoAndPoints(ctx) {
         ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
         ctx.drawImage(state.photo, 0, 0);
-        
-        if (state.scale.point1) {
-            ctx.fillStyle = '#00ff00';
-            ctx.beginPath();
-            ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
-        
-        if (state.scale.point2) {
-            ctx.fillStyle = '#00ff00';
-            ctx.beginPath();
-            ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            ctx.strokeStyle = '#00ff00';
+
+        // Draw lasso if in lasso mode
+        if (state.lassoPoints.length > 0) {
+            ctx.strokeStyle = '#3498db';
             ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
-            ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+            ctx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            for (let i = 1; i < state.lassoPoints.length; i++) {
+                ctx.lineTo(state.lassoPoints[i].x, state.lassoPoints[i].y);
+            }
+            if (state.lassoComplete) {
+                ctx.closePath();
+            }
             ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Fill semi-transparent if complete
+            if (state.lassoComplete) {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+                ctx.fill();
+            }
+        }
+
+        // Draw calibration points based on mode
+        if (state.scale.calibrationMode === 'two-point') {
+            // 2-POINT MODE: Draw two points and a line
+            if (state.scale.point1) {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            if (state.scale.point2) {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
+                ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+                ctx.stroke();
+            }
+        } else {
+            // 4-POINT MODE: Draw all 4 corners and card outline
+            const points = [state.scale.point1, state.scale.point2, state.scale.point3, state.scale.point4];
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ff00ff']; // Red, Green, Blue, Magenta
+            const labels = ['TL', 'TR', 'BR', 'BL']; // Top-Left, Top-Right, Bottom-Right, Bottom-Left
+
+            points.forEach((point, index) => {
+                if (point) {
+                    // Draw point circle
+                    ctx.fillStyle = colors[index];
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Draw label
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(labels[index], point.x, point.y);
+                }
+            });
+
+            // Draw card outline if all 4 points are set
+            if (state.scale.point1 && state.scale.point2 && state.scale.point3 && state.scale.point4) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
+                ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
+                ctx.lineTo(state.scale.point3.x, state.scale.point3.y);
+                ctx.lineTo(state.scale.point4.x, state.scale.point4.y);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Fill with semi-transparent overlay
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                ctx.fill();
+            }
         }
     }
 
     document.getElementById('resetScaleBtn').addEventListener('click', () => {
         state.scale.point1 = null;
         state.scale.point2 = null;
+        state.scale.point3 = null;
+        state.scale.point4 = null;
+        state.scale.perspectiveWarning = false;
         document.getElementById('confirmScaleBtn').disabled = true;
 
         // Hide magnifier when resetting
         hideMagnifier();
 
+        // Reset lasso
+        state.lassoMode = false;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
         // Reset the guide status
         document.getElementById('manualCalibrationGuide').style.display = 'none';
-        document.getElementById('point1Status').textContent = 'Not set - Click the 📍 button in magnifying glass';
-        document.getElementById('point1Status').style.color = '#e74c3c';
-        document.getElementById('undoPoint1Btn').style.display = 'none';
-        document.getElementById('point2Status').textContent = 'Waiting for Point 1...';
-        document.getElementById('point2Status').style.color = '#95a5a6';
-        document.getElementById('undoPoint2Btn').style.display = 'none';
+        resetCalibrationUI();
+        document.getElementById('perspectiveWarningDiv').style.display = 'none';
 
         const canvas = document.getElementById('photoCanvas');
         const ctx = canvas.getContext('2d');
         drawPhotoAndPoints(ctx);
     });
 
-    // Auto-Detect Credit Card using AI
-    document.getElementById('autoDetectBtn').addEventListener('click', async () => {
-        const statusDiv = document.getElementById('autoDetectStatus');
-        const btn = document.getElementById('autoDetectBtn');
+    // Lasso Tool Functionality
+    document.getElementById('startLassoBtn').addEventListener('click', () => {
+        state.lassoMode = true;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
+        // Hide magnifier during lasso
+        hideMagnifier();
+
+        // Update UI
+        document.getElementById('startLassoBtn').style.display = 'none';
+        document.getElementById('cancelLassoBtn').style.display = 'inline-block';
+        document.getElementById('lassoStatus').style.display = 'block';
+        document.getElementById('lassoStatus').style.background = '#e3f2fd';
+        document.getElementById('lassoStatus').style.color = '#1976d2';
+        document.getElementById('lassoStatus').textContent = '✏️ Draw around the card or brick, then release to finish';
+
+        // Enable lasso drawing on canvas
+        const canvas = document.getElementById('photoCanvas');
+        canvas.style.cursor = 'crosshair';
+    });
+
+    document.getElementById('cancelLassoBtn').addEventListener('click', () => {
+        state.lassoMode = false;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+
+        // Reset UI
+        document.getElementById('startLassoBtn').style.display = 'inline-block';
+        document.getElementById('cancelLassoBtn').style.display = 'none';
+        document.getElementById('detectInLassoBtn').style.display = 'none';
+        document.getElementById('lassoStatus').style.display = 'none';
+
+        const canvas = document.getElementById('photoCanvas');
+        canvas.style.cursor = 'default';
+        const ctx = canvas.getContext('2d');
+        drawPhotoAndPoints(ctx);
+    });
+
+    // Add lasso drawing to canvas
+    function setupLassoDrawing() {
+        const canvas = document.getElementById('photoCanvas');
+
+        let isDrawing = false;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!state.lassoMode) return;
+            isDrawing = true;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!state.lassoMode || !isDrawing) return;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!state.lassoMode || !isDrawing) return;
+            isDrawing = false;
+            state.lassoComplete = true;
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+
+            // Show detect button
+            document.getElementById('detectInLassoBtn').style.display = 'inline-block';
+            document.getElementById('lassoStatus').textContent = '✅ Lasso complete! Click "Detect Card" to find edges with AI';
+            document.getElementById('lassoStatus').style.background = '#e8f5e9';
+            document.getElementById('lassoStatus').style.color = '#2e7d32';
+        });
+
+        // Touch support for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            if (!state.lassoMode) return;
+            e.preventDefault();
+            isDrawing = true;
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!state.lassoMode || !isDrawing) return;
+            e.preventDefault();
+            const coords = getCanvasCoordinates(canvas, e);
+            state.lassoPoints.push(coords);
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+        });
+
+        canvas.addEventListener('touchend', () => {
+            if (!state.lassoMode || !isDrawing) return;
+            isDrawing = false;
+            state.lassoComplete = true;
+            const ctx = canvas.getContext('2d');
+            drawPhotoAndPoints(ctx);
+
+            // Show detect button
+            document.getElementById('detectInLassoBtn').style.display = 'inline-block';
+            document.getElementById('lassoStatus').textContent = '✅ Lasso complete! Click "Detect Card" to find edges with AI';
+            document.getElementById('lassoStatus').style.background = '#e8f5e9';
+            document.getElementById('lassoStatus').style.color = '#2e7d32';
+        });
+    }
+
+    // Call setup after canvas is ready
+    setTimeout(() => {
+        const canvas = document.getElementById('photoCanvas');
+        if (canvas) {
+            setupLassoDrawing();
+        }
+    }, 100);
+
+    // Detect Card in Lasso Region using AI
+    document.getElementById('detectInLassoBtn').addEventListener('click', async () => {
+        const statusDiv = document.getElementById('lassoStatus');
+        const btn = document.getElementById('detectInLassoBtn');
 
         // Show loading status
         statusDiv.style.display = 'block';
         statusDiv.style.background = '#e3f2fd';
         statusDiv.style.color = '#1976d2';
-        statusDiv.textContent = '🔍 Detecting credit card with AI...';
+        statusDiv.textContent = '🔍 Analyzing selected region with AI...';
         btn.disabled = true;
 
         try {
-            // Convert image to base64
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = state.photoWidth;
-            canvas.height = state.photoHeight;
-            ctx.drawImage(state.photo, 0, 0);
-            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            // Calculate bounding box from lasso points
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            state.lassoPoints.forEach(point => {
+                minX = Math.min(minX, point.x);
+                minY = Math.min(minY, point.y);
+                maxX = Math.max(maxX, point.x);
+                maxY = Math.max(maxY, point.y);
+            });
 
-            // Call AI Worker (use minimal object detection to save API costs)
+            // Add padding (20%) to bounding box
+            const padding = 0.2;
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const paddedMinX = Math.max(0, minX - width * padding);
+            const paddedMinY = Math.max(0, minY - height * padding);
+            const paddedMaxX = Math.min(state.photoWidth, maxX + width * padding);
+            const paddedMaxY = Math.min(state.photoHeight, maxY + height * padding);
+            const paddedWidth = paddedMaxX - paddedMinX;
+            const paddedHeight = paddedMaxY - paddedMinY;
+
+            // Crop image to lasso region
+            const cropCanvas = document.createElement('canvas');
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCanvas.width = paddedWidth;
+            cropCanvas.height = paddedHeight;
+            cropCtx.drawImage(
+                state.photo,
+                paddedMinX, paddedMinY, paddedWidth, paddedHeight,
+                0, 0, paddedWidth, paddedHeight
+            );
+
+            // Convert cropped image to base64
+            const croppedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI Worker with cropped image and crop metadata
             let response;
             try {
                 response = await fetch('https://clearance.martinbibb.workers.dev', {
@@ -1036,19 +1559,27 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        image: imageBase64,
+                        image: croppedImageBase64,
                         equipmentType: state.equipmentType,
-                        detectObjects: [], // Empty array - we only need card detection
-                        cardColorHint: 'blue' // Hint to AI that calibration card is blue for better detection
+                        detectObjects: [],
+                        cardColorHint: 'blue',
+                        cropMetadata: {
+                            originX: paddedMinX,
+                            originY: paddedMinY,
+                            width: paddedWidth,
+                            height: paddedHeight,
+                            fullImageWidth: state.photoWidth,
+                            fullImageHeight: state.photoHeight
+                        },
+                        useHybridDetection: true // Flag to tell AI this is a user-hinted crop
                     }),
-                    signal: AbortSignal.timeout(30000) // 30 second timeout
+                    signal: AbortSignal.timeout(30000)
                 });
             } catch (fetchError) {
-                // Network error or timeout
                 if (fetchError.name === 'TimeoutError') {
-                    throw new Error('Request timed out after 30 seconds. The image may be too large or the service is slow. Try a smaller image.');
+                    throw new Error('Request timed out. Try drawing a smaller lasso around just the card.');
                 } else if (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('Load failed')) {
-                    throw new Error('Cannot connect to AI service. Check your internet connection or the service may be temporarily unavailable.');
+                    throw new Error('Cannot connect to AI service. Check your internet connection.');
                 }
                 throw new Error(`Network error: ${fetchError.message}`);
             }
@@ -1060,24 +1591,22 @@
                     if (errorData.error) {
                         errorMessage = errorData.error;
                     }
-                } catch (e) {
-                    // Could not parse error response
-                }
+                } catch (e) {}
                 throw new Error(errorMessage);
             }
 
             const result = await response.json();
 
-            // Check what was detected (priority: card > brick > nothing)
+            // Check what was detected in the cropped region
             if (result.calibration && result.calibration.creditCardDetected) {
-                // CREDIT CARD DETECTED
+                // CREDIT CARD DETECTED in crop
                 const cardBounds = result.calibration.creditCardBounds.bounds;
 
-                // Scale factor: API returns coordinates based on 1000x1000 reference
-                const scaleX = state.photoWidth / 1000;
-                const scaleY = state.photoHeight / 1000;
+                // Scale factor: API returns coordinates based on 1000x1000 reference of CROPPED image
+                const scaleX = paddedWidth / 1000;
+                const scaleY = paddedHeight / 1000;
 
-                // Scale card bounds to actual image dimensions
+                // Scale card bounds to cropped image dimensions
                 const cardWidthPx = cardBounds.width * scaleX;
                 const cardHeightPx = cardBounds.height * scaleY;
 
@@ -1088,10 +1617,18 @@
                 state.scale.pixelsPerMM = actualCardWidthPx / 85;
                 state.scale.distanceMM = 85; // Credit card width
 
+                // Reset lasso UI
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+                document.getElementById('startLassoBtn').style.display = 'inline-block';
+                document.getElementById('cancelLassoBtn').style.display = 'none';
+                document.getElementById('detectInLassoBtn').style.display = 'none';
+
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected!</strong><br>` +
+                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
                     `Reference: 85mm blue card width`;
@@ -1114,31 +1651,28 @@
                 }, 1500);
 
             } else if (result.calibration && result.calibration.brickDetected) {
-                // BRICK DETECTED (FALLBACK)
+                // BRICK DETECTED (FALLBACK) in cropped region
                 const brickBounds = result.calibration.brickBounds.bounds;
                 const orientation = result.calibration.brickBounds.orientation;
 
-                // Scale factor: API returns coordinates based on 1000x1000 reference
-                const scaleX = state.photoWidth / 1000;
-                const scaleY = state.photoHeight / 1000;
+                // Scale factor: API returns coordinates based on 1000x1000 reference of CROPPED image
+                const scaleX = paddedWidth / 1000;
+                const scaleY = paddedHeight / 1000;
 
-                // Scale brick bounds to actual image dimensions
+                // Scale brick bounds to cropped image dimensions
                 const brickWidthPx = brickBounds.width * scaleX;
                 const brickHeightPx = brickBounds.height * scaleY;
 
                 // Standard UK brick: 215mm x 102.5mm x 65mm
-                // Use the appropriate dimension based on orientation
                 let referenceMM;
                 let actualSizePx;
                 let brickDimension;
 
                 if (orientation === 'horizontal') {
-                    // Width should be ~215mm
                     actualSizePx = Math.max(brickWidthPx, brickHeightPx);
                     referenceMM = 215;
                     brickDimension = 'length (215mm)';
                 } else {
-                    // Height/width might be 102.5mm or 65mm
                     actualSizePx = Math.max(brickWidthPx, brickHeightPx);
                     referenceMM = 102.5;
                     brickDimension = 'width (102.5mm)';
@@ -1148,23 +1682,28 @@
                 state.scale.pixelsPerMM = actualSizePx / referenceMM;
                 state.scale.distanceMM = referenceMM;
 
+                // Reset lasso UI
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+                document.getElementById('startLassoBtn').style.display = 'inline-block';
+                document.getElementById('cancelLassoBtn').style.display = 'none';
+                document.getElementById('detectInLassoBtn').style.display = 'none';
+
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>Brick detected!</strong> (No card found - using brick as reference)<br>` +
+                statusDiv.innerHTML = `✅ <strong>Brick detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.brickBounds.confidence * 100).toFixed(0)}%<br>` +
                     `Reference: Standard UK brick ${brickDimension}`;
 
-                // Auto-advance to next step after 2 seconds (give user time to read)
+                // Auto-advance to next step
                 setTimeout(() => {
-                    // Hide magnifier when moving to next step
                     hideMagnifier();
-
                     document.getElementById('step2').classList.add('hidden');
                     document.getElementById('step3').classList.remove('hidden');
 
-                    // Update step 3 labels
                     const info = EQUIPMENT_INFO[state.equipmentType];
                     document.getElementById('equipmentLabel').textContent = info.name;
                     document.getElementById('equipmentLabel2').textContent = info.name;
@@ -1174,23 +1713,16 @@
                 }, 2000);
 
             } else {
-                // NOTHING DETECTED - clear message about what AI tried
+                // NOTHING DETECTED in lasso region
                 statusDiv.style.background = '#fff3e0';
                 statusDiv.style.color = '#e65100';
-                statusDiv.innerHTML = '⚠️ <strong>AI Detection: No calibration objects found</strong><br>' +
-                    '<small>Searched for: Blue credit card, Standard bricks</small><br><br>' +
-                    '<strong>💡 To improve detection:</strong><br>' +
-                    '• Include a 🔵 <strong>BLUE credit/debit card</strong> (85mm wide) OR standard brick in your photo<br>' +
-                    '• Blue cards provide the highest detection accuracy<br>' +
-                    '• Ensure good lighting without glare or shadows<br>' +
-                    '• Object should be fully visible and flat<br>' +
-                    '• Avoid tilted or partially visible objects<br><br>' +
-                    '<strong>📏 Or use Manual Calibration below:</strong><br>' +
-                    '1. <strong>Tap two points</strong> on any known object (🔵 blue card recommended, brick, ruler, etc.)<br>' +
-                    '2. <strong>Enter the distance</strong> between those points in mm<br>' +
-                    '   • Blue card width = <strong>85mm</strong> (best accuracy)<br>' +
-                    '   • Standard brick length = <strong>215mm</strong><br>' +
-                    '3. Click <strong>"Confirm Scale"</strong>';
+                statusDiv.innerHTML = '⚠️ <strong>No card/brick found in lasso region</strong><br><br>' +
+                    '<strong>💡 Try again:</strong><br>' +
+                    '• Draw lasso closer around the card/brick<br>' +
+                    '• Make sure the card is fully visible in the lasso<br>' +
+                    '• Ensure good lighting without glare<br>' +
+                    '• 🔵 Blue cards work best!<br><br>' +
+                    '<strong>Or use Manual Calibration below instead</strong>';
                 btn.disabled = false;
 
                 // Show the manual calibration guide
@@ -1430,20 +1962,51 @@
         }
     });
 
+    // Tool selection handlers
+    function setDrawingTool(tool) {
+        state.drawingTool = tool;
+
+        // Update button styles
+        document.getElementById('rectangleToolBtn').classList.remove('active');
+        document.getElementById('lineToolBtn').classList.remove('active');
+        document.getElementById('circleToolBtn').classList.remove('active');
+
+        const instructions = document.getElementById('toolInstructions');
+
+        if (tool === 'rectangle') {
+            document.getElementById('rectangleToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle';
+        } else if (tool === 'line') {
+            document.getElementById('lineToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>📏 Line Tool:</strong> Tap two points to draw a line (obstacle extends perpendicular from line)';
+        } else if (tool === 'circle') {
+            document.getElementById('circleToolBtn').classList.add('active');
+            instructions.innerHTML = '<strong>⭕ Circle Tool:</strong> Tap center then drag to set radius of circular obstacle';
+        }
+    }
+
     // Step 4: Mark Obstacles
     function setupObstacleCanvas() {
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = state.photoWidth;
         canvas.height = state.photoHeight;
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
+        // Tool button handlers
+        document.getElementById('rectangleToolBtn').addEventListener('click', () => setDrawingTool('rectangle'));
+        document.getElementById('lineToolBtn').addEventListener('click', () => setDrawingTool('line'));
+        document.getElementById('circleToolBtn').addEventListener('click', () => setDrawingTool('circle'));
+
+        // Initialize with rectangle tool
+        setDrawingTool('rectangle');
+
         canvas.addEventListener('mousedown', handleObstacleMouseDown);
         canvas.addEventListener('mousemove', handleObstacleMouseMove);
         canvas.addEventListener('mouseup', handleObstacleMouseUp);
-        
+
         canvas.addEventListener('touchstart', handleObstacleTouchStart);
         canvas.addEventListener('touchmove', handleObstacleTouchMove);
         canvas.addEventListener('touchend', handleObstacleTouchEnd);
@@ -1459,36 +2022,95 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
         ctx.strokeStyle = '#ffff00';
         ctx.lineWidth = 3;
-        ctx.strokeRect(
-            state.currentObstacleStart.x,
-            state.currentObstacleStart.y,
-            current.x - state.currentObstacleStart.x,
-            current.y - state.currentObstacleStart.y
-        );
+        ctx.setLineDash([5, 5]);
+
+        if (state.drawingTool === 'rectangle') {
+            // Draw preview rectangle
+            ctx.strokeRect(
+                state.currentObstacleStart.x,
+                state.currentObstacleStart.y,
+                current.x - state.currentObstacleStart.x,
+                current.y - state.currentObstacleStart.y
+            );
+        } else if (state.drawingTool === 'line') {
+            // Draw preview line
+            ctx.beginPath();
+            ctx.moveTo(state.currentObstacleStart.x, state.currentObstacleStart.y);
+            ctx.lineTo(current.x, current.y);
+            ctx.stroke();
+        } else if (state.drawingTool === 'circle') {
+            // Draw preview circle
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            ctx.beginPath();
+            ctx.arc(state.currentObstacleStart.x, state.currentObstacleStart.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
     }
 
     function handleObstacleMouseUp(e) {
         if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         const obstacleType = document.getElementById('obstacleType').value;
-        
-        state.obstacles.push({
+
+        const obstacle = {
             type: obstacleType,
-            bounds: {
+            shape: state.drawingTool
+        };
+
+        if (state.drawingTool === 'rectangle') {
+            obstacle.bounds = {
                 x: Math.min(state.currentObstacleStart.x, current.x),
                 y: Math.min(state.currentObstacleStart.y, current.y),
                 width: Math.abs(current.x - state.currentObstacleStart.x),
                 height: Math.abs(current.y - state.currentObstacleStart.y)
-            }
-        });
-        
+            };
+        } else if (state.drawingTool === 'line') {
+            obstacle.line = {
+                x1: state.currentObstacleStart.x,
+                y1: state.currentObstacleStart.y,
+                x2: current.x,
+                y2: current.y
+            };
+            // For clearance calculation, create bounding box
+            obstacle.bounds = {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            };
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            obstacle.circle = {
+                centerX: state.currentObstacleStart.x,
+                centerY: state.currentObstacleStart.y,
+                radius: radius
+            };
+            // For clearance calculation, create bounding box
+            obstacle.bounds = {
+                x: state.currentObstacleStart.x - radius,
+                y: state.currentObstacleStart.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            };
+        }
+
+        state.obstacles.push(obstacle);
+
         state.currentObstacleStart = null;
         updateObstacleList();
         drawPhotoWithObstacles(canvas.getContext('2d'));
@@ -1506,17 +2128,36 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
-        
+
         drawPhotoWithObstacles(ctx);
-        
+
         ctx.strokeStyle = '#ffff00';
         ctx.lineWidth = 3;
-        ctx.strokeRect(
-            state.currentObstacleStart.x,
-            state.currentObstacleStart.y,
-            current.x - state.currentObstacleStart.x,
-            current.y - state.currentObstacleStart.y
-        );
+        ctx.setLineDash([5, 5]);
+
+        if (state.drawingTool === 'rectangle') {
+            ctx.strokeRect(
+                state.currentObstacleStart.x,
+                state.currentObstacleStart.y,
+                current.x - state.currentObstacleStart.x,
+                current.y - state.currentObstacleStart.y
+            );
+        } else if (state.drawingTool === 'line') {
+            ctx.beginPath();
+            ctx.moveTo(state.currentObstacleStart.x, state.currentObstacleStart.y);
+            ctx.lineTo(current.x, current.y);
+            ctx.stroke();
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            ctx.beginPath();
+            ctx.arc(state.currentObstacleStart.x, state.currentObstacleStart.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
     }
 
     function handleObstacleTouchEnd(e) {
@@ -1525,19 +2166,54 @@
         const canvas = document.getElementById('photoCanvas3');
         const touch = e.changedTouches[0];
         const current = getCanvasCoordinates(canvas, { clientX: touch.clientX, clientY: touch.clientY });
-        
+
         const obstacleType = document.getElementById('obstacleType').value;
-        
-        state.obstacles.push({
+
+        const obstacle = {
             type: obstacleType,
-            bounds: {
+            shape: state.drawingTool
+        };
+
+        if (state.drawingTool === 'rectangle') {
+            obstacle.bounds = {
                 x: Math.min(state.currentObstacleStart.x, current.x),
                 y: Math.min(state.currentObstacleStart.y, current.y),
                 width: Math.abs(current.x - state.currentObstacleStart.x),
                 height: Math.abs(current.y - state.currentObstacleStart.y)
-            }
-        });
-        
+            };
+        } else if (state.drawingTool === 'line') {
+            obstacle.line = {
+                x1: state.currentObstacleStart.x,
+                y1: state.currentObstacleStart.y,
+                x2: current.x,
+                y2: current.y
+            };
+            obstacle.bounds = {
+                x: Math.min(state.currentObstacleStart.x, current.x),
+                y: Math.min(state.currentObstacleStart.y, current.y),
+                width: Math.abs(current.x - state.currentObstacleStart.x),
+                height: Math.abs(current.y - state.currentObstacleStart.y)
+            };
+        } else if (state.drawingTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(current.x - state.currentObstacleStart.x, 2) +
+                Math.pow(current.y - state.currentObstacleStart.y, 2)
+            );
+            obstacle.circle = {
+                centerX: state.currentObstacleStart.x,
+                centerY: state.currentObstacleStart.y,
+                radius: radius
+            };
+            obstacle.bounds = {
+                x: state.currentObstacleStart.x - radius,
+                y: state.currentObstacleStart.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            };
+        }
+
+        state.obstacles.push(obstacle);
+
         state.currentObstacleStart = null;
         updateObstacleList();
         drawPhotoWithObstacles(canvas.getContext('2d'));
@@ -1546,24 +2222,54 @@
     function drawPhotoWithObstacles(ctx) {
         ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
         ctx.drawImage(state.photo, 0, 0);
-        
+
         if (state.equipment) {
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
             ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         state.obstacles.forEach((obstacle, index) => {
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 3;
-            ctx.strokeRect(
-                obstacle.bounds.x,
-                obstacle.bounds.y,
-                obstacle.bounds.width,
-                obstacle.bounds.height
-            );
-            
+
+            // Draw based on shape type
+            if (obstacle.shape === 'rectangle' || !obstacle.shape) {
+                // Rectangle (default for legacy obstacles)
+                ctx.strokeRect(
+                    obstacle.bounds.x,
+                    obstacle.bounds.y,
+                    obstacle.bounds.width,
+                    obstacle.bounds.height
+                );
+            } else if (obstacle.shape === 'line' && obstacle.line) {
+                // Line
+                ctx.beginPath();
+                ctx.moveTo(obstacle.line.x1, obstacle.line.y1);
+                ctx.lineTo(obstacle.line.x2, obstacle.line.y2);
+                ctx.stroke();
+                // Draw small circles at endpoints
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(obstacle.line.x1, obstacle.line.y1, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(obstacle.line.x2, obstacle.line.y2, 5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (obstacle.shape === 'circle' && obstacle.circle) {
+                // Circle
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                // Draw center point
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw label number
             ctx.fillStyle = '#00ff00';
             ctx.font = 'bold 20px Arial';
             ctx.fillText(`${index + 1}`, obstacle.bounds.x + 10, obstacle.bounds.y + 30);
@@ -1573,12 +2279,13 @@
     function updateObstacleList() {
         const list = document.getElementById('obstacleList');
         list.innerHTML = '<h3 style="margin: 10px 0;">Marked Obstacles:</h3>';
-        
+
         state.obstacles.forEach((obstacle, index) => {
+            const shapeIcon = obstacle.shape === 'line' ? '📏' : obstacle.shape === 'circle' ? '⭕' : '📐';
             const item = document.createElement('div');
             item.className = 'obstacle-item';
             item.innerHTML = `
-                <span>${index + 1}. ${OBSTACLE_LABELS[obstacle.type]}</span>
+                <span>${index + 1}. ${OBSTACLE_LABELS[obstacle.type]} ${shapeIcon}</span>
                 <button onclick="removeObstacle(${index})">Remove</button>
             `;
             list.appendChild(item);
@@ -1624,53 +2331,113 @@
         generateClearanceOverlay();
     });
 
+    // Draw rounded rectangle (rectangle with 90° arc corners)
+    function drawRoundedRect(ctx, x, y, width, height, radius, fill = true, stroke = true) {
+        // Ensure radius doesn't exceed half of width or height
+        const maxRadius = Math.min(width, height) / 2;
+        const r = Math.min(radius, maxRadius);
+
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + width - r, y);
+        ctx.arc(x + width - r, y + r, r, Math.PI * 1.5, Math.PI * 2); // Top-right corner
+        ctx.lineTo(x + width, y + height - r);
+        ctx.arc(x + width - r, y + height - r, r, 0, Math.PI * 0.5); // Bottom-right corner
+        ctx.lineTo(x + r, y + height);
+        ctx.arc(x + r, y + height - r, r, Math.PI * 0.5, Math.PI); // Bottom-left corner
+        ctx.lineTo(x, y + r);
+        ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5); // Top-left corner
+        ctx.closePath();
+
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+    }
+
+    // Check if point is inside rounded rectangle clearance zone
+    function isPointInRoundedRect(px, py, x, y, width, height, radius) {
+        const maxRadius = Math.min(width, height) / 2;
+        const r = Math.min(radius, maxRadius);
+
+        // Check if point is within the overall bounding box
+        if (px < x || px > x + width || py < y || py > y + height) {
+            return false;
+        }
+
+        // Check corner regions
+        // Top-left corner
+        if (px < x + r && py < y + r) {
+            const dx = px - (x + r);
+            const dy = py - (y + r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Top-right corner
+        if (px > x + width - r && py < y + r) {
+            const dx = px - (x + width - r);
+            const dy = py - (y + r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Bottom-left corner
+        if (px < x + r && py > y + height - r) {
+            const dx = px - (x + r);
+            const dy = py - (y + height - r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+        // Bottom-right corner
+        if (px > x + width - r && py > y + height - r) {
+            const dx = px - (x + width - r);
+            const dy = py - (y + height - r);
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+
+        // Point is in main rectangular region
+        return true;
+    }
+
     function generateClearanceOverlay() {
         const canvas = document.getElementById('photoCanvas4');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = state.photoWidth;
         canvas.height = state.photoHeight;
-        
+
         ctx.drawImage(state.photo, 0, 0);
-        
+
         const rules = CLEARANCE_RULES[state.equipmentType][state.brand].rules;
         const violations = [];
-        
+
         state.obstacles.forEach(obstacle => {
             const rule = rules.find(r => r.obstacle_type === obstacle.type);
             if (!rule) return;
-            
+
             const clearancePx = {
                 above: rule.clearances.above * state.scale.pixelsPerMM,
                 below: rule.clearances.below * state.scale.pixelsPerMM,
                 sides: rule.clearances.sides * state.scale.pixelsPerMM
             };
-            
+
+            // Calculate clearance zone bounds
+            const zoneX = obstacle.bounds.x - clearancePx.sides;
+            const zoneY = obstacle.bounds.y - clearancePx.above;
+            const zoneWidth = obstacle.bounds.width + (2 * clearancePx.sides);
+            const zoneHeight = obstacle.bounds.height + clearancePx.above + clearancePx.below;
+
+            // Corner radius for 90° arcs - use the smaller of the clearances for natural rounding
+            const cornerRadius = Math.min(clearancePx.above, clearancePx.below, clearancePx.sides);
+
+            // Draw clearance zone with rounded corners (90° arcs)
             ctx.fillStyle = rule.color;
-            ctx.fillRect(
-                obstacle.bounds.x - clearancePx.sides,
-                obstacle.bounds.y - clearancePx.above,
-                obstacle.bounds.width + (2 * clearancePx.sides),
-                obstacle.bounds.height + clearancePx.above + clearancePx.below
-            );
-            
             ctx.strokeStyle = rule.stroke;
             ctx.lineWidth = 3;
-            ctx.strokeRect(
-                obstacle.bounds.x - clearancePx.sides,
-                obstacle.bounds.y - clearancePx.above,
-                obstacle.bounds.width + (2 * clearancePx.sides),
-                obstacle.bounds.height + clearancePx.above + clearancePx.below
-            );
-            
-            if (state.equipment.x >= obstacle.bounds.x - clearancePx.sides &&
-                state.equipment.x <= obstacle.bounds.x + obstacle.bounds.width + clearancePx.sides &&
-                state.equipment.y >= obstacle.bounds.y - clearancePx.above &&
-                state.equipment.y <= obstacle.bounds.y + obstacle.bounds.height + clearancePx.below) {
+
+            drawRoundedRect(ctx, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius, true, true);
+
+            // Check if equipment point is in clearance zone using rounded rectangle collision
+            if (isPointInRoundedRect(state.equipment.x, state.equipment.y, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius)) {
                 violations.push({ obstacle, rule });
             }
         });
-        
+
+        // Draw equipment position marker
         ctx.fillStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
         ctx.beginPath();
         ctx.arc(state.equipment.x, state.equipment.y, 20, 0, Math.PI * 2);
@@ -1678,7 +2445,7 @@
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 4;
         ctx.stroke();
-        
+
         displayComplianceResult(violations);
     }
 
