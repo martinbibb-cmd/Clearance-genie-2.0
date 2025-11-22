@@ -2305,13 +2305,13 @@
             const result = await response.json();
 
             // Check if obstacles were detected
-            if (result.obstacles && result.obstacles.length > 0) {
+            if (result.objects && result.objects.length > 0) {
                 // Scale factor: API returns coordinates based on 1000x1000 reference
                 const scaleX = state.photoWidth / 1000;
                 const scaleY = state.photoHeight / 1000;
 
                 // Add detected obstacles to state
-                result.obstacles.forEach(obstacle => {
+                result.objects.forEach(obstacle => {
                     state.obstacles.push({
                         type: obstacle.type,
                         bounds: {
@@ -2326,8 +2326,8 @@
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>Detected ${result.obstacles.length} obstacle(s)!</strong><br>` +
-                    `<small>${result.obstacles.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
+                statusDiv.innerHTML = `✅ <strong>Detected ${result.objects.length} obstacle(s)!</strong><br>` +
+                    `<small>${result.objects.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
                     `You can add more obstacles manually if needed.`;
 
                 // Update obstacle list and canvas
@@ -2423,12 +2423,12 @@
 
             const result = await response.json();
 
-            if (result.obstacles && result.obstacles.length > 0) {
+            if (result.objects && result.objects.length > 0) {
                 // Scale and translate obstacle coordinates
                 const scaleX = cropWidth / 1000;
                 const scaleY = cropHeight / 1000;
 
-                const obstacle = result.obstacles[0]; // Take first detected obstacle
+                const obstacle = result.objects[0]; // Take first detected obstacle
                 state.obstacles.push({
                     type: obstacle.type,
                     shape: 'rectangle',
@@ -3347,14 +3347,14 @@
 
             const result = await response.json();
 
-            // Check for obstacles in response (API returns 'obstacles' not 'detections')
-            if (result.obstacles && result.obstacles.length > 0) {
+            // Check for obstacles in response (API returns 'objects' not 'obstacles')
+            if (result.objects && result.objects.length > 0) {
                 // Scale factor: API returns coordinates based on 1000x1000 reference
                 const scaleX = cropWidth / 1000;
                 const scaleY = cropHeight / 1000;
 
                 // Add detected objects as obstacles
-                result.obstacles.forEach(detection => {
+                result.objects.forEach(detection => {
                     const obstacle = {
                         type: detection.type,
                         shape: 'rectangle',
@@ -3375,7 +3375,7 @@
                 const ctx = document.getElementById('photoCanvas3').getContext('2d');
                 drawPhotoWithObstacles(ctx);
 
-                alert(`✅ AI confirmed ${result.obstacles.length} object(s) in the painted region!`);
+                alert(`✅ AI confirmed ${result.objects.length} object(s) in the painted region!`);
             } else {
                 alert('❌ AI could not detect any objects in the painted region. Try painting more clearly or use manual tools.');
             }
