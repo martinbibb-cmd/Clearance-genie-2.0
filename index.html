@@ -178,6 +178,8 @@
         cursor: pointer;
         text-align: center;
         transition: all 0.3s;
+        touch-action: manipulation;
+        user-select: none;
     }
 
     .equipment-type-btn:hover {
@@ -354,27 +356,27 @@
     <div class="step" id="step0">
         <h2><span class="step-number">0</span> Select Equipment Type</h2>
         <div class="equipment-type-selector">
-            <div class="equipment-type-btn" onclick="selectEquipmentType('flue', event)">
+            <div class="equipment-type-btn" data-equipment-type="flue">
                 <div class="icon">🌬️</div>
                 <div class="label">Flue Terminal</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('combi_boiler', event)">
+            <div class="equipment-type-btn" data-equipment-type="combi_boiler">
                 <div class="icon">🔥</div>
                 <div class="label">Combi Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('system_boiler', event)">
+            <div class="equipment-type-btn" data-equipment-type="system_boiler">
                 <div class="icon">⚙️</div>
                 <div class="label">System Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('regular_boiler', event)">
+            <div class="equipment-type-btn" data-equipment-type="regular_boiler">
                 <div class="icon">🏭</div>
                 <div class="label">Regular Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('radiator', event)">
+            <div class="equipment-type-btn" data-equipment-type="radiator">
                 <div class="icon">♨️</div>
                 <div class="label">Radiator</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('cylinder', event)">
+            <div class="equipment-type-btn" data-equipment-type="cylinder">
                 <div class="icon">🛢️</div>
                 <div class="label">Cylinder</div>
             </div>
@@ -1097,15 +1099,15 @@
     };
 
     // Step 0: Equipment Type Selection
-    window.selectEquipmentType = function(type, event) {
+    function selectEquipmentType(type, clickedButton) {
         state.equipmentType = type;
 
         // Update active button
         document.querySelectorAll('.equipment-type-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        if (event && event.target) {
-            event.target.closest('.equipment-type-btn').classList.add('active');
+        if (clickedButton) {
+            clickedButton.classList.add('active');
         }
 
         // Update info box
@@ -1119,7 +1121,26 @@
             document.getElementById('step0').classList.add('hidden');
             document.getElementById('step1').classList.remove('hidden');
         }, 500);
-    };
+    }
+
+    // Attach event listeners to equipment type buttons
+    document.querySelectorAll('.equipment-type-btn').forEach(btn => {
+        // Handle both click and touch events
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const type = this.getAttribute('data-equipment-type');
+            selectEquipmentType(type, this);
+        });
+
+        // Also handle touchend for better mobile support
+        btn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const type = this.getAttribute('data-equipment-type');
+            selectEquipmentType(type, this);
+        });
+    });
 
     // Utility: Get canvas coordinates from touch/click event
     function getCanvasCoordinates(canvas, event) {
