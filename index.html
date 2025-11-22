@@ -549,9 +549,22 @@
                 <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
                     ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
                 </button>
+                <button id="paintToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    🖌️ Paint<br><span style="font-size: 11px; opacity: 0.9;">AI Confirm Area</span>
+                </button>
             </div>
             <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
                 <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
+            </div>
+            <div id="paintToolControls" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; display: none;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Brush Size: <span id="brushSizeValue">30</span>px</label>
+                <input type="range" id="brushSizeSlider" min="10" max="100" value="30" style="width: 100%;">
+                <button id="confirmPaintMaskBtn" style="margin-top: 8px; padding: 8px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-size: 13px;">
+                    🤖 Confirm Masked Area with AI
+                </button>
+                <button id="clearPaintMaskBtn" style="margin-top: 5px; padding: 6px; background: #e74c3c; color: white; border: none; border-radius: 4px; width: 100%; font-size: 12px;">
+                    Clear Paint Mask
+                </button>
             </div>
         </div>
 
@@ -566,14 +579,23 @@
         <button id="nextToRulesBtn">Continue to Clearance Check</button>
     </div>
 
-    <!-- Step 5: Select Brand & Generate -->
+    <!-- Step 5: Select Brand & Model & Generate -->
     <div class="step hidden" id="step5">
-        <h2><span class="step-number">5</span> Select Manufacturer & Check</h2>
+        <h2><span class="step-number">5</span> Select Manufacturer & Model</h2>
         <div class="input-group" id="brandSelectGroup">
             <label for="brand">Manufacturer:</label>
             <select id="brand">
                 <!-- Will be populated based on equipment type -->
             </select>
+        </div>
+        <div class="input-group" id="modelSelectGroup" style="display: none;">
+            <label for="model">Model:</label>
+            <select id="model">
+                <!-- Will be populated based on selected brand -->
+            </select>
+        </div>
+        <div class="info-box" style="background: #e3f2fd; border-color: #2196f3;">
+            <strong>💡 Model-Specific Clearances:</strong> Each model has specific clearance requirements. Select the exact model for accurate compliance checking.
         </div>
         <button id="generateBtn">Generate Clearance Overlay</button>
     </div>
@@ -602,6 +624,7 @@
         
         <button id="downloadBtn">Download Annotated Photo</button>
         <button class="secondary" id="startOverBtn">Start Over</button>
+        <button class="danger" id="forceResetBtn">🔄 Force Reset (Clear All Data)</button>
     </div>
 </div>
 
@@ -625,12 +648,17 @@
         equipment: null,
         obstacles: [],
         brand: null,
+        model: null, // Selected model
         currentObstacleStart: null,
         currentMagnifierPosition: null,
         lassoMode: false,
         lassoPoints: [],
         lassoComplete: false,
-        drawingTool: 'rectangle' // 'rectangle', 'line', or 'circle'
+        drawingTool: 'rectangle', // 'rectangle', 'line', 'circle', or 'paint'
+        paintMasks: [], // Array of painted mask regions for AI confirmation
+        paintBrushSize: 30, // Paint brush size in pixels
+        isPainting: false,
+        currentPaintStroke: null
     };
 
     // Equipment type configurations
@@ -665,35 +693,65 @@
         }
     };
 
-    // Comprehensive clearance rules database
+    // Comprehensive clearance rules database with model-specific data
     const CLEARANCE_RULES = {
         // FLUE RULES
         flue: {
             worcester_bosch: {
                 name: "Worcester Bosch",
-                rules: [
-                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                ]
+                models: {
+                    greenstar_8000: {
+                        name: "Greenstar 8000 Style",
+                        dimensions: { width: 100, height: 100, depth: 50 }, // mm (flue terminal dimensions)
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    greenstar_4000: {
+                        name: "Greenstar 4000",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    }
+                }
             },
             vaillant: {
                 name: "Vaillant",
-                rules: [
-                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                ]
+                models: {
+                    ecotec_plus: {
+                        name: "ecoTEC Plus",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    }
+                }
             },
             ideal: {
                 name: "Ideal",
-                rules: [
-                    { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                ]
+                models: {
+                    logic_plus: {
+                        name: "Logic Plus",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    }
+                }
             }
         },
         
@@ -701,26 +759,55 @@
         boiler: {
             worcester_bosch: {
                 name: "Worcester Bosch",
-                rules: [
-                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                ]
+                models: {
+                    greenstar_8000_30kw: {
+                        name: "Greenstar 8000 30kW",
+                        dimensions: { width: 440, height: 700, depth: 340 }, // mm
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                        ]
+                    },
+                    greenstar_4000_25kw: {
+                        name: "Greenstar 4000 25kW",
+                        dimensions: { width: 400, height: 720, depth: 330 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                        ]
+                    }
+                }
             },
             vaillant: {
                 name: "Vaillant",
-                rules: [
-                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                ]
+                models: {
+                    ecotec_plus_428: {
+                        name: "ecoTEC Plus 428",
+                        dimensions: { width: 440, height: 720, depth: 338 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                        ]
+                    }
+                }
             },
             ideal: {
                 name: "Ideal",
-                rules: [
-                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                ]
+                models: {
+                    logic_plus_30kw: {
+                        name: "Logic Plus 30kW",
+                        dimensions: { width: 400, height: 700, depth: 290 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    }
+                }
             }
         },
         
@@ -728,28 +815,63 @@
         radiator: {
             general: {
                 name: "General Standards",
-                rules: [
-                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
-                    { obstacle_type: 'floor', clearances: { above: 0, below: 150, sides: 0 }, zone_type: 'circulation', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'window', clearances: { above: 50, below: 0, sides: 50 }, zone_type: 'recommended', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'curtain_rail', clearances: { above: 100, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                    { obstacle_type: 'furniture', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
-                    { obstacle_type: 'socket', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'safety', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                ]
+                models: {
+                    standard_single_600x1000: {
+                        name: "Standard Single Panel 600x1000mm",
+                        dimensions: { width: 1000, height: 600, depth: 55 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 150, sides: 0 }, zone_type: 'circulation', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'window', clearances: { above: 50, below: 0, sides: 50 }, zone_type: 'recommended', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'curtain_rail', clearances: { above: 100, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'furniture', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                            { obstacle_type: 'socket', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'safety', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    standard_double_600x1200: {
+                        name: "Standard Double Panel 600x1200mm",
+                        dimensions: { width: 1200, height: 600, depth: 110 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 150, sides: 0 }, zone_type: 'circulation', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'window', clearances: { above: 50, below: 0, sides: 50 }, zone_type: 'recommended', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'curtain_rail', clearances: { above: 100, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'furniture', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'circulation', color: 'rgba(255, 165, 0, 0.3)', stroke: '#ffa500' },
+                            { obstacle_type: 'socket', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'safety', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    }
+                }
             }
         },
-        
+
         // CYLINDER RULES
         cylinder: {
             general: {
                 name: "General Standards",
-                rules: [
-                    { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'ceiling', clearances: { above: 450, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 400 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                    { obstacle_type: 'corner', clearances: { above: 450, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                ]
+                models: {
+                    standard_150l: {
+                        name: "Standard 150L Cylinder",
+                        dimensions: { width: 450, height: 1050, depth: 450 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'ceiling', clearances: { above: 450, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 400 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'corner', clearances: { above: 450, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                        ]
+                    },
+                    standard_250l: {
+                        name: "Standard 250L Cylinder",
+                        dimensions: { width: 550, height: 1400, depth: 550 },
+                        rules: [
+                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 150 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'ceiling', clearances: { above: 450, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 400 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
+                            { obstacle_type: 'corner', clearances: { above: 450, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
+                        ]
+                    }
+                }
             }
         }
     };
@@ -1970,18 +2092,30 @@
         document.getElementById('rectangleToolBtn').classList.remove('active');
         document.getElementById('lineToolBtn').classList.remove('active');
         document.getElementById('circleToolBtn').classList.remove('active');
+        document.getElementById('paintToolBtn').classList.remove('active');
 
         const instructions = document.getElementById('toolInstructions');
+        const paintControls = document.getElementById('paintToolControls');
+
+        // Hide paint controls by default
+        paintControls.style.display = 'none';
 
         if (tool === 'rectangle') {
             document.getElementById('rectangleToolBtn').classList.add('active');
             instructions.innerHTML = '<strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle';
+            instructions.style.display = 'block';
         } else if (tool === 'line') {
             document.getElementById('lineToolBtn').classList.add('active');
             instructions.innerHTML = '<strong>📏 Line Tool:</strong> Tap two points to draw a line (obstacle extends perpendicular from line)';
+            instructions.style.display = 'block';
         } else if (tool === 'circle') {
             document.getElementById('circleToolBtn').classList.add('active');
             instructions.innerHTML = '<strong>⭕ Circle Tool:</strong> Tap center then drag to set radius of circular obstacle';
+            instructions.style.display = 'block';
+        } else if (tool === 'paint') {
+            document.getElementById('paintToolBtn').classList.add('active');
+            instructions.style.display = 'none';
+            paintControls.style.display = 'block';
         }
     }
 
@@ -1999,6 +2133,22 @@
         document.getElementById('rectangleToolBtn').addEventListener('click', () => setDrawingTool('rectangle'));
         document.getElementById('lineToolBtn').addEventListener('click', () => setDrawingTool('line'));
         document.getElementById('circleToolBtn').addEventListener('click', () => setDrawingTool('circle'));
+        document.getElementById('paintToolBtn').addEventListener('click', () => setDrawingTool('paint'));
+
+        // Paint tool controls
+        document.getElementById('brushSizeSlider').addEventListener('input', (e) => {
+            state.paintBrushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeValue').textContent = e.target.value;
+        });
+
+        document.getElementById('clearPaintMaskBtn').addEventListener('click', () => {
+            state.paintMasks = [];
+            drawPhotoWithObstacles(ctx);
+        });
+
+        document.getElementById('confirmPaintMaskBtn').addEventListener('click', () => {
+            confirmPaintMaskWithAI();
+        });
 
         // Initialize with rectangle tool
         setDrawingTool('rectangle');
@@ -2014,14 +2164,34 @@
 
     function handleObstacleMouseDown(e) {
         const canvas = document.getElementById('photoCanvas3');
-        state.currentObstacleStart = getCanvasCoordinates(canvas, e);
+        const coords = getCanvasCoordinates(canvas, e);
+
+        if (state.drawingTool === 'paint') {
+            state.isPainting = true;
+            state.currentPaintStroke = [coords];
+        } else {
+            state.currentObstacleStart = coords;
+        }
     }
 
     function handleObstacleMouseMove(e) {
-        if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
+
+        if (state.drawingTool === 'paint' && state.isPainting) {
+            // Add point to current stroke
+            state.currentPaintStroke.push(current);
+
+            // Redraw everything
+            drawPhotoWithObstacles(ctx);
+
+            // Draw current stroke
+            drawPaintStroke(ctx, state.currentPaintStroke, state.paintBrushSize);
+            return;
+        }
+
+        if (!state.currentObstacleStart) return;
 
         drawPhotoWithObstacles(ctx);
 
@@ -2058,8 +2228,22 @@
     }
 
     function handleObstacleMouseUp(e) {
-        if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
+
+        if (state.drawingTool === 'paint' && state.isPainting) {
+            state.isPainting = false;
+            if (state.currentPaintStroke && state.currentPaintStroke.length > 1) {
+                state.paintMasks.push({
+                    stroke: state.currentPaintStroke,
+                    brushSize: state.paintBrushSize
+                });
+            }
+            state.currentPaintStroke = null;
+            drawPhotoWithObstacles(canvas.getContext('2d'));
+            return;
+        }
+
+        if (!state.currentObstacleStart) return;
         const current = getCanvasCoordinates(canvas, e);
 
         const obstacleType = document.getElementById('obstacleType').value;
@@ -2114,6 +2298,33 @@
         state.currentObstacleStart = null;
         updateObstacleList();
         drawPhotoWithObstacles(canvas.getContext('2d'));
+    }
+
+    function drawPaintStroke(ctx, stroke, brushSize) {
+        if (!stroke || stroke.length < 2) return;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) {
+            ctx.lineTo(stroke[i].x, stroke[i].y);
+        }
+        ctx.stroke();
+
+        // Draw circles at each point for better coverage
+        stroke.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        ctx.restore();
     }
 
     function handleObstacleTouchStart(e) {
@@ -2274,6 +2485,11 @@
             ctx.font = 'bold 20px Arial';
             ctx.fillText(`${index + 1}`, obstacle.bounds.x + 10, obstacle.bounds.y + 30);
         });
+
+        // Draw paint masks
+        state.paintMasks.forEach(mask => {
+            drawPaintStroke(ctx, mask.stroke, mask.brushSize);
+        });
     }
 
     function updateObstacleList() {
@@ -2305,13 +2521,13 @@
             alert('Please mark at least one obstacle');
             return;
         }
-        
+
         document.getElementById('step4').classList.add('hidden');
         document.getElementById('step5').classList.remove('hidden');
-        
+
         // Populate manufacturer options
         const brandSelect = document.getElementById('brand');
-        brandSelect.innerHTML = '';
+        brandSelect.innerHTML = '<option value="">-- Select Manufacturer --</option>';
         const manufacturers = CLEARANCE_RULES[state.equipmentType];
         Object.keys(manufacturers).forEach(key => {
             const option = document.createElement('option');
@@ -2319,15 +2535,53 @@
             option.textContent = manufacturers[key].name;
             brandSelect.appendChild(option);
         });
+
+        // Show model select group
+        document.getElementById('modelSelectGroup').style.display = 'block';
+    });
+
+    // Brand change handler - populate models
+    document.getElementById('brand').addEventListener('change', (e) => {
+        const brandKey = e.target.value;
+        const modelSelect = document.getElementById('model');
+        modelSelect.innerHTML = '<option value="">-- Select Model --</option>';
+
+        if (!brandKey) {
+            document.getElementById('generateBtn').disabled = true;
+            return;
+        }
+
+        const models = CLEARANCE_RULES[state.equipmentType][brandKey].models;
+        Object.keys(models).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = models[key].name;
+            modelSelect.appendChild(option);
+        });
+
+        // Disable generate button until model is selected
+        document.getElementById('generateBtn').disabled = true;
+    });
+
+    // Model change handler - enable generate button
+    document.getElementById('model').addEventListener('change', (e) => {
+        const modelKey = e.target.value;
+        document.getElementById('generateBtn').disabled = !modelKey;
     });
 
     // Step 5: Generate Clearance Overlay
     document.getElementById('generateBtn').addEventListener('click', () => {
         state.brand = document.getElementById('brand').value;
-        
+        state.model = document.getElementById('model').value;
+
+        if (!state.model) {
+            alert('Please select a model');
+            return;
+        }
+
         document.getElementById('step5').classList.add('hidden');
         document.getElementById('step6').classList.remove('hidden');
-        
+
         generateClearanceOverlay();
     });
 
@@ -2402,7 +2656,23 @@
 
         ctx.drawImage(state.photo, 0, 0);
 
-        const rules = CLEARANCE_RULES[state.equipmentType][state.brand].rules;
+        // Get model data with dimensions and rules
+        const modelData = CLEARANCE_RULES[state.equipmentType][state.brand].models[state.model];
+        const rules = modelData.rules;
+        const dimensions = modelData.dimensions;
+
+        // Convert equipment dimensions from mm to pixels
+        const equipmentWidthPx = dimensions.width * state.scale.pixelsPerMM;
+        const equipmentHeightPx = dimensions.height * state.scale.pixelsPerMM;
+
+        // Calculate equipment rectangle (centered on marked point)
+        const equipmentRect = {
+            x: state.equipment.x - equipmentWidthPx / 2,
+            y: state.equipment.y - equipmentHeightPx / 2,
+            width: equipmentWidthPx,
+            height: equipmentHeightPx
+        };
+
         const violations = [];
 
         state.obstacles.forEach(obstacle => {
@@ -2431,20 +2701,68 @@
 
             drawRoundedRect(ctx, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius, true, true);
 
-            // Check if equipment point is in clearance zone using rounded rectangle collision
-            if (isPointInRoundedRect(state.equipment.x, state.equipment.y, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius)) {
+            // Check if equipment rectangle intersects with clearance zone
+            const equipmentIntersects = !(
+                equipmentRect.x + equipmentRect.width < zoneX ||
+                equipmentRect.x > zoneX + zoneWidth ||
+                equipmentRect.y + equipmentRect.height < zoneY ||
+                equipmentRect.y > zoneY + zoneHeight
+            );
+
+            if (equipmentIntersects) {
                 violations.push({ obstacle, rule });
             }
         });
 
-        // Draw equipment position marker
-        ctx.fillStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
-        ctx.beginPath();
-        ctx.arc(state.equipment.x, state.equipment.y, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
+        // Draw equipment with actual size and service clearances
+        // First draw service clearance zones for the equipment itself
+        const serviceColor = 'rgba(0, 255, 255, 0.2)'; // Cyan for service clearances
+        ctx.fillStyle = serviceColor;
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+
+        // Draw service clearance envelope around equipment
+        rules.forEach(rule => {
+            if (rule.zone_type === 'service') {
+                const servicePx = {
+                    above: rule.clearances.above * state.scale.pixelsPerMM,
+                    below: rule.clearances.below * state.scale.pixelsPerMM,
+                    sides: rule.clearances.sides * state.scale.pixelsPerMM
+                };
+
+                const serviceX = equipmentRect.x - servicePx.sides;
+                const serviceY = equipmentRect.y - servicePx.above;
+                const serviceWidth = equipmentRect.width + (2 * servicePx.sides);
+                const serviceHeight = equipmentRect.height + servicePx.above + servicePx.below;
+
+                ctx.strokeRect(serviceX, serviceY, serviceWidth, serviceHeight);
+            }
+        });
+
+        ctx.setLineDash([]);
+
+        // Draw equipment rectangle with actual dimensions
+        ctx.fillStyle = violations.length > 0 ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 255, 0, 0.5)';
+        ctx.strokeStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
         ctx.lineWidth = 4;
+        ctx.fillRect(equipmentRect.x, equipmentRect.y, equipmentRect.width, equipmentRect.height);
+        ctx.strokeRect(equipmentRect.x, equipmentRect.y, equipmentRect.width, equipmentRect.height);
+
+        // Draw center point marker
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(state.equipment.x, state.equipment.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        // Draw dimension labels
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${dimensions.width}mm × ${dimensions.height}mm`, equipmentRect.x + equipmentRect.width / 2, equipmentRect.y - 10);
 
         displayComplianceResult(violations);
     }
@@ -2475,9 +2793,184 @@
         link.click();
     });
 
+    // AI Paint Mask Confirmation
+    async function confirmPaintMaskWithAI() {
+        if (state.paintMasks.length === 0) {
+            alert('No painted areas to confirm. Please paint an area first.');
+            return;
+        }
+
+        const btn = document.getElementById('confirmPaintMaskBtn');
+        btn.disabled = true;
+        btn.textContent = '🔄 Analyzing...';
+
+        try {
+            // Create a temporary canvas to extract the masked region
+            const canvas = document.getElementById('photoCanvas3');
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Calculate bounding box for all paint strokes
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            state.paintMasks.forEach(mask => {
+                mask.stroke.forEach(point => {
+                    const padding = mask.brushSize;
+                    minX = Math.min(minX, point.x - padding);
+                    minY = Math.min(minY, point.y - padding);
+                    maxX = Math.max(maxX, point.x + padding);
+                    maxY = Math.max(maxY, point.y + padding);
+                });
+            });
+
+            // Add some extra padding
+            const padding = 20;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(state.photoWidth, maxX + padding);
+            maxY = Math.min(state.photoHeight, maxY + padding);
+
+            const cropWidth = maxX - minX;
+            const cropHeight = maxY - minY;
+
+            tempCanvas.width = cropWidth;
+            tempCanvas.height = cropHeight;
+
+            // Draw the cropped region
+            tempCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            // Convert to base64
+            const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+            // Send to AI for confirmation
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image: imageBase64,
+                    equipmentType: state.equipmentType,
+                    detectObjects: EQUIPMENT_INFO[state.equipmentType].obstacles,
+                    cropMetadata: {
+                        originX: minX,
+                        originY: minY,
+                        width: cropWidth,
+                        height: cropHeight,
+                        fullWidth: state.photoWidth,
+                        fullHeight: state.photoHeight
+                    },
+                    useHybridDetection: true,
+                    prompt: `Identify and locate the exact position and dimensions of objects in this painted/masked region. Return bounds for detected objects.`
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.detections && result.detections.length > 0) {
+                // Add detected objects as obstacles
+                result.detections.forEach(detection => {
+                    const obstacle = {
+                        type: detection.type,
+                        shape: 'rectangle',
+                        bounds: {
+                            x: detection.bounds.x + minX,
+                            y: detection.bounds.y + minY,
+                            width: detection.bounds.width,
+                            height: detection.bounds.height
+                        },
+                        aiConfirmed: true
+                    };
+                    state.obstacles.push(obstacle);
+                });
+
+                // Clear paint masks after confirmation
+                state.paintMasks = [];
+                updateObstacleList();
+                const ctx = document.getElementById('photoCanvas3').getContext('2d');
+                drawPhotoWithObstacles(ctx);
+
+                alert(`✅ AI confirmed ${result.detections.length} object(s) in the painted region!`);
+            } else {
+                alert('❌ AI could not detect any objects in the painted region. Try painting more clearly or use manual tools.');
+            }
+
+        } catch (error) {
+            console.error('AI confirmation error:', error);
+            alert('❌ Error confirming with AI. Please try again or use manual marking tools.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🤖 Confirm Masked Area with AI';
+        }
+    }
+
     document.getElementById('startOverBtn').addEventListener('click', () => {
         location.reload();
     });
+
+    // Force reset button - properly resets state without page reload
+    document.getElementById('forceResetBtn').addEventListener('click', () => {
+        if (confirm('This will clear all data and start fresh. Are you sure?')) {
+            resetApplication();
+        }
+    });
+
+    function resetApplication() {
+        // Reset state to initial values
+        state.equipmentType = null;
+        state.photo = null;
+        state.photoWidth = 0;
+        state.photoHeight = 0;
+        state.scale = {
+            point1: null,
+            point2: null,
+            point3: null,
+            point4: null,
+            calibrationMode: 'two-point',
+            distanceMM: 85,
+            pixelsPerMM: 0,
+            perspectiveWarning: false
+        };
+        state.equipment = null;
+        state.obstacles = [];
+        state.brand = null;
+        state.model = null;
+        state.currentObstacleStart = null;
+        state.currentMagnifierPosition = null;
+        state.lassoMode = false;
+        state.lassoPoints = [];
+        state.lassoComplete = false;
+        state.drawingTool = 'rectangle';
+        state.paintMasks = [];
+        state.isPainting = false;
+        state.currentPaintStroke = null;
+
+        // Clear all canvases
+        ['photoCanvas', 'photoCanvas2', 'photoCanvas3', 'photoCanvas4', 'magnifyCanvas'].forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+
+        // Reset all form inputs
+        document.getElementById('brand').innerHTML = '';
+        document.getElementById('obstacleType').innerHTML = '';
+        document.getElementById('knownDistance').value = '85';
+
+        // Clear obstacle list
+        document.getElementById('obstacleList').innerHTML = '';
+
+        // Hide all steps except step 0
+        document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
+        document.getElementById('step0').classList.remove('hidden');
+
+        // Clear equipment type selection
+        document.querySelectorAll('.equipment-type-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Reset info box
+        document.getElementById('equipmentInfo').innerHTML = 'Select the type of equipment you\'re checking clearances for.';
+    }
 </script>
 ```
 
