@@ -36,7 +36,7 @@ export default {
 
     try {
       // Parse request body
-      const { image, equipmentType, detectObjects } = await request.json();
+      const { image, equipmentType, detectObjects, userMessage } = await request.json();
 
       // Validate inputs
       if (!image || !equipmentType || !detectObjects) {
@@ -65,19 +65,46 @@ export default {
         }, 500);
       }
 
-      // Try OpenAI first, fallback to Claude if it fails
+      // Try OpenAI first, fallback to Claude if it fails or detects nothing
       let detectedObjects, creditCard, brick;
+      let aiServiceUsed = 'openai'; // Track which AI service was used
 
       try {
         const result = await detectObjectsWithOpenAI(
           image,
           equipmentType,
           detectObjects,
-          env.OPENAI_API_KEY
+          env.OPENAI_API_KEY,
+          userMessage
         );
         detectedObjects = result.objects;
         creditCard = result.creditCard;
         brick = result.brick;
+
+        // If OpenAI returned 0 objects and Claude is available, try Claude as fallback
+        if ((!detectedObjects || detectedObjects.length === 0) && env.ANTHROPIC_API_KEY) {
+          console.log('OpenAI detected 0 objects, trying Claude fallback');
+          try {
+            const claudeResult = await detectObjectsWithClaude(
+              image,
+              equipmentType,
+              detectObjects,
+              env.ANTHROPIC_API_KEY,
+              userMessage
+            );
+            // Only use Claude results if it found something
+            if (claudeResult.objects && claudeResult.objects.length > 0) {
+              detectedObjects = claudeResult.objects;
+              creditCard = claudeResult.creditCard;
+              brick = claudeResult.brick;
+              aiServiceUsed = 'claude';
+              console.log(`Claude found ${claudeResult.objects.length} objects`);
+            }
+          } catch (claudeError) {
+            console.log('Claude fallback also failed:', claudeError.message);
+            // Keep OpenAI results (empty array) if Claude fails
+          }
+        }
       } catch (openaiError) {
         console.log('OpenAI failed, trying Claude fallback:', openaiError.message);
 
@@ -88,11 +115,13 @@ export default {
               image,
               equipmentType,
               detectObjects,
-              env.ANTHROPIC_API_KEY
+              env.ANTHROPIC_API_KEY,
+              userMessage
             );
             detectedObjects = result.objects;
             creditCard = result.creditCard;
             brick = result.brick;
+            aiServiceUsed = 'claude';
           } catch (claudeError) {
             console.error('Both OpenAI and Claude failed:', { openaiError, claudeError });
             throw new Error('AI detection failed: Both OpenAI and Claude services are unavailable');
@@ -115,7 +144,8 @@ export default {
       return jsonResponse({
         success: true,
         objects: detectedObjects,
-        calibration: calibration
+        calibration: calibration,
+        aiServiceUsed: aiServiceUsed // Indicate which AI service was used
       });
 
     } catch (error) {
@@ -133,11 +163,18 @@ export default {
 /**
  * Detect objects using OpenAI Vision API (GPT-4 Vision)
  */
-async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiKey) {
+async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiKey, userMessage = '') {
   // Build a detailed prompt for object detection AND credit card detection
   const objectList = detectObjects.join(', ');
 
-  const prompt = `You are an expert computer vision system for heating compliance detection.
+  let prompt = `You are an expert computer vision system for heating compliance detection.`;
+
+  // Add user message if provided
+  if (userMessage && userMessage.trim()) {
+    prompt += `\n\nUSER CONTEXT: ${userMessage.trim()}\nPlease take this context into account when analyzing the image. For example, if the user mentions items to be removed or ignored, adjust your detection accordingly.`;
+  }
+
+  prompt += `
 
 TASK 1: Detect calibration objects for scale measurement
 Look for the following objects in priority order:
@@ -319,11 +356,18 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
 /**
  * Detect objects using Claude (Anthropic) Vision API - Fallback option
  */
-async function detectObjectsWithClaude(image, equipmentType, detectObjects, apiKey) {
+async function detectObjectsWithClaude(image, equipmentType, detectObjects, apiKey, userMessage = '') {
   // Build the same prompt as OpenAI
   const objectList = detectObjects.join(', ');
 
-  const prompt = `You are an expert computer vision system for heating compliance detection.
+  let prompt = `You are an expert computer vision system for heating compliance detection.`;
+
+  // Add user message if provided
+  if (userMessage && userMessage.trim()) {
+    prompt += `\n\nUSER CONTEXT: ${userMessage.trim()}\nPlease take this context into account when analyzing the image. For example, if the user mentions items to be removed or ignored, adjust your detection accordingly.`;
+  }
+
+  prompt += `
 
 TASK 1: Detect calibration objects for scale measurement
 Look for the following objects in priority order:

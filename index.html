@@ -549,6 +549,25 @@
     <div class="step hidden" id="step4">
         <h2><span class="step-number">4</span> Mark Clearance Obstacles</h2>
 
+        <!-- AI Context Message Panel -->
+        <div class="instructions" style="background: #f3e5f5; border-left: 4px solid #9c27b0; margin-bottom: 20px;">
+            <strong>💬 Optional: Provide Context to AI</strong><br>
+            Give the AI additional instructions to improve detection accuracy
+        </div>
+        <div style="margin-bottom: 20px; padding: 15px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <label for="aiMessageInput" style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">
+                Message to AI (optional):
+            </label>
+            <textarea
+                id="aiMessageInput"
+                placeholder="e.g., 'Cupboard to be removed to fit boiler', 'Vent to be sealed', 'Shelf to be removed', 'Ignore kitchen appliances'"
+                style="width: 100%; min-height: 80px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-family: Arial, sans-serif; font-size: 14px; resize: vertical;"
+            ></textarea>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                <strong>Examples:</strong> "Cupboard to be removed to fit boiler" • "Vent to be sealed" • "Ignore kitchen appliances" • "Shelf to be removed"
+            </div>
+        </div>
+
         <!-- Lasso + AI Detection Section (Primary Method) -->
         <div class="instructions">
             <strong>✨ Option 1: Lasso + AI Detection (Recommended)</strong><br>
@@ -701,6 +720,7 @@
         obstacles: [],
         brand: null,
         model: null, // Selected model
+        aiMessage: '', // User's optional message to AI for context
         currentObstacleStart: null,
         currentMagnifierPosition: null,
         lassoMode: false,
@@ -1920,6 +1940,10 @@
             // Convert cropped image to base64
             const croppedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.8);
 
+            // Get user's AI message if provided
+            const aiMessageInput = document.getElementById('aiMessageInput');
+            const aiMessage = aiMessageInput ? aiMessageInput.value.trim() : '';
+
             // Call AI Worker with cropped image and crop metadata
             let response;
             try {
@@ -1941,7 +1965,8 @@
                             fullImageWidth: state.photoWidth,
                             fullImageHeight: state.photoHeight
                         },
-                        useHybridDetection: true // Flag to tell AI this is a user-hinted crop
+                        useHybridDetection: true, // Flag to tell AI this is a user-hinted crop
+                        userMessage: aiMessage // User's optional context
                     }),
                     signal: AbortSignal.timeout(30000)
                 });
@@ -1998,7 +2023,9 @@
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected in lasso!</strong><br>` +
+                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
+                const aiServiceBadge = `<span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${aiService}</span>`;
+                statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected in lasso!</strong> ${aiServiceBadge}<br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
                     `Reference: 85mm blue card width<br>` +
@@ -2281,6 +2308,10 @@
             const info = EQUIPMENT_INFO[state.equipmentType];
             const detectObjects = info.obstacles; // e.g., ['opening_window', 'door', 'wall']
 
+            // Get user's AI message if provided
+            const aiMessageInput = document.getElementById('aiMessageInput');
+            const aiMessage = aiMessageInput ? aiMessageInput.value.trim() : '';
+
             // Call AI Worker for object detection
             const response = await fetch('https://clearance.martinbibb.workers.dev', {
                 method: 'POST',
@@ -2293,7 +2324,8 @@
                     detectObjects: detectObjects, // Request AI to detect these obstacles
                     cardColorHint: 'blue',
                     preciseBoundaries: true, // Request exact pixel-perfect boundary detection
-                    prompt: 'Detect the exact boundaries and edges of objects. Return precise bounding boxes that tightly fit each object with pixel-level accuracy. Identify the true edges of doors, windows, walls, and other obstacles.'
+                    prompt: 'Detect the exact boundaries and edges of objects. Return precise bounding boxes that tightly fit each object with pixel-level accuracy. Identify the true edges of doors, windows, walls, and other obstacles.',
+                    userMessage: aiMessage // User's optional context
                 }),
                 signal: AbortSignal.timeout(60000) // 60 second timeout for obstacle detection
             });
@@ -2326,7 +2358,8 @@
                 // Show success message
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.innerHTML = `✅ <strong>Detected ${result.objects.length} obstacle(s)!</strong><br>` +
+                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
+                statusDiv.innerHTML = `✅ <strong>Detected ${result.objects.length} obstacle(s)!</strong> <span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${aiService}</span><br>` +
                     `<small>${result.objects.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
                     `You can add more obstacles manually if needed.`;
 
@@ -2392,6 +2425,10 @@
 
             const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8);
 
+            // Get user's AI message if provided
+            const aiMessageInput = document.getElementById('aiMessageInput');
+            const aiMessage = aiMessageInput ? aiMessageInput.value.trim() : '';
+
             // Call AI Worker
             const response = await fetch('https://clearance.martinbibb.workers.dev', {
                 method: 'POST',
@@ -2412,7 +2449,8 @@
                     },
                     useHybridDetection: true,
                     preciseBoundaries: true,
-                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy.`
+                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy.`,
+                    userMessage: aiMessage // User's optional context
                 }),
                 signal: AbortSignal.timeout(60000)
             });
@@ -2452,7 +2490,9 @@
 
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                statusDiv.textContent = `✅ ${OBSTACLE_LABELS[obstacle.type]} detected! Draw another lasso or use other methods to add more obstacles.`;
+                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
+                const aiServiceBadge = `<span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${aiService}</span>`;
+                statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[obstacle.type]} detected!</strong> ${aiServiceBadge}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
 
                 // Update list and canvas
                 updateObstacleList();
@@ -3319,6 +3359,10 @@
             // Convert to base64
             const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
+            // Get user's AI message if provided
+            const aiMessageInput = document.getElementById('aiMessageInput');
+            const aiMessage = aiMessageInput ? aiMessageInput.value.trim() : '';
+
             // Send to AI for confirmation
             const response = await fetch('https://clearance.martinbibb.workers.dev', {
                 method: 'POST',
@@ -3337,7 +3381,8 @@
                     },
                     useHybridDetection: true,
                     preciseBoundaries: true,
-                    prompt: `Identify and locate the exact position and dimensions of objects in this painted/masked region. Return bounds for detected objects with pixel-level accuracy.`
+                    prompt: `Identify and locate the exact position and dimensions of objects in this painted/masked region. Return bounds for detected objects with pixel-level accuracy.`,
+                    userMessage: aiMessage // User's optional context
                 })
             });
 
@@ -3375,7 +3420,8 @@
                 const ctx = document.getElementById('photoCanvas3').getContext('2d');
                 drawPhotoWithObstacles(ctx);
 
-                alert(`✅ AI confirmed ${result.objects.length} object(s) in the painted region!`);
+                const aiService = result.aiServiceUsed === 'claude' ? 'Claude' : 'OpenAI';
+                alert(`✅ AI confirmed ${result.objects.length} object(s) in the painted region! (${aiService})`);
             } else {
                 alert('❌ AI could not detect any objects in the painted region. Try painting more clearly or use manual tools.');
             }
