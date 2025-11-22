@@ -354,27 +354,27 @@
     <div class="step" id="step0">
         <h2><span class="step-number">0</span> Select Equipment Type</h2>
         <div class="equipment-type-selector">
-            <div class="equipment-type-btn" onclick="selectEquipmentType('flue')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('flue', event)">
                 <div class="icon">🌬️</div>
                 <div class="label">Flue Terminal</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('combi_boiler')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('combi_boiler', event)">
                 <div class="icon">🔥</div>
                 <div class="label">Combi Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('system_boiler')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('system_boiler', event)">
                 <div class="icon">⚙️</div>
                 <div class="label">System Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('regular_boiler')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('regular_boiler', event)">
                 <div class="icon">🏭</div>
                 <div class="label">Regular Boiler</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('radiator')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('radiator', event)">
                 <div class="icon">♨️</div>
                 <div class="label">Radiator</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('cylinder')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('cylinder', event)">
                 <div class="icon">🛢️</div>
                 <div class="label">Cylinder</div>
             </div>
@@ -1097,21 +1097,23 @@
     };
 
     // Step 0: Equipment Type Selection
-    window.selectEquipmentType = function(type) {
+    window.selectEquipmentType = function(type, event) {
         state.equipmentType = type;
-        
+
         // Update active button
         document.querySelectorAll('.equipment-type-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        event.target.closest('.equipment-type-btn').classList.add('active');
-        
+        if (event && event.target) {
+            event.target.closest('.equipment-type-btn').classList.add('active');
+        }
+
         // Update info box
         const info = EQUIPMENT_INFO[type];
         document.getElementById('equipmentInfo').innerHTML = `
             <strong>${info.icon} ${info.name}:</strong> ${info.description}
         `;
-        
+
         // Show next step button
         setTimeout(() => {
             document.getElementById('step0').classList.add('hidden');
