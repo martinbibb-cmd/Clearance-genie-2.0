@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="Heating equipment clearance checking tool with AI-powered object detection">
+    <link rel="manifest" href="/manifest.json">
     <title>Clearance Genie - Service & Installation Clearance Checker</title>
     <style>
         * {
@@ -17,6 +20,44 @@
         background: #f5f5f5;
         color: #333;
         overflow-x: hidden;
+        padding-top: 60px;
+    }
+
+    .fixed-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        z-index: 1000;
+        padding: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .fixed-header h1 {
+        font-size: 18px;
+        margin: 0;
+        flex: 1;
+    }
+
+    .start-over-btn {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+        white-space: nowrap;
+        margin-left: 10px;
+    }
+
+    .start-over-btn:active {
+        background: #c0392b;
     }
 
     .container {
@@ -346,12 +387,108 @@
         opacity: 0.9;
         transform: scale(1.02);
     }
+
+    /* Object editing controls */
+    .object-editor {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 2px solid #3498db;
+    }
+
+    .object-editor h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #2c3e50;
+    }
+
+    .arrow-controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+        max-width: 200px;
+        margin: 10px auto;
+    }
+
+    .arrow-btn {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 6px;
+        font-size: 20px;
+        cursor: pointer;
+        font-weight: 600;
+        width: 100%;
+        margin: 0;
+    }
+
+    .arrow-btn:active {
+        background: #2980b9;
+    }
+
+    .arrow-btn:disabled {
+        background: #95a5a6;
+        cursor: not-allowed;
+    }
+
+    .size-editor {
+        margin-top: 15px;
+    }
+
+    .size-editor label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #34495e;
+    }
+
+    .size-editor select,
+    .size-editor input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .model-editor {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .model-editor h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #856404;
+    }
+
+    .drag-hint {
+        background: #e8f4f8;
+        border: 1px dashed #3498db;
+        border-radius: 6px;
+        padding: 10px;
+        margin: 10px 0;
+        text-align: center;
+        font-size: 13px;
+        color: #2c3e50;
+    }
 </style>
 
 </head>
 <body>
-    <div class="container">
+    <div class="fixed-header">
         <h1>🔥 Clearance Genie</h1>
+        <button class="start-over-btn" onclick="startOver()">Start Over</button>
+    </div>
+
+    <div class="container">
         <div class="subtitle">Service & Installation Clearance Checker</div>
 
     <!-- Step 0: Select Equipment Type -->
@@ -676,7 +813,24 @@
     <div class="step hidden" id="step6">
         <h2><span class="step-number">6</span> Results</h2>
         <canvas id="photoCanvas4"></canvas>
-        
+
+        <div class="model-editor" id="modelEditorSection" style="display: none;">
+            <h3>Change Make & Model</h3>
+            <div class="size-editor">
+                <label for="brandSelectResults">Brand:</label>
+                <select id="brandSelectResults" onchange="updateBrandSelection()">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="size-editor">
+                <label for="modelSelectResults">Model:</label>
+                <select id="modelSelectResults" onchange="updateModelSelection()">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <button onclick="hideModelEditor()" style="background: #95a5a6; margin-top: 10px;">Close</button>
+        </div>
+
         <div class="legend">
             <div class="legend-item">
                 <div class="legend-color" style="background: rgba(255,0,0,0.3);"></div>
@@ -693,7 +847,8 @@
         </div>
         
         <div id="complianceResult"></div>
-        
+
+        <button onclick="showModelEditorInResults()" style="background: #f39c12;">Change Make/Model</button>
         <button id="downloadBtn">Download Annotated Photo</button>
         <button class="secondary" id="startOverBtn">Start Over</button>
         <button class="danger" id="forceResetBtn">🔄 Force Reset (Clear All Data)</button>
@@ -733,7 +888,11 @@
         isPainting: false,
         currentPaintStroke: null,
         magnifyEnabled: true,
-        magnifyHandedness: 'right' // 'left' or 'right'
+        magnifyHandedness: 'right', // 'left' or 'right'
+        cylinderSize: '120L', // Default cylinder size
+        radiatorSize: '600x1200', // Default radiator size (height x width in mm)
+        selectedObject: null, // Currently selected object for editing {type: 'equipment'|'obstacle', index: null}
+        dragOffset: null // Offset for dragging
     };
 
     // Equipment type configurations
@@ -1120,6 +1279,512 @@
         tank: "Tank / Water Tank"
     };
 
+    // ============================================
+    // PWA & PERSISTENCE FUNCTIONALITY
+    // ============================================
+
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('Service Worker registered:', registration);
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+    }
+
+    // Save state to localStorage
+    function saveState() {
+        try {
+            const stateToSave = {
+                ...state,
+                photo: null, // Don't save the actual image
+                photoDataURL: state.photo ? null : null // We'll handle images separately
+            };
+            localStorage.setItem('clearanceGenieState', JSON.stringify(stateToSave));
+
+            // Save photo separately as data URL if it exists
+            if (state.photo) {
+                const canvas = document.createElement('canvas');
+                canvas.width = state.photo.width;
+                canvas.height = state.photo.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(state.photo, 0, 0);
+                const photoDataURL = canvas.toDataURL('image/jpeg', 0.8);
+                localStorage.setItem('clearanceGeniePhoto', photoDataURL);
+            }
+        } catch (e) {
+            console.error('Error saving state:', e);
+        }
+    }
+
+    // Restore state from localStorage
+    function restoreState() {
+        try {
+            const savedState = localStorage.getItem('clearanceGenieState');
+            const savedPhoto = localStorage.getItem('clearanceGeniePhoto');
+
+            if (savedState) {
+                const parsedState = JSON.parse(savedState);
+
+                // Restore all state properties except photo
+                Object.keys(parsedState).forEach(key => {
+                    if (key !== 'photo' && key !== 'photoDataURL') {
+                        state[key] = parsedState[key];
+                    }
+                });
+
+                // Restore photo if it exists
+                if (savedPhoto) {
+                    const img = new Image();
+                    img.onload = function() {
+                        state.photo = img;
+                        // Redraw canvases if needed
+                        updateUIAfterRestore();
+                    };
+                    img.src = savedPhoto;
+                } else {
+                    updateUIAfterRestore();
+                }
+            }
+        } catch (e) {
+            console.error('Error restoring state:', e);
+        }
+    }
+
+    // Update UI after restoring state
+    function updateUIAfterRestore() {
+        if (state.equipmentType) {
+            // Highlight selected equipment type
+            document.querySelectorAll('.equipment-type-btn').forEach(btn => {
+                if (btn.getAttribute('data-equipment-type') === state.equipmentType) {
+                    btn.classList.add('active');
+                    const info = EQUIPMENT_INFO[state.equipmentType];
+                    document.getElementById('equipmentInfo').innerHTML = `
+                        <strong>${info.icon} ${info.name}:</strong> ${info.description}
+                    `;
+                }
+            });
+
+            // Show appropriate step based on progress
+            if (state.brand && state.model) {
+                // User was on results step
+                document.getElementById('step0').classList.add('hidden');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.add('hidden');
+                document.getElementById('step4').classList.add('hidden');
+                document.getElementById('step5').classList.add('hidden');
+                document.getElementById('step6').classList.remove('hidden');
+                showResults();
+            } else if (state.obstacles && state.obstacles.length > 0) {
+                // User was marking obstacles
+                document.getElementById('step0').classList.add('hidden');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.add('hidden');
+                document.getElementById('step4').classList.remove('hidden');
+            } else if (state.equipment) {
+                // User marked equipment position
+                document.getElementById('step0').classList.add('hidden');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+            } else if (state.scale.pixelsPerMM > 0) {
+                // User calibrated scale
+                document.getElementById('step0').classList.add('hidden');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+            } else if (state.photo) {
+                // User uploaded photo
+                document.getElementById('step0').classList.add('hidden');
+                document.getElementById('step1').classList.remove('hidden');
+            }
+        }
+    }
+
+    // Auto-save on state changes (debounced)
+    let saveTimeout;
+    function autoSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveState, 500);
+    }
+
+    // Start Over function
+    function startOver() {
+        if (confirm('Are you sure you want to start over? All progress will be lost.')) {
+            // Clear localStorage
+            localStorage.removeItem('clearanceGenieState');
+            localStorage.removeItem('clearanceGeniePhoto');
+
+            // Reload the page
+            window.location.reload();
+        }
+    }
+
+    // Restore state on page load
+    restoreState();
+
+    // ============================================
+    // OBJECT EDITING FUNCTIONALITY
+    // ============================================
+
+    // Check if a point is inside an object
+    function isPointInObject(x, y, obj) {
+        if (!obj) return false;
+
+        // Check if it's the equipment point
+        if (obj.x !== undefined && obj.y !== undefined) {
+            const dist = Math.sqrt((x - obj.x) ** 2 + (y - obj.y) ** 2);
+            return dist <= 15; // Equipment is drawn as 15px radius circle
+        }
+
+        // Check obstacle based on shape
+        if (obj.shape === 'rectangle' || !obj.shape) {
+            return x >= obj.bounds.x &&
+                   x <= obj.bounds.x + obj.bounds.width &&
+                   y >= obj.bounds.y &&
+                   y <= obj.bounds.y + obj.bounds.height;
+        } else if (obj.shape === 'line' && obj.line) {
+            // Check if point is near the line (within 10px)
+            const dist = distanceToLineSegment(x, y, obj.line.x1, obj.line.y1, obj.line.x2, obj.line.y2);
+            return dist <= 10;
+        } else if (obj.shape === 'circle' && obj.circle) {
+            const dist = Math.sqrt((x - obj.circle.centerX) ** 2 + (y - obj.circle.centerY) ** 2);
+            return Math.abs(dist - obj.circle.radius) <= 10; // Near the circle edge
+        }
+
+        return false;
+    }
+
+    // Distance from point to line segment
+    function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+
+        if (lenSq !== 0) param = dot / lenSq;
+
+        let xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Find object at position
+    function findObjectAtPosition(x, y) {
+        // Check equipment first
+        if (state.equipment && isPointInObject(x, y, state.equipment)) {
+            return { type: 'equipment', index: null };
+        }
+
+        // Check obstacles
+        for (let i = state.obstacles.length - 1; i >= 0; i--) {
+            if (isPointInObject(x, y, state.obstacles[i])) {
+                return { type: 'obstacle', index: i };
+            }
+        }
+
+        return null;
+    }
+
+    // Move object by delta
+    function moveObject(objectRef, dx, dy) {
+        if (objectRef.type === 'equipment') {
+            state.equipment.x += dx;
+            state.equipment.y += dy;
+        } else if (objectRef.type === 'obstacle') {
+            const obstacle = state.obstacles[objectRef.index];
+            if (obstacle.bounds) {
+                obstacle.bounds.x += dx;
+                obstacle.bounds.y += dy;
+            }
+            if (obstacle.line) {
+                obstacle.line.x1 += dx;
+                obstacle.line.y1 += dy;
+                obstacle.line.x2 += dx;
+                obstacle.line.y2 += dy;
+            }
+            if (obstacle.circle) {
+                obstacle.circle.centerX += dx;
+                obstacle.circle.centerY += dy;
+            }
+        }
+    }
+
+    // Arrow key controls
+    document.addEventListener('keydown', function(e) {
+        if (!state.selectedObject) return;
+
+        const step = e.shiftKey ? 10 : 1; // Shift for larger steps
+        let handled = false;
+
+        switch(e.key) {
+            case 'ArrowUp':
+                moveObject(state.selectedObject, 0, -step);
+                handled = true;
+                break;
+            case 'ArrowDown':
+                moveObject(state.selectedObject, 0, step);
+                handled = true;
+                break;
+            case 'ArrowLeft':
+                moveObject(state.selectedObject, -step, 0);
+                handled = true;
+                break;
+            case 'ArrowRight':
+                moveObject(state.selectedObject, step, 0);
+                handled = true;
+                break;
+            case 'Escape':
+                state.selectedObject = null;
+                hideObjectEditor();
+                handled = true;
+                break;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            redrawCurrentCanvas();
+            autoSave();
+        }
+    });
+
+    // Show object editor UI
+    function showObjectEditor(objectRef) {
+        let editorHTML = '';
+
+        if (objectRef.type === 'equipment') {
+            let sizeEditorHTML = '';
+
+            // Add size selector for cylinders
+            if (state.equipmentType === 'cylinder') {
+                sizeEditorHTML = `
+                    <div class="size-editor">
+                        <label for="cylinderSizeSelect">Cylinder Size:</label>
+                        <select id="cylinderSizeSelect" onchange="updateCylinderSize(this.value)">
+                            <option value="90L" ${state.cylinderSize === '90L' ? 'selected' : ''}>90 Liters</option>
+                            <option value="120L" ${state.cylinderSize === '120L' ? 'selected' : ''}>120 Liters</option>
+                            <option value="150L" ${state.cylinderSize === '150L' ? 'selected' : ''}>150 Liters</option>
+                            <option value="180L" ${state.cylinderSize === '180L' ? 'selected' : ''}>180 Liters</option>
+                            <option value="210L" ${state.cylinderSize === '210L' ? 'selected' : ''}>210 Liters</option>
+                            <option value="250L" ${state.cylinderSize === '250L' ? 'selected' : ''}>250 Liters</option>
+                            <option value="300L" ${state.cylinderSize === '300L' ? 'selected' : ''}>300 Liters</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Add size selector for radiators
+            if (state.equipmentType === 'radiator') {
+                sizeEditorHTML = `
+                    <div class="size-editor">
+                        <label for="radiatorSizeSelect">Radiator Size (H×W mm):</label>
+                        <select id="radiatorSizeSelect" onchange="updateRadiatorSize(this.value)">
+                            <option value="400x600" ${state.radiatorSize === '400x600' ? 'selected' : ''}>400×600 mm</option>
+                            <option value="400x800" ${state.radiatorSize === '400x800' ? 'selected' : ''}>400×800 mm</option>
+                            <option value="400x1000" ${state.radiatorSize === '400x1000' ? 'selected' : ''}>400×1000 mm</option>
+                            <option value="600x600" ${state.radiatorSize === '600x600' ? 'selected' : ''}>600×600 mm</option>
+                            <option value="600x800" ${state.radiatorSize === '600x800' ? 'selected' : ''}>600×800 mm</option>
+                            <option value="600x1000" ${state.radiatorSize === '600x1000' ? 'selected' : ''}>600×1000 mm</option>
+                            <option value="600x1200" ${state.radiatorSize === '600x1200' ? 'selected' : ''}>600×1200 mm</option>
+                            <option value="600x1400" ${state.radiatorSize === '600x1400' ? 'selected' : ''}>600×1400 mm</option>
+                            <option value="600x1600" ${state.radiatorSize === '600x1600' ? 'selected' : ''}>600×1600 mm</option>
+                        </select>
+                    </div>
+                `;
+            }
+
+            editorHTML = `
+                <div class="object-editor" id="objectEditor">
+                    <h3>Edit Equipment Position</h3>
+                    <div class="drag-hint">
+                        👆 Tap and drag on the canvas to move, or use arrow keys for precise positioning (Shift for larger steps)
+                    </div>
+                    <div class="arrow-controls">
+                        <button class="arrow-btn" style="grid-column: 2;" onclick="moveSelectedObject(0, -5)">↑</button>
+                        <button class="arrow-btn" onclick="moveSelectedObject(-5, 0)">←</button>
+                        <button class="arrow-btn" onclick="deselectObject()">⊗</button>
+                        <button class="arrow-btn" onclick="moveSelectedObject(5, 0)">→</button>
+                        <button class="arrow-btn" style="grid-column: 2;" onclick="moveSelectedObject(0, 5)">↓</button>
+                    </div>
+                    ${sizeEditorHTML}
+                </div>
+            `;
+        } else if (objectRef.type === 'obstacle') {
+            const obstacle = state.obstacles[objectRef.index];
+            const typeLabel = OBSTACLE_LABELS[obstacle.type] || obstacle.type;
+            editorHTML = `
+                <div class="object-editor" id="objectEditor">
+                    <h3>Edit ${typeLabel}</h3>
+                    <div class="drag-hint">
+                        👆 Tap and drag on the canvas to move, or use arrow keys for precise positioning (Shift for larger steps)
+                    </div>
+                    <div class="arrow-controls">
+                        <button class="arrow-btn" style="grid-column: 2;" onclick="moveSelectedObject(0, -5)">↑</button>
+                        <button class="arrow-btn" onclick="moveSelectedObject(-5, 0)">←</button>
+                        <button class="arrow-btn" onclick="deselectObject()">⊗</button>
+                        <button class="arrow-btn" onclick="moveSelectedObject(5, 0)">→</button>
+                        <button class="arrow-btn" style="grid-column: 2;" onclick="moveSelectedObject(0, 5)">↓</button>
+                    </div>
+                    <button onclick="deleteSelectedObject()" style="background: #e74c3c; margin-top: 10px;">Delete ${typeLabel}</button>
+                </div>
+            `;
+        }
+
+        // Insert editor before the appropriate step
+        const existingEditor = document.getElementById('objectEditor');
+        if (existingEditor) existingEditor.remove();
+
+        const step4 = document.getElementById('step4');
+        if (step4 && !step4.classList.contains('hidden')) {
+            step4.insertAdjacentHTML('afterbegin', editorHTML);
+        }
+    }
+
+    function hideObjectEditor() {
+        const editor = document.getElementById('objectEditor');
+        if (editor) editor.remove();
+    }
+
+    function moveSelectedObject(dx, dy) {
+        if (state.selectedObject) {
+            moveObject(state.selectedObject, dx, dy);
+            redrawCurrentCanvas();
+            autoSave();
+        }
+    }
+
+    function deselectObject() {
+        state.selectedObject = null;
+        hideObjectEditor();
+        redrawCurrentCanvas();
+    }
+
+    function deleteSelectedObject() {
+        if (state.selectedObject && state.selectedObject.type === 'obstacle') {
+            if (confirm('Delete this obstacle?')) {
+                state.obstacles.splice(state.selectedObject.index, 1);
+                state.selectedObject = null;
+                hideObjectEditor();
+                updateObstacleList();
+                redrawCurrentCanvas();
+                autoSave();
+            }
+        }
+    }
+
+    function redrawCurrentCanvas() {
+        // Find which canvas is currently visible and redraw it
+        const canvas3 = document.getElementById('photoCanvas3');
+        const canvas4 = document.getElementById('photoCanvas4');
+
+        if (canvas3 && !document.getElementById('step4').classList.contains('hidden')) {
+            const ctx = canvas3.getContext('2d');
+            drawPhotoWithObstacles(ctx);
+        } else if (canvas4 && !document.getElementById('step6').classList.contains('hidden')) {
+            showResults(); // This redraws the results canvas
+        }
+    }
+
+    // Update cylinder size
+    function updateCylinderSize(size) {
+        state.cylinderSize = size;
+        autoSave();
+    }
+
+    // Update radiator size
+    function updateRadiatorSize(size) {
+        state.radiatorSize = size;
+        autoSave();
+    }
+
+    // Show model editor in results
+    function showModelEditorInResults() {
+        const editorSection = document.getElementById('modelEditorSection');
+        const brandSelect = document.getElementById('brandSelectResults');
+        const modelSelect = document.getElementById('modelSelectResults');
+
+        // Populate brand options
+        const brands = CLEARANCE_RULES[state.equipmentType];
+        brandSelect.innerHTML = '';
+        for (const [brandKey, brandData] of Object.entries(brands)) {
+            const option = document.createElement('option');
+            option.value = brandKey;
+            option.textContent = brandData.name;
+            option.selected = state.brand === brandKey;
+            brandSelect.appendChild(option);
+        }
+
+        // Populate model options for current brand
+        updateModelOptionsInResults();
+
+        // Show the editor
+        editorSection.style.display = 'block';
+    }
+
+    function updateModelOptionsInResults() {
+        const modelSelect = document.getElementById('modelSelectResults');
+        const brandSelect = document.getElementById('brandSelectResults');
+        const selectedBrand = brandSelect.value;
+
+        modelSelect.innerHTML = '';
+        const models = CLEARANCE_RULES[state.equipmentType][selectedBrand].models;
+        for (const [modelKey, modelData] of Object.entries(models)) {
+            const option = document.createElement('option');
+            option.value = modelKey;
+            option.textContent = modelData.name;
+            option.selected = state.model === modelKey;
+            modelSelect.appendChild(option);
+        }
+    }
+
+    function updateBrandSelection() {
+        const brandSelect = document.getElementById('brandSelectResults');
+        state.brand = brandSelect.value;
+        updateModelOptionsInResults();
+
+        // Auto-select first model
+        const modelSelect = document.getElementById('modelSelectResults');
+        state.model = modelSelect.value;
+
+        // Redraw results
+        showResults();
+        autoSave();
+    }
+
+    function updateModelSelection() {
+        const modelSelect = document.getElementById('modelSelectResults');
+        state.model = modelSelect.value;
+
+        // Redraw results
+        showResults();
+        autoSave();
+    }
+
+    function hideModelEditor() {
+        document.getElementById('modelEditorSection').style.display = 'none';
+    }
+
     // Step 0: Equipment Type Selection
     function selectEquipmentType(type, clickedButton) {
         state.equipmentType = type;
@@ -1137,6 +1802,9 @@
         document.getElementById('equipmentInfo').innerHTML = `
             <strong>${info.icon} ${info.name}:</strong> ${info.description}
         `;
+
+        // Save state
+        autoSave();
 
         // Show next step button
         setTimeout(() => {
@@ -1191,6 +1859,8 @@
                 state.photo = img;
                 state.photoWidth = img.width;
                 state.photoHeight = img.height;
+
+                autoSave();
 
                 document.getElementById('step1').classList.add('hidden');
                 document.getElementById('step2').classList.remove('hidden');
@@ -1636,6 +2306,8 @@
             state.scale.perspectiveWarning = false;
             document.getElementById('perspectiveWarningDiv').style.display = 'none';
         }
+
+        autoSave();
 
         // Auto-advance to next step
         setTimeout(() => {
@@ -2236,6 +2908,7 @@
         const canvas = document.getElementById('photoCanvas2');
         const coords = getCanvasCoordinates(canvas, e);
         state.equipment = coords;
+        autoSave();
         document.getElementById('confirmEquipmentBtn').disabled = false;
         const ctx = canvas.getContext('2d');
         drawPhotoWithEquipment(ctx);
@@ -2246,6 +2919,7 @@
         const canvas = document.getElementById('photoCanvas2');
         const coords = getCanvasCoordinates(canvas, e);
         state.equipment = coords;
+        autoSave();
         document.getElementById('confirmEquipmentBtn').disabled = false;
         const ctx = canvas.getContext('2d');
         drawPhotoWithEquipment(ctx);
@@ -2684,6 +3358,24 @@
             return;
         }
 
+        // Check if clicked on an existing object for editing/dragging
+        const clickedObject = findObjectAtPosition(coords.x, coords.y);
+        if (clickedObject) {
+            state.selectedObject = clickedObject;
+            state.dragOffset = {
+                x: coords.x,
+                y: coords.y
+            };
+            showObjectEditor(clickedObject);
+            return;
+        }
+
+        // Deselect if clicking on empty space
+        if (state.selectedObject) {
+            state.selectedObject = null;
+            hideObjectEditor();
+        }
+
         if (state.drawingTool === 'paint') {
             state.isPainting = true;
             state.currentPaintStroke = [coords];
@@ -2696,6 +3388,16 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
+
+        // Handle object dragging
+        if (state.selectedObject && state.dragOffset) {
+            const dx = current.x - state.dragOffset.x;
+            const dy = current.y - state.dragOffset.y;
+            moveObject(state.selectedObject, dx, dy);
+            state.dragOffset = current;
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
 
         // Handle lasso mode
         if (state.lassoMode && state.lassoPoints.length > 0) {
@@ -2755,6 +3457,13 @@
     function handleObstacleMouseUp(e) {
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
+
+        // Handle object dragging end
+        if (state.dragOffset) {
+            state.dragOffset = null;
+            autoSave();
+            return;
+        }
 
         // Handle lasso mode
         if (state.lassoMode && state.lassoPoints.length > 0) {
@@ -2833,6 +3542,7 @@
         }
 
         state.obstacles.push(obstacle);
+        autoSave();
 
         state.currentObstacleStart = null;
         updateObstacleList();
@@ -2869,15 +3579,71 @@
     function handleObstacleTouchStart(e) {
         e.preventDefault();
         const canvas = document.getElementById('photoCanvas3');
-        state.currentObstacleStart = getCanvasCoordinates(canvas, e);
+        const coords = getCanvasCoordinates(canvas, e);
+
+        // Handle lasso mode
+        if (state.lassoMode) {
+            state.lassoPoints.push(coords);
+            return;
+        }
+
+        // Check if touched an existing object for editing/dragging
+        const touchedObject = findObjectAtPosition(coords.x, coords.y);
+        if (touchedObject) {
+            state.selectedObject = touchedObject;
+            state.dragOffset = {
+                x: coords.x,
+                y: coords.y
+            };
+            showObjectEditor(touchedObject);
+            return;
+        }
+
+        // Deselect if touching empty space
+        if (state.selectedObject) {
+            state.selectedObject = null;
+            hideObjectEditor();
+        }
+
+        if (state.drawingTool === 'paint') {
+            state.isPainting = true;
+            state.currentPaintStroke = [coords];
+        } else {
+            state.currentObstacleStart = coords;
+        }
     }
 
     function handleObstacleTouchMove(e) {
         e.preventDefault();
-        if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
+
+        // Handle object dragging
+        if (state.selectedObject && state.dragOffset) {
+            const dx = current.x - state.dragOffset.x;
+            const dy = current.y - state.dragOffset.y;
+            moveObject(state.selectedObject, dx, dy);
+            state.dragOffset = current;
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoPoints.push(current);
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
+
+        if (state.drawingTool === 'paint' && state.isPainting) {
+            state.currentPaintStroke.push(current);
+            drawPhotoWithObstacles(ctx);
+            drawPaintStroke(ctx, state.currentPaintStroke, state.paintBrushSize);
+            return;
+        }
+
+        if (!state.currentObstacleStart) return;
 
         drawPhotoWithObstacles(ctx);
 
@@ -2912,8 +3678,41 @@
 
     function handleObstacleTouchEnd(e) {
         e.preventDefault();
-        if (!state.currentObstacleStart) return;
         const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+
+        // Handle object dragging end
+        if (state.dragOffset) {
+            state.dragOffset = null;
+            autoSave();
+            return;
+        }
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoComplete = true;
+            drawPhotoWithObstacles(ctx);
+            document.getElementById('detectInObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('obstacleLassoStatus').textContent = '✅ Lasso complete! Select obstacle type below, then click "Detect Obstacle with AI"';
+            document.getElementById('obstacleLassoStatus').style.background = '#e8f5e9';
+            document.getElementById('obstacleLassoStatus').style.color = '#2e7d32';
+            return;
+        }
+
+        if (state.drawingTool === 'paint' && state.isPainting) {
+            state.isPainting = false;
+            if (state.currentPaintStroke && state.currentPaintStroke.length > 1) {
+                state.paintMasks.push({
+                    stroke: state.currentPaintStroke,
+                    brushSize: state.paintBrushSize
+                });
+            }
+            state.currentPaintStroke = null;
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
+
+        if (!state.currentObstacleStart) return;
         const touch = e.changedTouches[0];
         const current = getCanvasCoordinates(canvas, { clientX: touch.clientX, clientY: touch.clientY });
 
@@ -2963,6 +3762,7 @@
         }
 
         state.obstacles.push(obstacle);
+        autoSave();
 
         state.currentObstacleStart = null;
         updateObstacleList();
@@ -3176,6 +3976,8 @@
             alert('Please select a model');
             return;
         }
+
+        autoSave();
 
         document.getElementById('step5').classList.add('hidden');
         document.getElementById('step6').classList.remove('hidden');
