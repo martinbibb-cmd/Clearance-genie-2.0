@@ -545,55 +545,76 @@
     <div class="step hidden" id="step4">
         <h2><span class="step-number">4</span> Mark Clearance Obstacles</h2>
 
-        <!-- AI Detection Section -->
+        <!-- Lasso + AI Detection Section (Primary Method) -->
         <div class="instructions">
-            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
-            Let AI detect obstacles in your photo automatically.
+            <strong>✨ Option 1: Lasso + AI Detection (Recommended)</strong><br>
+            <strong>Step 1:</strong> Draw a rough lasso around an obstacle<br>
+            <strong>Step 2:</strong> AI will find exact boundaries within that area<br>
+            <strong>Step 3:</strong> Select the obstacle type and confirm
         </div>
-        <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Ensure good lighting and clear visibility of windows, doors, walls, and other obstacles.
+        <div class="instructions" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+            💡 <strong>Why use lasso+AI?</strong> Much more accurate and faster! You roughly circle obstacles like windows, doors, or walls, and AI refines the exact edges. This combines your knowledge of what's important with AI precision!
         </div>
-        <button id="autoDetectObstaclesBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            🤖 Auto-Detect Obstacles (AI)
+        <button id="startObstacleLassoBtn" style="margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            ✏️ Draw Lasso Around Obstacle
+        </button>
+        <button id="detectInObstacleLassoBtn" style="margin-bottom: 10px; display: none; background: #2e7d32; color: white;">
+            🤖 Detect Obstacle with AI
+        </button>
+        <button id="clearObstacleLassoBtn" style="margin-bottom: 10px; display: none; background: #e74c3c; color: white;">
+            🗑️ Clear Lasso
+        </button>
+        <div id="obstacleLassoStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        <!-- Auto-Detect All (Secondary AI Option) -->
+        <div class="instructions" style="margin-top: 20px; background: #e3f2fd; border-left: 4px solid #2196f3;">
+            <strong>🤖 Or: Auto-Detect All Obstacles</strong><br>
+            Let AI try to detect all obstacles automatically (may miss some or be less accurate).
+        </div>
+        <button id="autoDetectObstaclesBtn" style="margin-bottom: 20px; background: #2196f3; color: white;">
+            🤖 Auto-Detect All Obstacles (AI)
         </button>
         <div id="autoDetectObstaclesStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
-        <!-- Manual Marking Section -->
-        <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;" id="step4Instructions">
-            <strong>📏 Option 2: Manual Marking</strong><br>
-            Choose a marking tool and draw obstacles on the photo.
-        </div>
-
-        <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-            <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
-                </button>
-                <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
-                </button>
-                <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
-                </button>
-                <button id="paintToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    🖌️ Paint<br><span style="font-size: 11px; opacity: 0.9;">AI Confirm Area</span>
-                </button>
+        <!-- Manual Marking Section (Fallback) -->
+        <details style="margin-top: 20px;">
+            <summary style="cursor: pointer; padding: 12px; background: #fff9e6; border: 2px dashed #ff9800; border-radius: 8px; font-weight: 600; user-select: none;">
+                📏 Option 2: Manual Tools (Fallback - Click to Expand)
+            </summary>
+            <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                <div class="instructions" style="background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 10px;" id="step4Instructions">
+                    <strong>⚠️ Manual Marking:</strong> Use these tools only if lasso+AI doesn't work for a specific obstacle. These require precise drawing and are more time-consuming.
+                </div>
+                <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
+                    </button>
+                    <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
+                    </button>
+                    <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
+                    </button>
+                    <button id="paintToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        🖌️ Paint<br><span style="font-size: 11px; opacity: 0.9;">AI Confirm Area</span>
+                    </button>
+                </div>
+                <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
+                    <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
+                </div>
+                <div id="paintToolControls" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; display: none;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Brush Size: <span id="brushSizeValue">30</span>px</label>
+                    <input type="range" id="brushSizeSlider" min="10" max="100" value="30" style="width: 100%;">
+                    <button id="confirmPaintMaskBtn" style="margin-top: 8px; padding: 8px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-size: 13px;">
+                        🤖 Confirm Masked Area with AI
+                    </button>
+                    <button id="clearPaintMaskBtn" style="margin-top: 5px; padding: 6px; background: #e74c3c; color: white; border: none; border-radius: 4px; width: 100%; font-size: 12px;">
+                        Clear Paint Mask
+                    </button>
+                </div>
             </div>
-            <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
-                <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
-            </div>
-            <div id="paintToolControls" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; display: none;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Brush Size: <span id="brushSizeValue">30</span>px</label>
-                <input type="range" id="brushSizeSlider" min="10" max="100" value="30" style="width: 100%;">
-                <button id="confirmPaintMaskBtn" style="margin-top: 8px; padding: 8px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-size: 13px;">
-                    🤖 Confirm Masked Area with AI
-                </button>
-                <button id="clearPaintMaskBtn" style="margin-top: 5px; padding: 6px; background: #e74c3c; color: white; border: none; border-radius: 4px; width: 100%; font-size: 12px;">
-                    Clear Paint Mask
-                </button>
-            </div>
-        </div>
+        </details>
 
         <canvas id="photoCanvas3"></canvas>
         <div class="input-group">
@@ -2311,6 +2332,131 @@
         }
     });
 
+    // Detect obstacle within lasso selection
+    async function detectObstacleInLasso() {
+        const statusDiv = document.getElementById('obstacleLassoStatus');
+        const detectBtn = document.getElementById('detectInObstacleLassoBtn');
+        const selectedType = document.getElementById('obstacleType').value;
+
+        if (!selectedType) {
+            alert('Please select an obstacle type from the dropdown below before detecting.');
+            return;
+        }
+
+        statusDiv.style.background = '#e3f2fd';
+        statusDiv.style.color = '#1976d2';
+        statusDiv.textContent = '🔍 Detecting obstacle with AI...';
+        detectBtn.disabled = true;
+
+        try {
+            // Calculate bounding box of lasso
+            const minX = Math.min(...state.lassoPoints.map(p => p.x));
+            const minY = Math.min(...state.lassoPoints.map(p => p.y));
+            const maxX = Math.max(...state.lassoPoints.map(p => p.x));
+            const maxY = Math.max(...state.lassoPoints.map(p => p.y));
+            const cropWidth = maxX - minX;
+            const cropHeight = maxY - minY;
+
+            // Create cropped canvas
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = cropWidth;
+            tempCanvas.height = cropHeight;
+
+            // Draw cropped region from original photo
+            tempCtx.drawImage(state.photo, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI Worker
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageBase64,
+                    equipmentType: state.equipmentType,
+                    detectObjects: [selectedType],
+                    cropMetadata: {
+                        originX: minX,
+                        originY: minY,
+                        width: cropWidth,
+                        height: cropHeight,
+                        fullImageWidth: state.photoWidth,
+                        fullImageHeight: state.photoHeight
+                    },
+                    useHybridDetection: true,
+                    preciseBoundaries: true,
+                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy.`
+                }),
+                signal: AbortSignal.timeout(60000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API returned error status ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.obstacles && result.obstacles.length > 0) {
+                // Scale and translate obstacle coordinates
+                const scaleX = cropWidth / 1000;
+                const scaleY = cropHeight / 1000;
+
+                const obstacle = result.obstacles[0]; // Take first detected obstacle
+                state.obstacles.push({
+                    type: obstacle.type,
+                    shape: 'rectangle',
+                    bounds: {
+                        x: (obstacle.bounds.x * scaleX) + minX,
+                        y: (obstacle.bounds.y * scaleY) + minY,
+                        width: obstacle.bounds.width * scaleX,
+                        height: obstacle.bounds.height * scaleY
+                    }
+                });
+
+                // Success! Reset lasso
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+
+                // Update UI
+                document.getElementById('startObstacleLassoBtn').style.display = 'inline-block';
+                document.getElementById('clearObstacleLassoBtn').style.display = 'none';
+                document.getElementById('detectInObstacleLassoBtn').style.display = 'none';
+
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.textContent = `✅ ${OBSTACLE_LABELS[obstacle.type]} detected! Draw another lasso or use other methods to add more obstacles.`;
+
+                // Update list and canvas
+                updateObstacleList();
+                const canvas = document.getElementById('photoCanvas3');
+                const ctx = canvas.getContext('2d');
+                drawPhotoWithObstacles(ctx);
+
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+
+            } else {
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.color = '#e65100';
+                statusDiv.textContent = '⚠️ No obstacle detected in lasso area. Try drawing a tighter lasso or use manual tools.';
+            }
+
+            detectBtn.disabled = false;
+
+        } catch (error) {
+            console.error('Lasso detection error:', error);
+            statusDiv.style.background = '#ffebee';
+            statusDiv.style.color = '#c62828';
+            statusDiv.textContent = `❌ Detection failed: ${error.message}. Try again or use manual tools.`;
+            detectBtn.disabled = false;
+        }
+    }
+
     // Tool selection handlers
     function setDrawingTool(tool) {
         state.drawingTool = tool;
@@ -2356,6 +2502,41 @@
 
         drawPhotoWithObstacles(ctx);
 
+        // Obstacle Lasso Tool Handlers
+        document.getElementById('startObstacleLassoBtn').addEventListener('click', () => {
+            state.lassoMode = true;
+            state.lassoPoints = [];
+            state.lassoComplete = false;
+            hideMagnifier();
+
+            document.getElementById('startObstacleLassoBtn').style.display = 'none';
+            document.getElementById('clearObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('obstacleLassoStatus').style.display = 'block';
+            document.getElementById('obstacleLassoStatus').style.background = '#e3f2fd';
+            document.getElementById('obstacleLassoStatus').style.color = '#1976d2';
+            document.getElementById('obstacleLassoStatus').textContent = '✏️ Draw around the obstacle, then release to finish';
+
+            canvas.style.cursor = 'crosshair';
+        });
+
+        document.getElementById('clearObstacleLassoBtn').addEventListener('click', () => {
+            state.lassoMode = false;
+            state.lassoPoints = [];
+            state.lassoComplete = false;
+
+            document.getElementById('startObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('clearObstacleLassoBtn').style.display = 'none';
+            document.getElementById('detectInObstacleLassoBtn').style.display = 'none';
+            document.getElementById('obstacleLassoStatus').style.display = 'none';
+
+            canvas.style.cursor = 'default';
+            drawPhotoWithObstacles(ctx);
+        });
+
+        document.getElementById('detectInObstacleLassoBtn').addEventListener('click', async () => {
+            await detectObstacleInLasso();
+        });
+
         // Tool button handlers
         document.getElementById('rectangleToolBtn').addEventListener('click', () => setDrawingTool('rectangle'));
         document.getElementById('lineToolBtn').addEventListener('click', () => setDrawingTool('line'));
@@ -2377,7 +2558,7 @@
             confirmPaintMaskWithAI();
         });
 
-        // Initialize with rectangle tool
+        // Initialize with rectangle tool (but lasso is recommended)
         setDrawingTool('rectangle');
 
         canvas.addEventListener('mousedown', handleObstacleMouseDown);
@@ -2393,6 +2574,12 @@
         const canvas = document.getElementById('photoCanvas3');
         const coords = getCanvasCoordinates(canvas, e);
 
+        // Handle lasso mode
+        if (state.lassoMode) {
+            state.lassoPoints.push(coords);
+            return;
+        }
+
         if (state.drawingTool === 'paint') {
             state.isPainting = true;
             state.currentPaintStroke = [coords];
@@ -2405,6 +2592,13 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoPoints.push(current);
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
 
         if (state.drawingTool === 'paint' && state.isPainting) {
             // Add point to current stroke
@@ -2456,6 +2650,20 @@
 
     function handleObstacleMouseUp(e) {
         const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoComplete = true;
+            drawPhotoWithObstacles(ctx);
+
+            // Show detect button
+            document.getElementById('detectInObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('obstacleLassoStatus').textContent = '✅ Lasso complete! Select obstacle type below, then click "Detect Obstacle with AI"';
+            document.getElementById('obstacleLassoStatus').style.background = '#e8f5e9';
+            document.getElementById('obstacleLassoStatus').style.color = '#2e7d32';
+            return;
+        }
 
         if (state.drawingTool === 'paint' && state.isPainting) {
             state.isPainting = false;
@@ -2717,6 +2925,26 @@
         state.paintMasks.forEach(mask => {
             drawPaintStroke(ctx, mask.stroke, mask.brushSize);
         });
+
+        // Draw lasso
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            ctx.strokeStyle = state.lassoComplete ? '#00ff00' : '#ffff00';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            for (let i = 1; i < state.lassoPoints.length; i++) {
+                ctx.lineTo(state.lassoPoints[i].x, state.lassoPoints[i].y);
+            }
+
+            if (state.lassoComplete && state.lassoPoints.length > 2) {
+                ctx.closePath();
+            }
+
+            ctx.stroke();
+        }
     }
 
     function updateObstacleList() {
