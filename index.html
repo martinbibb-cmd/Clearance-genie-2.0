@@ -358,9 +358,17 @@
                 <div class="icon">🌬️</div>
                 <div class="label">Flue Terminal</div>
             </div>
-            <div class="equipment-type-btn" onclick="selectEquipmentType('boiler')">
+            <div class="equipment-type-btn" onclick="selectEquipmentType('combi_boiler')">
                 <div class="icon">🔥</div>
-                <div class="label">Boiler</div>
+                <div class="label">Combi Boiler</div>
+            </div>
+            <div class="equipment-type-btn" onclick="selectEquipmentType('system_boiler')">
+                <div class="icon">⚙️</div>
+                <div class="label">System Boiler</div>
+            </div>
+            <div class="equipment-type-btn" onclick="selectEquipmentType('regular_boiler')">
+                <div class="icon">🏭</div>
+                <div class="label">Regular Boiler</div>
             </div>
             <div class="equipment-type-btn" onclick="selectEquipmentType('radiator')">
                 <div class="icon">♨️</div>
@@ -537,55 +545,76 @@
     <div class="step hidden" id="step4">
         <h2><span class="step-number">4</span> Mark Clearance Obstacles</h2>
 
-        <!-- AI Detection Section -->
+        <!-- Lasso + AI Detection Section (Primary Method) -->
         <div class="instructions">
-            <strong>🤖 Option 1: Automatic Detection (Recommended)</strong><br>
-            Let AI detect obstacles in your photo automatically.
+            <strong>✨ Option 1: Lasso + AI Detection (Recommended)</strong><br>
+            <strong>Step 1:</strong> Draw a rough lasso around an obstacle<br>
+            <strong>Step 2:</strong> AI will find exact boundaries within that area<br>
+            <strong>Step 3:</strong> Select the obstacle type and confirm
         </div>
-        <div class="instructions" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
-            💡 <strong>For best results:</strong> Ensure good lighting and clear visibility of windows, doors, walls, and other obstacles.
+        <div class="instructions" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+            💡 <strong>Why use lasso+AI?</strong> Much more accurate and faster! You roughly circle obstacles like windows, doors, or walls, and AI refines the exact edges. This combines your knowledge of what's important with AI precision!
         </div>
-        <button id="autoDetectObstaclesBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            🤖 Auto-Detect Obstacles (AI)
+        <button id="startObstacleLassoBtn" style="margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            ✏️ Draw Lasso Around Obstacle
+        </button>
+        <button id="detectInObstacleLassoBtn" style="margin-bottom: 10px; display: none; background: #2e7d32; color: white;">
+            🤖 Detect Obstacle with AI
+        </button>
+        <button id="clearObstacleLassoBtn" style="margin-bottom: 10px; display: none; background: #e74c3c; color: white;">
+            🗑️ Clear Lasso
+        </button>
+        <div id="obstacleLassoStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
+
+        <!-- Auto-Detect All (Secondary AI Option) -->
+        <div class="instructions" style="margin-top: 20px; background: #e3f2fd; border-left: 4px solid #2196f3;">
+            <strong>🤖 Or: Auto-Detect All Obstacles</strong><br>
+            Let AI try to detect all obstacles automatically (may miss some or be less accurate).
+        </div>
+        <button id="autoDetectObstaclesBtn" style="margin-bottom: 20px; background: #2196f3; color: white;">
+            🤖 Auto-Detect All Obstacles (AI)
         </button>
         <div id="autoDetectObstaclesStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
-        <!-- Manual Marking Section -->
-        <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;" id="step4Instructions">
-            <strong>📏 Option 2: Manual Marking</strong><br>
-            Choose a marking tool and draw obstacles on the photo.
-        </div>
-
-        <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-            <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
-                </button>
-                <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
-                </button>
-                <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
-                </button>
-                <button id="paintToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                    🖌️ Paint<br><span style="font-size: 11px; opacity: 0.9;">AI Confirm Area</span>
-                </button>
+        <!-- Manual Marking Section (Fallback) -->
+        <details style="margin-top: 20px;">
+            <summary style="cursor: pointer; padding: 12px; background: #fff9e6; border: 2px dashed #ff9800; border-radius: 8px; font-weight: 600; user-select: none;">
+                📏 Option 2: Manual Tools (Fallback - Click to Expand)
+            </summary>
+            <div style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                <div class="instructions" style="background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 10px;" id="step4Instructions">
+                    <strong>⚠️ Manual Marking:</strong> Use these tools only if lasso+AI doesn't work for a specific obstacle. These require precise drawing and are more time-consuming.
+                </div>
+                <strong style="display: block; margin-bottom: 10px;">Marking Tools:</strong>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="rectangleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #3498db; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        📐 Rectangle<br><span style="font-size: 11px; opacity: 0.9;">Windows, Doors</span>
+                    </button>
+                    <button id="lineToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        📏 Line<br><span style="font-size: 11px; opacity: 0.9;">Edges, Soffits</span>
+                    </button>
+                    <button id="circleToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        ⭕ Circle<br><span style="font-size: 11px; opacity: 0.9;">Round Objects</span>
+                    </button>
+                    <button id="paintToolBtn" class="tool-btn" style="flex: 1; min-width: 120px; padding: 10px; background: #95a5a6; border: 2px solid transparent; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                        🖌️ Paint<br><span style="font-size: 11px; opacity: 0.9;">AI Confirm Area</span>
+                    </button>
+                </div>
+                <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
+                    <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
+                </div>
+                <div id="paintToolControls" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; display: none;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Brush Size: <span id="brushSizeValue">30</span>px</label>
+                    <input type="range" id="brushSizeSlider" min="10" max="100" value="30" style="width: 100%;">
+                    <button id="confirmPaintMaskBtn" style="margin-top: 8px; padding: 8px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-size: 13px;">
+                        🤖 Confirm Masked Area with AI
+                    </button>
+                    <button id="clearPaintMaskBtn" style="margin-top: 5px; padding: 6px; background: #e74c3c; color: white; border: none; border-radius: 4px; width: 100%; font-size: 12px;">
+                        Clear Paint Mask
+                    </button>
+                </div>
             </div>
-            <div id="toolInstructions" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 13px;">
-                <strong>📐 Rectangle Tool:</strong> Tap two corners to draw a rectangle around the obstacle
-            </div>
-            <div id="paintToolControls" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; display: none;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Brush Size: <span id="brushSizeValue">30</span>px</label>
-                <input type="range" id="brushSizeSlider" min="10" max="100" value="30" style="width: 100%;">
-                <button id="confirmPaintMaskBtn" style="margin-top: 8px; padding: 8px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-size: 13px;">
-                    🤖 Confirm Masked Area with AI
-                </button>
-                <button id="clearPaintMaskBtn" style="margin-top: 5px; padding: 6px; background: #e74c3c; color: white; border: none; border-radius: 4px; width: 100%; font-size: 12px;">
-                    Clear Paint Mask
-                </button>
-            </div>
-        </div>
+        </details>
 
         <canvas id="photoCanvas3"></canvas>
         <div class="input-group">
@@ -689,28 +718,42 @@
             icon: "🌬️",
             description: "Check clearances around boiler flue terminals to windows, doors, vents, and building features.",
             markingInstruction: "Tap the center of the flue terminal.",
-            obstacles: ['opening_window', 'non_opening_window', 'vent', 'door', 'corner', 'ground']
+            obstacles: ['opening_window', 'non_opening_window', 'vent', 'door', 'corner', 'ground', 'soffit', 'gutter', 'balcony', 'canopy']
         },
-        boiler: {
-            name: "Boiler",
+        combi_boiler: {
+            name: "Combi Boiler",
             icon: "🔥",
-            description: "Check service clearances around the boiler for maintenance access and ventilation.",
+            description: "Check service clearances around combination boilers for maintenance access and ventilation.",
             markingInstruction: "Tap the center of the boiler.",
-            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window']
+            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
+        },
+        system_boiler: {
+            name: "System Boiler",
+            icon: "⚙️",
+            description: "Check service clearances around system boilers for maintenance access and ventilation.",
+            markingInstruction: "Tap the center of the boiler.",
+            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
+        },
+        regular_boiler: {
+            name: "Regular Boiler",
+            icon: "🏭",
+            description: "Check service clearances around regular (heat only) boilers for maintenance access and ventilation.",
+            markingInstruction: "Tap the center of the boiler.",
+            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
         },
         radiator: {
             name: "Radiator",
             icon: "♨️",
             description: "Check clearances around radiators for air circulation, curtains, and furniture.",
             markingInstruction: "Tap the center of the radiator.",
-            obstacles: ['wall', 'floor', 'window', 'curtain_rail', 'furniture', 'socket']
+            obstacles: ['wall', 'floor', 'window', 'curtain_rail', 'furniture', 'socket', 'skirting_board', 'shelf', 'desk', 'sofa']
         },
         cylinder: {
             name: "Cylinder",
             icon: "🛢️",
             description: "Check service clearances around hot water cylinders for maintenance and safety valve access.",
             markingInstruction: "Tap the center of the cylinder.",
-            obstacles: ['wall', 'ceiling', 'floor', 'door', 'corner']
+            obstacles: ['wall', 'ceiling', 'floor', 'door', 'corner', 'pipe', 'tank', 'shelf', 'cupboard']
         }
     };
 
@@ -742,7 +785,21 @@
                             { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
                             { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
                             { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                            { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    greenstar_2000: {
+                        name: "Greenstar 2000",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'door', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'ground', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
                         ]
                     }
                 }
@@ -756,7 +813,18 @@
                         rules: [
                             { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
                             { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    ecotec_exclusive: {
+                        name: "ecoTEC Exclusive",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'vent', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
                         ]
                     }
                 }
@@ -769,67 +837,168 @@
                         dimensions: { width: 100, height: 100, depth: 50 },
                         rules: [
                             { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    logic_max: {
+                        name: "Logic Max",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
+                        ]
+                    },
+                    vogue_max: {
+                        name: "Vogue Max",
+                        dimensions: { width: 100, height: 100, depth: 50 },
+                        rules: [
+                            { obstacle_type: 'opening_window', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'non_opening_window', clearances: { above: 150, below: 150, sides: 150 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
+                            { obstacle_type: 'soffit', clearances: { above: 300, below: 0, sides: 300 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
                         ]
                     }
                 }
             }
         },
         
-        // BOILER RULES
-        boiler: {
+        // COMBI BOILER RULES
+        combi_boiler: {
             worcester_bosch: {
                 name: "Worcester Bosch",
                 models: {
-                    greenstar_8000_30kw: {
-                        name: "Greenstar 8000 30kW",
-                        dimensions: { width: 440, height: 700, depth: 340 }, // mm
-                        rules: [
-                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                        ]
-                    },
-                    greenstar_4000_25kw: {
-                        name: "Greenstar 4000 25kW",
-                        dimensions: { width: 400, height: 720, depth: 330 },
-                        rules: [
-                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'corner', clearances: { above: 300, below: 300, sides: 300 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' },
-                            { obstacle_type: 'door', clearances: { above: 0, below: 0, sides: 500 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                        ]
-                    }
+                    greenstar_8000_life_25: { name: "Greenstar 8000 Life 25kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_life_30: { name: "Greenstar 8000 Life 30kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_style_30: { name: "Greenstar 8000 Style 30kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_style_35: { name: "Greenstar 8000 Style 35kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_4000_25: { name: "Greenstar 4000 25kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_4000_30: { name: "Greenstar 4000 30kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_2000_24: { name: "Greenstar 2000 24kW", dimensions: { width: 390, height: 700, depth: 310 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_2000_30: { name: "Greenstar 2000 30kW", dimensions: { width: 390, height: 700, depth: 310 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_1200_ri_18: { name: "Greenstar 1200 Ri 18kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_1200_ri_24: { name: "Greenstar 1200 Ri 24kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_compact_25: { name: "Greenstar Compact 25kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_compact_30: { name: "Greenstar Compact 30kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
                 }
             },
             vaillant: {
                 name: "Vaillant",
                 models: {
-                    ecotec_plus_428: {
-                        name: "ecoTEC Plus 428",
-                        dimensions: { width: 440, height: 720, depth: 338 },
-                        rules: [
-                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' },
-                            { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }
-                        ]
-                    }
+                    ecotec_plus_825: { name: "ecoTEC Plus 825", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_830: { name: "ecoTEC Plus 830", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_835: { name: "ecoTEC Plus 835", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_838: { name: "ecoTEC Plus 838", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_825: { name: "ecoTEC Exclusive 825", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_830: { name: "ecoTEC Exclusive 830", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_835: { name: "ecoTEC Exclusive 835", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_843: { name: "ecoTEC Exclusive 843", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_pure_825: { name: "ecoTEC Pure 825", dimensions: { width: 360, height: 720, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_pure_830: { name: "ecoTEC Pure 830", dimensions: { width: 360, height: 720, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_pure_835: { name: "ecoTEC Pure 835", dimensions: { width: 360, height: 720, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
                 }
             },
             ideal: {
                 name: "Ideal",
                 models: {
-                    logic_plus_30kw: {
-                        name: "Logic Plus 30kW",
-                        dimensions: { width: 400, height: 700, depth: 290 },
-                        rules: [
-                            { obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }
-                        ]
-                    }
+                    logic_plus_24: { name: "Logic Plus 24kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_plus_30: { name: "Logic Plus 30kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_plus_35: { name: "Logic Plus 35kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_max_24: { name: "Logic Max 24kW", dimensions: { width: 395, height: 710, depth: 285 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_max_30: { name: "Logic Max 30kW", dimensions: { width: 395, height: 710, depth: 285 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_max_35: { name: "Logic Max 35kW", dimensions: { width: 395, height: 710, depth: 285 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_26: { name: "Vogue Max 26kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_32: { name: "Vogue Max 32kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_40: { name: "Vogue Max 40kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_code_24: { name: "Logic Code 24kW", dimensions: { width: 380, height: 705, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_code_30: { name: "Logic Code 30kW", dimensions: { width: 380, height: 705, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_code_35: { name: "Logic Code 35kW", dimensions: { width: 380, height: 705, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
                 }
             }
+        },
+
+        // SYSTEM BOILER RULES
+        system_boiler: {
+            worcester_bosch: {
+                name: "Worcester Bosch",
+                models: {
+                    greenstar_8000_style_system_25: { name: "Greenstar 8000 Style System 25kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_style_system_30: { name: "Greenstar 8000 Style System 30kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_life_system_25: { name: "Greenstar 8000 Life System 25kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_8000_life_system_30: { name: "Greenstar 8000 Life System 30kW", dimensions: { width: 440, height: 700, depth: 340 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_4000_system_18: { name: "Greenstar 4000 System 18kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_4000_system_25: { name: "Greenstar 4000 System 25kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_4000_system_30: { name: "Greenstar 4000 System 30kW", dimensions: { width: 400, height: 720, depth: 330 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_2000_system_18: { name: "Greenstar 2000 System 18kW", dimensions: { width: 390, height: 700, depth: 310 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_2000_system_24: { name: "Greenstar 2000 System 24kW", dimensions: { width: 390, height: 700, depth: 310 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_2000_system_30: { name: "Greenstar 2000 System 30kW", dimensions: { width: 390, height: 700, depth: 310 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            },
+            vaillant: {
+                name: "Vaillant",
+                models: {
+                    ecotec_plus_system_418: { name: "ecoTEC Plus System 418", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_system_425: { name: "ecoTEC Plus System 425", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_system_430: { name: "ecoTEC Plus System 430", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_system_435: { name: "ecoTEC Plus System 435", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_system_832: { name: "ecoTEC Exclusive System 832", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_system_835: { name: "ecoTEC Exclusive System 835", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_exclusive_system_843: { name: "ecoTEC Exclusive System 843", dimensions: { width: 440, height: 800, depth: 360 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            },
+            ideal: {
+                name: "Ideal",
+                models: {
+                    logic_plus_system_18: { name: "Logic Plus System 18kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_plus_system_24: { name: "Logic Plus System 24kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_plus_system_30: { name: "Logic Plus System 30kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_max_system_24: { name: "Logic Max System 24kW", dimensions: { width: 395, height: 710, depth: 285 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_max_system_30: { name: "Logic Max System 30kW", dimensions: { width: 395, height: 710, depth: 285 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_system_26: { name: "Vogue Max System 26kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_system_32: { name: "Vogue Max System 32kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    vogue_max_system_40: { name: "Vogue Max System 40kW", dimensions: { width: 410, height: 730, depth: 295 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            }
+        },
+
+        // REGULAR BOILER RULES (Heat Only)
+        regular_boiler: {
+            worcester_bosch: {
+                name: "Worcester Bosch",
+                models: {
+                    greenstar_ri_regular_12: { name: "Greenstar Ri Regular 12kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_ri_regular_15: { name: "Greenstar Ri Regular 15kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_ri_regular_18: { name: "Greenstar Ri Regular 18kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_ri_regular_24: { name: "Greenstar Ri Regular 24kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_ri_regular_27: { name: "Greenstar Ri Regular 27kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_ri_regular_30: { name: "Greenstar Ri Regular 30kW", dimensions: { width: 400, height: 700, depth: 290 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_danesmoor_regular_18_25: { name: "Greenstar Danesmoor Regular 18/25kW", dimensions: { width: 580, height: 860, depth: 630 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    greenstar_danesmoor_regular_25_32: { name: "Greenstar Danesmoor Regular 25/32kW", dimensions: { width: 580, height: 860, depth: 630 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            },
+            vaillant: {
+                name: "Vaillant",
+                models: {
+                    ecotec_plus_regular_412: { name: "ecoTEC Plus Regular 412", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_regular_415: { name: "ecoTEC Plus Regular 415", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_regular_418: { name: "ecoTEC Plus Regular 418", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_regular_424: { name: "ecoTEC Plus Regular 424", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_regular_430: { name: "ecoTEC Plus Regular 430", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    ecotec_plus_regular_435: { name: "ecoTEC Plus Regular 435", dimensions: { width: 440, height: 720, depth: 338 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            },
+            ideal: {
+                name: "Ideal",
+                models: {
+                    logic_heat_regular_12: { name: "Logic Heat Regular 12kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_heat_regular_15: { name: "Logic Heat Regular 15kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_heat_regular_18: { name: "Logic Heat Regular 18kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_heat_regular_24: { name: "Logic Heat Regular 24kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_heat_regular_30: { name: "Logic Heat Regular 30kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] },
+                    logic_heat_regular_35: { name: "Logic Heat Regular 35kW", dimensions: { width: 380, height: 690, depth: 275 }, rules: [{ obstacle_type: 'wall', clearances: { above: 0, below: 0, sides: 50 }, zone_type: 'prohibited', color: 'rgba(255, 0, 0, 0.3)', stroke: '#ff0000' }, { obstacle_type: 'ceiling', clearances: { above: 300, below: 0, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }, { obstacle_type: 'floor', clearances: { above: 0, below: 300, sides: 0 }, zone_type: 'service', color: 'rgba(0, 255, 0, 0.3)', stroke: '#00ff00' }] }
+                }
+            }
+        },
         },
         
         // RADIATOR RULES
@@ -911,7 +1080,20 @@
         window: "Window",
         curtain_rail: "Curtain Rail",
         furniture: "Furniture",
-        socket: "Electrical Socket"
+        socket: "Electrical Socket",
+        soffit: "Soffit",
+        gutter: "Gutter / Downpipe",
+        balcony: "Balcony",
+        canopy: "Canopy / Overhang",
+        pipe: "Pipe",
+        duct: "Duct / Vent",
+        beam: "Beam / Joist",
+        cupboard: "Cupboard / Cabinet",
+        skirting_board: "Skirting Board",
+        shelf: "Shelf",
+        desk: "Desk",
+        sofa: "Sofa / Couch",
+        tank: "Tank / Water Tank"
     };
 
     // Step 0: Equipment Type Selection
@@ -2150,6 +2332,131 @@
         }
     });
 
+    // Detect obstacle within lasso selection
+    async function detectObstacleInLasso() {
+        const statusDiv = document.getElementById('obstacleLassoStatus');
+        const detectBtn = document.getElementById('detectInObstacleLassoBtn');
+        const selectedType = document.getElementById('obstacleType').value;
+
+        if (!selectedType) {
+            alert('Please select an obstacle type from the dropdown below before detecting.');
+            return;
+        }
+
+        statusDiv.style.background = '#e3f2fd';
+        statusDiv.style.color = '#1976d2';
+        statusDiv.textContent = '🔍 Detecting obstacle with AI...';
+        detectBtn.disabled = true;
+
+        try {
+            // Calculate bounding box of lasso
+            const minX = Math.min(...state.lassoPoints.map(p => p.x));
+            const minY = Math.min(...state.lassoPoints.map(p => p.y));
+            const maxX = Math.max(...state.lassoPoints.map(p => p.x));
+            const maxY = Math.max(...state.lassoPoints.map(p => p.y));
+            const cropWidth = maxX - minX;
+            const cropHeight = maxY - minY;
+
+            // Create cropped canvas
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = cropWidth;
+            tempCanvas.height = cropHeight;
+
+            // Draw cropped region from original photo
+            tempCtx.drawImage(state.photo, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI Worker
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageBase64,
+                    equipmentType: state.equipmentType,
+                    detectObjects: [selectedType],
+                    cropMetadata: {
+                        originX: minX,
+                        originY: minY,
+                        width: cropWidth,
+                        height: cropHeight,
+                        fullImageWidth: state.photoWidth,
+                        fullImageHeight: state.photoHeight
+                    },
+                    useHybridDetection: true,
+                    preciseBoundaries: true,
+                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy.`
+                }),
+                signal: AbortSignal.timeout(60000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API returned error status ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.obstacles && result.obstacles.length > 0) {
+                // Scale and translate obstacle coordinates
+                const scaleX = cropWidth / 1000;
+                const scaleY = cropHeight / 1000;
+
+                const obstacle = result.obstacles[0]; // Take first detected obstacle
+                state.obstacles.push({
+                    type: obstacle.type,
+                    shape: 'rectangle',
+                    bounds: {
+                        x: (obstacle.bounds.x * scaleX) + minX,
+                        y: (obstacle.bounds.y * scaleY) + minY,
+                        width: obstacle.bounds.width * scaleX,
+                        height: obstacle.bounds.height * scaleY
+                    }
+                });
+
+                // Success! Reset lasso
+                state.lassoMode = false;
+                state.lassoPoints = [];
+                state.lassoComplete = false;
+
+                // Update UI
+                document.getElementById('startObstacleLassoBtn').style.display = 'inline-block';
+                document.getElementById('clearObstacleLassoBtn').style.display = 'none';
+                document.getElementById('detectInObstacleLassoBtn').style.display = 'none';
+
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.textContent = `✅ ${OBSTACLE_LABELS[obstacle.type]} detected! Draw another lasso or use other methods to add more obstacles.`;
+
+                // Update list and canvas
+                updateObstacleList();
+                const canvas = document.getElementById('photoCanvas3');
+                const ctx = canvas.getContext('2d');
+                drawPhotoWithObstacles(ctx);
+
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+
+            } else {
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.color = '#e65100';
+                statusDiv.textContent = '⚠️ No obstacle detected in lasso area. Try drawing a tighter lasso or use manual tools.';
+            }
+
+            detectBtn.disabled = false;
+
+        } catch (error) {
+            console.error('Lasso detection error:', error);
+            statusDiv.style.background = '#ffebee';
+            statusDiv.style.color = '#c62828';
+            statusDiv.textContent = `❌ Detection failed: ${error.message}. Try again or use manual tools.`;
+            detectBtn.disabled = false;
+        }
+    }
+
     // Tool selection handlers
     function setDrawingTool(tool) {
         state.drawingTool = tool;
@@ -2195,6 +2502,41 @@
 
         drawPhotoWithObstacles(ctx);
 
+        // Obstacle Lasso Tool Handlers
+        document.getElementById('startObstacleLassoBtn').addEventListener('click', () => {
+            state.lassoMode = true;
+            state.lassoPoints = [];
+            state.lassoComplete = false;
+            hideMagnifier();
+
+            document.getElementById('startObstacleLassoBtn').style.display = 'none';
+            document.getElementById('clearObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('obstacleLassoStatus').style.display = 'block';
+            document.getElementById('obstacleLassoStatus').style.background = '#e3f2fd';
+            document.getElementById('obstacleLassoStatus').style.color = '#1976d2';
+            document.getElementById('obstacleLassoStatus').textContent = '✏️ Draw around the obstacle, then release to finish';
+
+            canvas.style.cursor = 'crosshair';
+        });
+
+        document.getElementById('clearObstacleLassoBtn').addEventListener('click', () => {
+            state.lassoMode = false;
+            state.lassoPoints = [];
+            state.lassoComplete = false;
+
+            document.getElementById('startObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('clearObstacleLassoBtn').style.display = 'none';
+            document.getElementById('detectInObstacleLassoBtn').style.display = 'none';
+            document.getElementById('obstacleLassoStatus').style.display = 'none';
+
+            canvas.style.cursor = 'default';
+            drawPhotoWithObstacles(ctx);
+        });
+
+        document.getElementById('detectInObstacleLassoBtn').addEventListener('click', async () => {
+            await detectObstacleInLasso();
+        });
+
         // Tool button handlers
         document.getElementById('rectangleToolBtn').addEventListener('click', () => setDrawingTool('rectangle'));
         document.getElementById('lineToolBtn').addEventListener('click', () => setDrawingTool('line'));
@@ -2216,7 +2558,7 @@
             confirmPaintMaskWithAI();
         });
 
-        // Initialize with rectangle tool
+        // Initialize with rectangle tool (but lasso is recommended)
         setDrawingTool('rectangle');
 
         canvas.addEventListener('mousedown', handleObstacleMouseDown);
@@ -2232,6 +2574,12 @@
         const canvas = document.getElementById('photoCanvas3');
         const coords = getCanvasCoordinates(canvas, e);
 
+        // Handle lasso mode
+        if (state.lassoMode) {
+            state.lassoPoints.push(coords);
+            return;
+        }
+
         if (state.drawingTool === 'paint') {
             state.isPainting = true;
             state.currentPaintStroke = [coords];
@@ -2244,6 +2592,13 @@
         const canvas = document.getElementById('photoCanvas3');
         const ctx = canvas.getContext('2d');
         const current = getCanvasCoordinates(canvas, e);
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoPoints.push(current);
+            drawPhotoWithObstacles(ctx);
+            return;
+        }
 
         if (state.drawingTool === 'paint' && state.isPainting) {
             // Add point to current stroke
@@ -2295,6 +2650,20 @@
 
     function handleObstacleMouseUp(e) {
         const canvas = document.getElementById('photoCanvas3');
+        const ctx = canvas.getContext('2d');
+
+        // Handle lasso mode
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            state.lassoComplete = true;
+            drawPhotoWithObstacles(ctx);
+
+            // Show detect button
+            document.getElementById('detectInObstacleLassoBtn').style.display = 'inline-block';
+            document.getElementById('obstacleLassoStatus').textContent = '✅ Lasso complete! Select obstacle type below, then click "Detect Obstacle with AI"';
+            document.getElementById('obstacleLassoStatus').style.background = '#e8f5e9';
+            document.getElementById('obstacleLassoStatus').style.color = '#2e7d32';
+            return;
+        }
 
         if (state.drawingTool === 'paint' && state.isPainting) {
             state.isPainting = false;
@@ -2556,6 +2925,26 @@
         state.paintMasks.forEach(mask => {
             drawPaintStroke(ctx, mask.stroke, mask.brushSize);
         });
+
+        // Draw lasso
+        if (state.lassoMode && state.lassoPoints.length > 0) {
+            ctx.strokeStyle = state.lassoComplete ? '#00ff00' : '#ffff00';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            for (let i = 1; i < state.lassoPoints.length; i++) {
+                ctx.lineTo(state.lassoPoints[i].x, state.lassoPoints[i].y);
+            }
+
+            if (state.lassoComplete && state.lassoPoints.length > 2) {
+                ctx.closePath();
+            }
+
+            ctx.stroke();
+        }
     }
 
     function updateObstacleList() {
@@ -2871,8 +3260,7 @@
         btn.textContent = '🔄 Analyzing...';
 
         try {
-            // Create a temporary canvas to extract the masked region
-            const canvas = document.getElementById('photoCanvas3');
+            // Create a temporary canvas to extract the masked region from the original photo
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
 
@@ -2901,8 +3289,8 @@
             tempCanvas.width = cropWidth;
             tempCanvas.height = cropHeight;
 
-            // Draw the cropped region
-            tempCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+            // Draw the cropped region from the ORIGINAL PHOTO (not the canvas with drawings)
+            tempCtx.drawImage(state.photo, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
             // Convert to base64
             const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
@@ -2920,27 +3308,37 @@
                         originY: minY,
                         width: cropWidth,
                         height: cropHeight,
-                        fullWidth: state.photoWidth,
-                        fullHeight: state.photoHeight
+                        fullImageWidth: state.photoWidth,
+                        fullImageHeight: state.photoHeight
                     },
                     useHybridDetection: true,
-                    prompt: `Identify and locate the exact position and dimensions of objects in this painted/masked region. Return bounds for detected objects.`
+                    preciseBoundaries: true,
+                    prompt: `Identify and locate the exact position and dimensions of objects in this painted/masked region. Return bounds for detected objects with pixel-level accuracy.`
                 })
             });
 
+            if (!response.ok) {
+                throw new Error(`API returned error status ${response.status}`);
+            }
+
             const result = await response.json();
 
-            if (result.detections && result.detections.length > 0) {
+            // Check for obstacles in response (API returns 'obstacles' not 'detections')
+            if (result.obstacles && result.obstacles.length > 0) {
+                // Scale factor: API returns coordinates based on 1000x1000 reference
+                const scaleX = cropWidth / 1000;
+                const scaleY = cropHeight / 1000;
+
                 // Add detected objects as obstacles
-                result.detections.forEach(detection => {
+                result.obstacles.forEach(detection => {
                     const obstacle = {
                         type: detection.type,
                         shape: 'rectangle',
                         bounds: {
-                            x: detection.bounds.x + minX,
-                            y: detection.bounds.y + minY,
-                            width: detection.bounds.width,
-                            height: detection.bounds.height
+                            x: (detection.bounds.x * scaleX) + minX,
+                            y: (detection.bounds.y * scaleY) + minY,
+                            width: detection.bounds.width * scaleX,
+                            height: detection.bounds.height * scaleY
                         },
                         aiConfirmed: true
                     };
@@ -2953,14 +3351,14 @@
                 const ctx = document.getElementById('photoCanvas3').getContext('2d');
                 drawPhotoWithObstacles(ctx);
 
-                alert(`✅ AI confirmed ${result.detections.length} object(s) in the painted region!`);
+                alert(`✅ AI confirmed ${result.obstacles.length} object(s) in the painted region!`);
             } else {
                 alert('❌ AI could not detect any objects in the painted region. Try painting more clearly or use manual tools.');
             }
 
         } catch (error) {
             console.error('AI confirmation error:', error);
-            alert('❌ Error confirming with AI. Please try again or use manual marking tools.');
+            alert(`❌ Error confirming with AI: ${error.message}\n\nPlease try again or use manual marking tools.`);
         } finally {
             btn.disabled = false;
             btn.textContent = '🤖 Confirm Masked Area with AI';
