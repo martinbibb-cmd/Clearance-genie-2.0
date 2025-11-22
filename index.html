@@ -12,7 +12,6 @@
             box-sizing: border-box;
         }
 
-```
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: #f5f5f5;
@@ -104,7 +103,12 @@
     }
 
     input[type="file"] {
-        display: none;
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
     }
 
     .file-upload-btn {
@@ -343,7 +347,6 @@
         transform: scale(1.02);
     }
 </style>
-```
 
 </head>
 <body>
@@ -351,7 +354,6 @@
         <h1>🔥 Clearance Genie</h1>
         <div class="subtitle">Service & Installation Clearance Checker</div>
 
-```
     <!-- Step 0: Select Equipment Type -->
     <div class="step" id="step0">
         <h2><span class="step-number">0</span> Select Equipment Type</h2>
@@ -3459,7 +3461,6 @@
         document.getElementById('equipmentInfo').innerHTML = 'Select the type of equipment you\'re checking clearances for.';
     }
 </script>
-```
 
 </body>
 </html>
