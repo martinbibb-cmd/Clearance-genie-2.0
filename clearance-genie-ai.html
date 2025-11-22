@@ -497,6 +497,11 @@
                     soil_pipe: 300,
                     downpipe: 300
                 },
+                // Physical dimensions in mm (flue terminal - circular, diameter)
+                dimensions: {
+                    width: 100,  // diameter
+                    height: 100  // diameter
+                },
                 isInternal: false
             },
             boiler: {
@@ -511,6 +516,11 @@
                     wall: 50,
                     door: 500
                 },
+                // Typical wall-hung boiler dimensions in mm
+                dimensions: {
+                    width: 440,   // width
+                    height: 700   // height
+                },
                 isInternal: true
             },
             radiator: {
@@ -523,6 +533,11 @@
                     curtain: 100,
                     furniture: 150,
                     wall: 50
+                },
+                // Typical radiator dimensions in mm
+                dimensions: {
+                    width: 1200,  // width
+                    height: 600   // height
                 },
                 isInternal: true
             },
@@ -537,6 +552,11 @@
                     valve: 300,
                     wall: 150,
                     ceiling: 450
+                },
+                // Typical hot water cylinder dimensions in mm
+                dimensions: {
+                    width: 450,   // diameter
+                    height: 1200  // height
                 },
                 isInternal: true
             }
@@ -877,7 +897,42 @@
             // Draw photo
             ctx.drawImage(state.photo, 0, 0);
 
-            // Draw clearance zones around detected objects
+            // Calculate equipment dimensions in pixels
+            const equipWidthPx = config.dimensions.width * state.scale.pixelsPerMM;
+            const equipHeightPx = config.dimensions.height * state.scale.pixelsPerMM;
+
+            // Equipment rectangle (centered on position)
+            const equipRect = {
+                x: state.equipmentPosition.x - equipWidthPx / 2,
+                y: state.equipmentPosition.y - equipHeightPx / 2,
+                width: equipWidthPx,
+                height: equipHeightPx
+            };
+
+            // Draw clearance zones around the equipment itself
+            // Find the maximum clearance required for this equipment type
+            const maxClearanceMM = Math.max(...Object.values(config.clearances));
+            const maxClearancePx = maxClearanceMM * state.scale.pixelsPerMM;
+
+            // Draw equipment clearance zone (service access area)
+            ctx.fillStyle = 'rgba(255, 193, 7, 0.2)';  // Yellow/amber for service area
+            ctx.fillRect(
+                equipRect.x - maxClearancePx,
+                equipRect.y - maxClearancePx,
+                equipRect.width + (2 * maxClearancePx),
+                equipRect.height + (2 * maxClearancePx)
+            );
+
+            // Draw label for service clearance
+            ctx.fillStyle = 'rgba(255, 193, 7, 0.8)';
+            ctx.fillRect(equipRect.x - maxClearancePx, equipRect.y - maxClearancePx - 30, 200, 25);
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`Service Zone: ${maxClearanceMM}mm`, equipRect.x - maxClearancePx + 5, equipRect.y - maxClearancePx - 25);
+
+            // Check for violations with detected objects
             const violations = [];
             state.detectedObjects.forEach(obj => {
                 if (!obj.enabled) return;
@@ -885,55 +940,81 @@
                 const clearanceMM = config.clearances[obj.type] || 100;
                 const clearancePx = clearanceMM * state.scale.pixelsPerMM;
 
-                // Calculate if equipment overlaps with clearance zone
-                const isOverlapping = checkOverlap(state.equipmentPosition, {
-                    x: obj.bounds.x - clearancePx,
-                    y: obj.bounds.y - clearancePx,
-                    width: obj.bounds.width + (2 * clearancePx),
-                    height: obj.bounds.height + (2 * clearancePx)
-                });
-
-                // Draw clearance zone
-                ctx.fillStyle = isOverlapping ?
-                    'rgba(244, 67, 54, 0.3)' :  // Red if overlapping
-                    'rgba(76, 175, 80, 0.3)';   // Green if safe
-
-                ctx.fillRect(
-                    obj.bounds.x - clearancePx,
-                    obj.bounds.y - clearancePx,
-                    obj.bounds.width + (2 * clearancePx),
-                    obj.bounds.height + (2 * clearancePx)
+                // Check if detected object intrudes into equipment's clearance zone
+                const isOverlapping = checkRectOverlap(
+                    {
+                        x: equipRect.x - clearancePx,
+                        y: equipRect.y - clearancePx,
+                        width: equipRect.width + (2 * clearancePx),
+                        height: equipRect.height + (2 * clearancePx)
+                    },
+                    obj.bounds
                 );
 
-                // Draw object box
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
-
+                // Draw detected object with clearance zone
                 if (isOverlapping) {
+                    // Draw violation zone around the object
+                    ctx.fillStyle = 'rgba(244, 67, 54, 0.3)';  // Red for violation
+                    ctx.fillRect(
+                        obj.bounds.x - clearancePx,
+                        obj.bounds.y - clearancePx,
+                        obj.bounds.width + (2 * clearancePx),
+                        obj.bounds.height + (2 * clearancePx)
+                    );
                     violations.push(obj);
                 }
+
+                // Draw object box
+                ctx.strokeStyle = isOverlapping ? '#f44336' : '#666';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
+
+                // Draw object label
+                ctx.fillStyle = isOverlapping ? 'rgba(244, 67, 54, 0.9)' : 'rgba(96, 125, 139, 0.9)';
+                const labelWidth = Math.min(200, obj.bounds.width);
+                ctx.fillRect(obj.bounds.x, obj.bounds.y - 25, labelWidth, 25);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(
+                    `${obj.label} (${clearanceMM}mm req)`,
+                    obj.bounds.x + 5,
+                    obj.bounds.y - 10
+                );
             });
 
-            // Draw equipment position
-            const equipRadius = 30;
-            ctx.fillStyle = config.isInternal ?
-                (violations.length > 0 ? 'rgba(244, 67, 54, 0.9)' : 'rgba(255, 255, 255, 0.9)') :
-                (violations.length > 0 ? '#f44336' : '#4caf50');
+            // Draw the equipment itself with actual dimensions
+            ctx.fillStyle = violations.length > 0 ?
+                'rgba(244, 67, 54, 0.7)' :  // Red if violations
+                'rgba(76, 175, 80, 0.7)';   // Green if compliant
+            ctx.fillRect(equipRect.x, equipRect.y, equipRect.width, equipRect.height);
 
-            ctx.beginPath();
-            ctx.arc(state.equipmentPosition.x, state.equipmentPosition.y, equipRadius, 0, Math.PI * 2);
-            ctx.fill();
+            // Draw equipment border
             ctx.strokeStyle = violations.length > 0 ? '#c62828' : '#2e7d32';
             ctx.lineWidth = 4;
-            ctx.stroke();
+            ctx.strokeRect(equipRect.x, equipRect.y, equipRect.width, equipRect.height);
 
-            // Draw equipment icon
-            ctx.font = '30px Arial';
-            ctx.fillStyle = config.isInternal && violations.length === 0 ? '#000' : '#fff';
+            // Draw equipment icon in center
+            ctx.font = 'bold 48px Arial';
+            ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(config.icon, state.equipmentPosition.x, state.equipmentPosition.y);
+
+            // Draw equipment label
+            ctx.fillStyle = violations.length > 0 ?
+                'rgba(244, 67, 54, 0.9)' :
+                'rgba(76, 175, 80, 0.9)';
+            ctx.fillRect(equipRect.x, equipRect.y + equipRect.height, equipRect.width, 30);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(
+                `${config.name} (${config.dimensions.width}×${config.dimensions.height}mm)`,
+                state.equipmentPosition.x,
+                equipRect.y + equipRect.height + 8
+            );
 
             // Store violations for later
             state.violations = violations;
@@ -944,6 +1025,14 @@
                    point.x <= rect.x + rect.width &&
                    point.y >= rect.y &&
                    point.y <= rect.y + rect.height;
+        }
+
+        function checkRectOverlap(rect1, rect2) {
+            // Check if two rectangles overlap
+            return !(rect1.x + rect1.width < rect2.x ||
+                     rect2.x + rect2.width < rect1.x ||
+                     rect1.y + rect1.height < rect2.y ||
+                     rect2.y + rect2.height < rect1.y);
         }
 
         function setupDragging(canvas) {
@@ -961,23 +1050,37 @@
                 };
             };
 
+            const isOverEquipment = (coords) => {
+                const config = EQUIPMENT_CONFIG[state.equipmentType];
+                const equipWidthPx = config.dimensions.width * state.scale.pixelsPerMM;
+                const equipHeightPx = config.dimensions.height * state.scale.pixelsPerMM;
+
+                const equipRect = {
+                    x: state.equipmentPosition.x - equipWidthPx / 2,
+                    y: state.equipmentPosition.y - equipHeightPx / 2,
+                    width: equipWidthPx,
+                    height: equipHeightPx
+                };
+
+                return coords.x >= equipRect.x &&
+                       coords.x <= equipRect.x + equipRect.width &&
+                       coords.y >= equipRect.y &&
+                       coords.y <= equipRect.y + equipRect.height;
+            };
+
             canvas.addEventListener('mousedown', (e) => {
                 const coords = getCoords(e);
-                const dist = Math.sqrt(
-                    Math.pow(coords.x - state.equipmentPosition.x, 2) +
-                    Math.pow(coords.y - state.equipmentPosition.y, 2)
-                );
-                if (dist < 40) isDragging = true;
+                if (isOverEquipment(coords)) {
+                    isDragging = true;
+                }
             });
 
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const coords = getCoords(e);
-                const dist = Math.sqrt(
-                    Math.pow(coords.x - state.equipmentPosition.x, 2) +
-                    Math.pow(coords.y - state.equipmentPosition.y, 2)
-                );
-                if (dist < 40) isDragging = true;
+                if (isOverEquipment(coords)) {
+                    isDragging = true;
+                }
             });
 
             canvas.addEventListener('mousemove', (e) => {
