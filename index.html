@@ -420,6 +420,25 @@
         </button>
         <div id="lassoStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;"></div>
 
+        <!-- Magnifying Glass Controls -->
+        <div class="instructions" style="background: #f0f0f0; border-left: 4px solid #666; margin-top: 20px;">
+            <strong>🔍 Magnifying Glass Settings</strong><br>
+            <div style="margin: 10px 0;">
+                <label style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 20px;">
+                    <input type="checkbox" id="magnifyEnabled" checked style="width: auto; margin-right: 8px;">
+                    <span>Enable Magnifying Glass</span>
+                </label>
+                <label style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 10px;">
+                    <input type="radio" id="magnifyRight" name="magnifyHand" value="right" checked style="width: auto; margin-right: 5px;">
+                    <span>Right Hand</span>
+                </label>
+                <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                    <input type="radio" id="magnifyLeft" name="magnifyHand" value="left" style="width: auto; margin-right: 5px;">
+                    <span>Left Hand 👈</span>
+                </label>
+            </div>
+        </div>
+
         <!-- Manual Calibration Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;">
             <strong>📏 Option 2: Manual Calibration</strong><br>
@@ -658,7 +677,9 @@
         paintMasks: [], // Array of painted mask regions for AI confirmation
         paintBrushSize: 30, // Paint brush size in pixels
         isPainting: false,
-        currentPaintStroke: null
+        currentPaintStroke: null,
+        magnifyEnabled: true,
+        magnifyHandedness: 'right' // 'left' or 'right'
     };
 
     // Equipment type configurations
@@ -1002,9 +1023,24 @@
         zoomSlider.addEventListener('input', (e) => {
             document.getElementById('zoomValue').textContent = e.target.value;
         });
+
+        // Add magnifying glass control handlers
+        document.getElementById('magnifyEnabled').addEventListener('change', (e) => {
+            state.magnifyEnabled = e.target.checked;
+            if (!state.magnifyEnabled) {
+                hideMagnifier();
+            }
+        });
+
+        document.querySelectorAll('input[name="magnifyHand"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.magnifyHandedness = e.target.value;
+            });
+        });
     }
 
     function showMagnifier() {
+        if (!state.magnifyEnabled) return;
         document.getElementById('magnifyingGlass').style.display = 'block';
         document.getElementById('zoomSliderContainer').style.display = 'block';
     }
@@ -1020,6 +1056,8 @@
     }
 
     function handleMagnifyMove(e) {
+        if (!state.magnifyEnabled) return;
+
         const canvas = document.getElementById('photoCanvas');
         const magnifier = document.getElementById('magnifyingGlass');
         const magnifyCanvas = document.getElementById('magnifyCanvas');
@@ -1030,8 +1068,9 @@
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Position magnifier near cursor (offset to avoid blocking view)
-        const magnifierLeft = e.clientX - rect.left + 20;
+        // Position magnifier near cursor (offset based on handedness to avoid blocking view)
+        const offsetX = state.magnifyHandedness === 'left' ? -170 : 20; // Left: move to left, Right: move to right
+        const magnifierLeft = e.clientX - rect.left + offsetX;
         const magnifierTop = e.clientY - rect.top - 80;
         magnifier.style.left = magnifierLeft + 'px';
         magnifier.style.top = magnifierTop + 'px';
@@ -1065,6 +1104,8 @@
 
     function handleMagnifyTouch(e) {
         e.preventDefault();
+        if (!state.magnifyEnabled) return;
+
         if (e.touches.length > 0) {
             const canvas = document.getElementById('photoCanvas');
             const magnifier = document.getElementById('magnifyingGlass');
@@ -1081,8 +1122,9 @@
             magnifier.style.display = 'block';
             zoomSliderContainer.style.display = 'block';
 
-            // Position magnifier above touch point
-            const magnifierLeft = touch.clientX - rect.left + 20;
+            // Position magnifier above/beside touch point based on handedness
+            const offsetX = state.magnifyHandedness === 'left' ? -170 : 20;
+            const magnifierLeft = touch.clientX - rect.left + offsetX;
             const magnifierTop = touch.clientY - rect.top - 180;
             magnifier.style.left = magnifierLeft + 'px';
             magnifier.style.top = magnifierTop + 'px';
@@ -1390,7 +1432,7 @@
         // Draw lasso if in lasso mode
         if (state.lassoPoints.length > 0) {
             ctx.strokeStyle = '#3498db';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 6;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
             ctx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
@@ -1419,7 +1461,7 @@
                 ctx.arc(state.scale.point1.x, state.scale.point1.y, 10, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#000';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 5;
                 ctx.stroke();
             }
 
@@ -1429,11 +1471,11 @@
                 ctx.arc(state.scale.point2.x, state.scale.point2.y, 10, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#000';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 5;
                 ctx.stroke();
 
                 ctx.strokeStyle = '#00ff00';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 6;
                 ctx.beginPath();
                 ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
                 ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
@@ -1453,7 +1495,7 @@
                     ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 5;
                     ctx.stroke();
 
                     // Draw label
@@ -1468,7 +1510,7 @@
             // Draw card outline if all 4 points are set
             if (state.scale.point1 && state.scale.point2 && state.scale.point3 && state.scale.point4) {
                 ctx.strokeStyle = '#00ff00';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 6;
                 ctx.beginPath();
                 ctx.moveTo(state.scale.point1.x, state.scale.point1.y);
                 ctx.lineTo(state.scale.point2.x, state.scale.point2.y);
@@ -1753,24 +1795,35 @@
                 statusDiv.innerHTML = `✅ <strong>🔵 Blue card detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.creditCardBounds.confidence * 100).toFixed(0)}%<br>` +
-                    `Reference: 85mm blue card width`;
+                    `Reference: 85mm blue card width<br>` +
+                    `<br>⏳ Advancing to next step...`;
 
-                // Auto-advance to next step after 1.5 seconds
+                // Clear canvas lasso and redraw
+                const canvas = document.getElementById('photoCanvas');
+                const ctx = canvas.getContext('2d');
+                drawPhotoAndPoints(ctx);
+
+                // Auto-advance to next step after 2 seconds
                 setTimeout(() => {
-                    // Hide magnifier when moving to next step
-                    hideMagnifier();
+                    try {
+                        // Hide magnifier when moving to next step
+                        hideMagnifier();
 
-                    document.getElementById('step2').classList.add('hidden');
-                    document.getElementById('step3').classList.remove('hidden');
+                        document.getElementById('step2').classList.add('hidden');
+                        document.getElementById('step3').classList.remove('hidden');
 
-                    // Update step 3 labels
-                    const info = EQUIPMENT_INFO[state.equipmentType];
-                    document.getElementById('equipmentLabel').textContent = info.name;
-                    document.getElementById('equipmentLabel2').textContent = info.name;
-                    document.getElementById('step3Instructions').textContent = info.markingInstruction;
+                        // Update step 3 labels
+                        const info = EQUIPMENT_INFO[state.equipmentType];
+                        document.getElementById('equipmentLabel').textContent = info.name;
+                        document.getElementById('equipmentLabel2').textContent = info.name;
+                        document.getElementById('step3Instructions').textContent = info.markingInstruction;
 
-                    setupEquipmentCanvas();
-                }, 1500);
+                        setupEquipmentCanvas();
+                    } catch (error) {
+                        console.error('Error advancing to step 3:', error);
+                        alert('Error advancing to next step. Please refresh and try again.');
+                    }
+                }, 2000);
 
             } else if (result.calibration && result.calibration.brickDetected) {
                 // BRICK DETECTED (FALLBACK) in cropped region
@@ -1818,20 +1871,31 @@
                 statusDiv.innerHTML = `✅ <strong>Brick detected in lasso!</strong><br>` +
                     `Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels/mm<br>` +
                     `Confidence: ${(result.calibration.brickBounds.confidence * 100).toFixed(0)}%<br>` +
-                    `Reference: Standard UK brick ${brickDimension}`;
+                    `Reference: Standard UK brick ${brickDimension}<br>` +
+                    `<br>⏳ Advancing to next step...`;
+
+                // Clear canvas lasso and redraw
+                const canvas2 = document.getElementById('photoCanvas');
+                const ctx2 = canvas2.getContext('2d');
+                drawPhotoAndPoints(ctx2);
 
                 // Auto-advance to next step
                 setTimeout(() => {
-                    hideMagnifier();
-                    document.getElementById('step2').classList.add('hidden');
-                    document.getElementById('step3').classList.remove('hidden');
+                    try {
+                        hideMagnifier();
+                        document.getElementById('step2').classList.add('hidden');
+                        document.getElementById('step3').classList.remove('hidden');
 
-                    const info = EQUIPMENT_INFO[state.equipmentType];
-                    document.getElementById('equipmentLabel').textContent = info.name;
-                    document.getElementById('equipmentLabel2').textContent = info.name;
-                    document.getElementById('step3Instructions').textContent = info.markingInstruction;
+                        const info = EQUIPMENT_INFO[state.equipmentType];
+                        document.getElementById('equipmentLabel').textContent = info.name;
+                        document.getElementById('equipmentLabel2').textContent = info.name;
+                        document.getElementById('step3Instructions').textContent = info.markingInstruction;
 
-                    setupEquipmentCanvas();
+                        setupEquipmentCanvas();
+                    } catch (error) {
+                        console.error('Error advancing to step 3:', error);
+                        alert('Error advancing to next step. Please refresh and try again.');
+                    }
                 }, 2000);
 
             } else {
@@ -1963,7 +2027,7 @@
             ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 6;
             ctx.stroke();
         }
     }
@@ -2021,7 +2085,9 @@
                     image: imageBase64,
                     equipmentType: state.equipmentType,
                     detectObjects: detectObjects, // Request AI to detect these obstacles
-                    cardColorHint: 'blue'
+                    cardColorHint: 'blue',
+                    preciseBoundaries: true, // Request exact pixel-perfect boundary detection
+                    prompt: 'Detect the exact boundaries and edges of objects. Return precise bounding boxes that tightly fit each object with pixel-level accuracy. Identify the true edges of doors, windows, walls, and other obstacles.'
                 }),
                 signal: AbortSignal.timeout(60000) // 60 second timeout for obstacle detection
             });
@@ -2196,7 +2262,7 @@
         drawPhotoWithObstacles(ctx);
 
         ctx.strokeStyle = '#ffff00';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 6;
         ctx.setLineDash([5, 5]);
 
         if (state.drawingTool === 'rectangle') {
@@ -2343,7 +2409,7 @@
         drawPhotoWithObstacles(ctx);
 
         ctx.strokeStyle = '#ffff00';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 6;
         ctx.setLineDash([5, 5]);
 
         if (state.drawingTool === 'rectangle') {
@@ -2443,7 +2509,7 @@
 
         state.obstacles.forEach((obstacle, index) => {
             ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 6;
 
             // Draw based on shape type
             if (obstacle.shape === 'rectangle' || !obstacle.shape) {
@@ -2697,7 +2763,7 @@
             // Draw clearance zone with rounded corners (90° arcs)
             ctx.fillStyle = rule.color;
             ctx.strokeStyle = rule.stroke;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 6;
 
             drawRoundedRect(ctx, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius, true, true);
 
@@ -2719,7 +2785,7 @@
         const serviceColor = 'rgba(0, 255, 255, 0.2)'; // Cyan for service clearances
         ctx.fillStyle = serviceColor;
         ctx.strokeStyle = '#00ffff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 5;
         ctx.setLineDash([5, 5]);
 
         // Draw service clearance envelope around equipment
@@ -2745,7 +2811,7 @@
         // Draw equipment rectangle with actual dimensions
         ctx.fillStyle = violations.length > 0 ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 255, 0, 0.5)';
         ctx.strokeStyle = violations.length > 0 ? '#ff0000' : '#00ff00';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 8;
         ctx.fillRect(equipmentRect.x, equipmentRect.y, equipmentRect.width, equipmentRect.height);
         ctx.strokeRect(equipmentRect.x, equipmentRect.y, equipmentRect.width, equipmentRect.height);
 
@@ -2755,7 +2821,7 @@
         ctx.arc(state.equipment.x, state.equipment.y, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 5;
         ctx.stroke();
 
         // Draw dimension labels
