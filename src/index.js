@@ -342,6 +342,17 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
 
     const result = JSON.parse(jsonStr);
 
+    // DEBUG: Log raw AI response
+    console.log('🔍 OpenAI Vision Response:', JSON.stringify(result, null, 2));
+    console.log(`📊 Objects detected: ${result.objects?.length || 0}`);
+    if (result.objects && result.objects.length > 0) {
+      result.objects.forEach((obj, i) => {
+        console.log(`   Object ${i + 1}: ${obj.type} (confidence: ${obj.confidence})`);
+        console.log(`   - Bounds: x=${obj.bounds.x}%, y=${obj.bounds.y}%, w=${obj.bounds.width}%, h=${obj.bounds.height}%`);
+        console.log(`   - Polygon points: ${obj.polygon?.length || 0}`);
+      });
+    }
+
     // Extract credit card detection
     let creditCard = null;
     if (result.creditCard && result.creditCard.detected) {
@@ -574,6 +585,17 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
 
     const result = JSON.parse(jsonStr);
 
+    // DEBUG: Log raw AI response
+    console.log('🔍 Claude Vision Response:', JSON.stringify(result, null, 2));
+    console.log(`📊 Objects detected: ${result.objects?.length || 0}`);
+    if (result.objects && result.objects.length > 0) {
+      result.objects.forEach((obj, i) => {
+        console.log(`   Object ${i + 1}: ${obj.type} (confidence: ${obj.confidence})`);
+        console.log(`   - Bounds: x=${obj.bounds.x}%, y=${obj.bounds.y}%, w=${obj.bounds.width}%, h=${obj.bounds.height}%`);
+        console.log(`   - Polygon points: ${obj.polygon?.length || 0}`);
+      });
+    }
+
     // Extract credit card detection
     let creditCard = null;
     if (result.creditCard && result.creditCard.detected) {
@@ -604,18 +626,30 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
     }
 
     // Transform objects to our expected format
-    const objects = (result.objects || []).map(det => ({
-      type: det.type,
-      label: det.type.toUpperCase().replace(/_/g, ' '),
-      bounds: {
-        x: Math.round(det.bounds.x * 10),
-        y: Math.round(det.bounds.y * 10),
-        width: Math.round(det.bounds.width * 10),
-        height: Math.round(det.bounds.height * 10)
-      },
-      confidence: det.confidence,
-      enabled: true
-    }));
+    const objects = (result.objects || []).map(det => {
+      const obj = {
+        type: det.type,
+        label: det.type.toUpperCase().replace(/_/g, ' '),
+        bounds: {
+          x: Math.round(det.bounds.x * 10),
+          y: Math.round(det.bounds.y * 10),
+          width: Math.round(det.bounds.width * 10),
+          height: Math.round(det.bounds.height * 10)
+        },
+        confidence: det.confidence,
+        enabled: true
+      };
+
+      // Add polygon if provided by AI (CRITICAL: This was missing in Claude version!)
+      if (det.polygon && Array.isArray(det.polygon) && det.polygon.length >= 3) {
+        obj.polygon = det.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      return obj;
+    });
 
     return { objects, creditCard, brick };
 
