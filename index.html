@@ -3182,7 +3182,7 @@
 
                 const obstacle = result.objects[0]; // Take first detected obstacle
                 state.obstacles.push({
-                    type: obstacle.type,
+                    type: selectedType,
                     shape: 'rectangle',
                     bounds: {
                         x: (obstacle.bounds.x * scaleX) + minX,
@@ -3206,7 +3206,7 @@
                 statusDiv.style.color = '#2e7d32';
                 const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
                 const aiServiceBadge = `<span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${aiService}</span>`;
-                statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[obstacle.type]} detected!</strong> ${aiServiceBadge}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
+                statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[selectedType]} detected!</strong> ${aiServiceBadge}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
 
                 // Update list and canvas
                 updateObstacleList();
