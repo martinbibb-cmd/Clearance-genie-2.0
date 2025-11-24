@@ -225,14 +225,23 @@ For EACH object you detect, provide:
    - y: top edge position (0-100%)
    - width: object width (0-100%)
    - height: object height (0-100%)
+4. **CRITICAL: Detailed polygon boundary** - An array of corner points that trace the ACTUAL boundary of the object:
+   - For rectangular objects (windows, vents): provide 4 corner points
+   - For irregular objects (pipes, flues): provide 6-12 points that trace the visible boundary
+   - Points should be in clockwise order starting from top-left
+   - Each point is {x: percentage 0-100, y: percentage 0-100}
+   - The polygon should HUG THE ACTUAL OBJECT EDGES with pixel-perfect accuracy
+   - For windows: trace the OPENING EDGE, not the surrounding brickwork
 
 Important guidelines:
 - Be thorough: detect ALL instances of the listed objects
 - Windows: distinguish between "window" (fixed) and "opening_window" (can open)
+  - For windows, the polygon should trace the OPENING portion only, excluding brick surround
 - Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
 - Pipes: "soil_pipe" (large drainage) vs "downpipe" (rainwater)
+  - For pipes/flues: trace the actual pipe edges, not the wall behind it
 - Only return objects from the provided list
-- Provide accurate bounding boxes that tightly fit each object
+- Provide accurate bounding boxes AND detailed polygon boundaries
 
 Return ONLY a JSON object in this exact format:
 {
@@ -251,12 +260,26 @@ Return ONLY a JSON object in this exact format:
     {
       "type": "opening_window",
       "confidence": 0.95,
-      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0}
+      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0},
+      "polygon": [
+        {"x": 45.5, "y": 20.0},
+        {"x": 75.5, "y": 20.0},
+        {"x": 75.5, "y": 60.0},
+        {"x": 45.5, "y": 60.0}
+      ]
     },
     {
-      "type": "air_vent",
+      "type": "downpipe",
       "confidence": 0.88,
-      "bounds": {"x": 15.0, "y": 60.0, "width": 15.0, "height": 15.0}
+      "bounds": {"x": 15.0, "y": 60.0, "width": 8.0, "height": 35.0},
+      "polygon": [
+        {"x": 15.2, "y": 60.0},
+        {"x": 22.8, "y": 60.5},
+        {"x": 23.0, "y": 75.0},
+        {"x": 22.5, "y": 94.5},
+        {"x": 15.5, "y": 95.0},
+        {"x": 15.0, "y": 75.0}
+      ]
     }
   ]
 }
@@ -353,19 +376,31 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
     // Transform objects to our expected format
     // Note: We need to get actual image dimensions, but since we don't have them
     // in the worker, we'll assume a standard size and let the frontend scale
-    const objects = (result.objects || []).map(det => ({
-      type: det.type,
-      label: det.type.toUpperCase().replace(/_/g, ' '),
-      bounds: {
-        // Convert percentage to pixel coordinates (assuming 1000x1000 reference)
-        x: Math.round(det.bounds.x * 10),
-        y: Math.round(det.bounds.y * 10),
-        width: Math.round(det.bounds.width * 10),
-        height: Math.round(det.bounds.height * 10)
-      },
-      confidence: det.confidence,
-      enabled: true
-    }));
+    const objects = (result.objects || []).map(det => {
+      const obj = {
+        type: det.type,
+        label: det.type.toUpperCase().replace(/_/g, ' '),
+        bounds: {
+          // Convert percentage to pixel coordinates (assuming 1000x1000 reference)
+          x: Math.round(det.bounds.x * 10),
+          y: Math.round(det.bounds.y * 10),
+          width: Math.round(det.bounds.width * 10),
+          height: Math.round(det.bounds.height * 10)
+        },
+        confidence: det.confidence,
+        enabled: true
+      };
+
+      // Add polygon if provided by AI
+      if (det.polygon && Array.isArray(det.polygon) && det.polygon.length >= 3) {
+        obj.polygon = det.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      return obj;
+    });
 
     return { objects, creditCard, brick };
 
@@ -418,14 +453,23 @@ For EACH object you detect, provide:
    - y: top edge position (0-100%)
    - width: object width (0-100%)
    - height: object height (0-100%)
+4. **CRITICAL: Detailed polygon boundary** - An array of corner points that trace the ACTUAL boundary of the object:
+   - For rectangular objects (windows, vents): provide 4 corner points
+   - For irregular objects (pipes, flues): provide 6-12 points that trace the visible boundary
+   - Points should be in clockwise order starting from top-left
+   - Each point is {x: percentage 0-100, y: percentage 0-100}
+   - The polygon should HUG THE ACTUAL OBJECT EDGES with pixel-perfect accuracy
+   - For windows: trace the OPENING EDGE, not the surrounding brickwork
 
 Important guidelines:
 - Be thorough: detect ALL instances of the listed objects
 - Windows: distinguish between "window" (fixed) and "opening_window" (can open)
+  - For windows, the polygon should trace the OPENING portion only, excluding brick surround
 - Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
 - Pipes: "soil_pipe" (large drainage) vs "downpipe" (rainwater)
+  - For pipes/flues: trace the actual pipe edges, not the wall behind it
 - Only return objects from the provided list
-- Provide accurate bounding boxes that tightly fit each object
+- Provide accurate bounding boxes AND detailed polygon boundaries
 
 Return ONLY a JSON object in this exact format:
 {
@@ -444,12 +488,26 @@ Return ONLY a JSON object in this exact format:
     {
       "type": "opening_window",
       "confidence": 0.95,
-      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0}
+      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0},
+      "polygon": [
+        {"x": 45.5, "y": 20.0},
+        {"x": 75.5, "y": 20.0},
+        {"x": 75.5, "y": 60.0},
+        {"x": 45.5, "y": 60.0}
+      ]
     },
     {
-      "type": "air_vent",
+      "type": "downpipe",
       "confidence": 0.88,
-      "bounds": {"x": 15.0, "y": 60.0, "width": 15.0, "height": 15.0}
+      "bounds": {"x": 15.0, "y": 60.0, "width": 8.0, "height": 35.0},
+      "polygon": [
+        {"x": 15.2, "y": 60.0},
+        {"x": 22.8, "y": 60.5},
+        {"x": 23.0, "y": 75.0},
+        {"x": 22.5, "y": 94.5},
+        {"x": 15.5, "y": 95.0},
+        {"x": 15.0, "y": 75.0}
+      ]
     }
   ]
 }
