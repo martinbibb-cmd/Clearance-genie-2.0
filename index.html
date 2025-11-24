@@ -1480,6 +1480,140 @@
         return result;
     }
 
+    /**
+     * Creates a clearance zone boundary with smooth arcs at corners.
+     * Returns an object with segments (straight edges) and arcs for rendering.
+     * This creates a true radial clearance where every point is exactly 'distance' from the polygon boundary.
+     */
+    function createClearanceZoneWithArcs(polygon, distance) {
+        if (!polygon || polygon.length < 3) return null;
+        if (!distance || distance <= 0) return null;
+
+        const area = polygonArea(polygon);
+        const outward = area >= 0 ? 1 : -1; // Positive area means CCW, negative CW
+
+        const segments = []; // Array of {start: {x, y}, end: {x, y}}
+        const arcs = []; // Array of {center: {x, y}, radius, startAngle, endAngle, counterclockwise}
+
+        for (let i = 0; i < polygon.length; i++) {
+            const prevVertex = polygon[(i - 1 + polygon.length) % polygon.length];
+            const currentVertex = polygon[i];
+            const nextVertex = polygon[(i + 1) % polygon.length];
+
+            // Calculate offset edge for current edge (currentVertex -> nextVertex)
+            const edge = { x: nextVertex.x - currentVertex.x, y: nextVertex.y - currentVertex.y };
+            const edgeUnit = normalizeVector(edge);
+            const edgeNormal = { x: edgeUnit.y * outward, y: -edgeUnit.x * outward };
+
+            const offsetStart = {
+                x: currentVertex.x + edgeNormal.x * distance,
+                y: currentVertex.y + edgeNormal.y * distance
+            };
+            const offsetEnd = {
+                x: nextVertex.x + edgeNormal.x * distance,
+                y: nextVertex.y + edgeNormal.y * distance
+            };
+
+            // Calculate angle for arc at currentVertex
+            // Previous edge direction
+            const prevEdge = { x: currentVertex.x - prevVertex.x, y: currentVertex.y - prevVertex.y };
+            const prevEdgeUnit = normalizeVector(prevEdge);
+
+            // Calculate angles for the arc
+            // The arc goes from the end of the previous offset edge to the start of current offset edge
+            const prevNormal = { x: prevEdgeUnit.y * outward, y: -prevEdgeUnit.x * outward };
+            const arcStart = {
+                x: currentVertex.x + prevNormal.x * distance,
+                y: currentVertex.y + prevNormal.y * distance
+            };
+
+            // Calculate start and end angles for the arc
+            const startAngle = Math.atan2(arcStart.y - currentVertex.y, arcStart.x - currentVertex.x);
+            const endAngle = Math.atan2(offsetStart.y - currentVertex.y, offsetStart.x - currentVertex.x);
+
+            // Determine if we need to go counterclockwise or clockwise
+            // For outward offset, we want the arc to go the "short way" around
+            let angleDiff = endAngle - startAngle;
+
+            // Normalize angle difference to [-π, π]
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+            // For outward expansion, we want positive angles (counterclockwise in canvas)
+            const useCounterclockwise = outward > 0;
+
+            // Add arc at this vertex
+            arcs.push({
+                center: { x: currentVertex.x, y: currentVertex.y },
+                radius: distance,
+                startAngle: startAngle,
+                endAngle: endAngle,
+                counterclockwise: !useCounterclockwise // Canvas arc direction
+            });
+
+            // Add straight segment after this arc
+            segments.push({
+                start: { x: offsetStart.x, y: offsetStart.y },
+                end: { x: offsetEnd.x, y: offsetEnd.y }
+            });
+        }
+
+        return { segments, arcs };
+    }
+
+    /**
+     * Draws a clearance zone with smooth arcs at corners.
+     * Uses the output from createClearanceZoneWithArcs.
+     */
+    function drawClearanceZoneWithArcs(ctx, innerPolygon, clearanceDistance, fillStyle, strokeStyle) {
+        if (!innerPolygon || innerPolygon.length < 3 || !clearanceDistance) return;
+
+        const clearanceZone = createClearanceZoneWithArcs(innerPolygon, clearanceDistance);
+        if (!clearanceZone) return;
+
+        ctx.save();
+        ctx.fillStyle = fillStyle;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+
+        // Draw outer boundary (clearance zone boundary)
+        ctx.beginPath();
+
+        // Start from first arc
+        if (clearanceZone.arcs.length > 0 && clearanceZone.segments.length > 0) {
+            const firstArc = clearanceZone.arcs[0];
+            const startX = firstArc.center.x + Math.cos(firstArc.startAngle) * firstArc.radius;
+            const startY = firstArc.center.y + Math.sin(firstArc.startAngle) * firstArc.radius;
+            ctx.moveTo(startX, startY);
+
+            // Draw all arcs and segments
+            for (let i = 0; i < clearanceZone.arcs.length; i++) {
+                const arc = clearanceZone.arcs[i];
+                const segment = clearanceZone.segments[i];
+
+                // Draw arc at vertex
+                ctx.arc(arc.center.x, arc.center.y, arc.radius, arc.startAngle, arc.endAngle, arc.counterclockwise);
+
+                // Draw straight segment
+                ctx.lineTo(segment.end.x, segment.end.y);
+            }
+        }
+        ctx.closePath();
+
+        // Draw inner boundary (original polygon) in reverse for evenodd fill
+        ctx.moveTo(innerPolygon[0].x, innerPolygon[0].y);
+        for (let i = innerPolygon.length - 1; i >= 0; i--) {
+            ctx.lineTo(innerPolygon[i].x, innerPolygon[i].y);
+        }
+        ctx.closePath();
+
+        // Fill the ring using evenodd rule
+        ctx.fill('evenodd');
+        ctx.stroke();
+        ctx.restore();
+    }
+
     function tracePolygon(ctx, polygon) {
         if (!polygon || polygon.length === 0) return;
         ctx.beginPath();
@@ -1623,6 +1757,12 @@
         if (obstacle.shape === 'rectangle' || !obstacle.shape) {
             if (!obstacle.polygon && obstacle.bounds) {
                 obstacle.polygon = createPolygonFromBounds(obstacle.bounds);
+            }
+        } else if (obstacle.shape === 'polygon') {
+            // Polygon shape already has polygon data from AI detection
+            // Just ensure bounds are calculated if not present
+            if (!obstacle.bounds && obstacle.polygon) {
+                updateBoundsFromPolygon(obstacle);
             }
         } else if (obstacle.shape === 'line' && obstacle.line) {
             if (!obstacle.polygon) {
@@ -3758,11 +3898,24 @@
                     height: obstacle.bounds.height * scaleY
                 };
 
-                state.obstacles.push(normalizeObstacleGeometry({
+                // Check if AI provided detailed polygon boundary
+                let obstacleData = {
                     type: selectedType,
                     shape: 'rectangle',
                     bounds: mappedBounds
-                }));
+                };
+
+                if (obstacle.polygon && obstacle.polygon.length >= 3) {
+                    // AI provided detailed polygon - use it instead of rectangle
+                    const mappedPolygon = obstacle.polygon.map(pt => ({
+                        x: (pt.x * scaleX) + minX,
+                        y: (pt.y * scaleY) + minY
+                    }));
+                    obstacleData.polygon = mappedPolygon;
+                    obstacleData.shape = 'polygon';
+                }
+
+                state.obstacles.push(normalizeObstacleGeometry(obstacleData));
 
                 // Highlight the exact AI-mapped position in green
                 state.recentDetection = {
@@ -4797,8 +4950,6 @@
                 const polygon = getObstaclePolygon(obstacle);
                 if (!polygon || polygon.length < 3) return;
 
-                const clearancePolygon = offsetPolygon(polygon, clearanceDistance);
-
                 // Draw original polygon outline
                 ctx.save();
                 ctx.strokeStyle = isSelected ? '#4caf50' : '#00ff00';
@@ -4808,10 +4959,12 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // Draw clearance band following polygon shape
-                drawClearanceRing(ctx, polygon, clearancePolygon, rule.color, rule.stroke);
+                // Draw clearance zone with smooth arcs at corners
+                drawClearanceZoneWithArcs(ctx, polygon, clearanceDistance, rule.color, rule.stroke);
 
-                // Check if equipment rectangle intersects with clearance polygon
+                // Check if equipment rectangle intersects with clearance zone
+                // Create the clearance zone and check intersection
+                const clearancePolygon = offsetPolygon(polygon, clearanceDistance);
                 equipmentIntersects = polygonIntersectsRect(clearancePolygon, equipmentRect);
             }
 
