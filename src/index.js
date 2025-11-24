@@ -83,7 +83,7 @@ export default {
         }, 500);
       }
 
-      // Try OpenAI first, fallback to Claude if it fails or detects nothing
+      // Try OpenAI first, fallback to Claude, then Gemini if needed
       let detectedObjects, creditCard, brick;
       let aiServiceUsed = 'openai'; // Track which AI service was used
 
@@ -99,32 +99,56 @@ export default {
         creditCard = result.creditCard;
         brick = result.brick;
 
-        // If OpenAI returned 0 objects and Claude is available, try Claude as fallback
-        if ((!detectedObjects || detectedObjects.length === 0) && env.ANTHROPIC_API_KEY) {
-          console.log('OpenAI detected 0 objects, trying Claude fallback');
-          try {
-            const claudeResult = await detectObjectsWithClaude(
-              image,
-              equipmentType,
-              detectObjects,
-              env.ANTHROPIC_API_KEY,
-              userMessage
-            );
-            // Only use Claude results if it found something
-            if (claudeResult.objects && claudeResult.objects.length > 0) {
-              detectedObjects = claudeResult.objects;
-              creditCard = claudeResult.creditCard;
-              brick = claudeResult.brick;
-              aiServiceUsed = 'claude';
-              console.log(`Claude found ${claudeResult.objects.length} objects`);
+        // If OpenAI returned 0 objects, try fallback options
+        if (!detectedObjects || detectedObjects.length === 0) {
+          // Try Claude as first fallback
+          if (env.ANTHROPIC_API_KEY) {
+            console.log('OpenAI detected 0 objects, trying Claude fallback');
+            try {
+              const claudeResult = await detectObjectsWithClaude(
+                image,
+                equipmentType,
+                detectObjects,
+                env.ANTHROPIC_API_KEY,
+                userMessage
+              );
+              if (claudeResult.objects && claudeResult.objects.length > 0) {
+                detectedObjects = claudeResult.objects;
+                creditCard = claudeResult.creditCard;
+                brick = claudeResult.brick;
+                aiServiceUsed = 'claude';
+                console.log(`Claude found ${claudeResult.objects.length} objects`);
+              }
+            } catch (claudeError) {
+              console.log('Claude fallback failed:', claudeError.message);
             }
-          } catch (claudeError) {
-            console.log('Claude fallback also failed:', claudeError.message);
-            // Keep OpenAI results (empty array) if Claude fails
+          }
+
+          // If still no objects and Gemini is available, try Gemini
+          if ((!detectedObjects || detectedObjects.length === 0) && env.GEMINI_API_KEY) {
+            console.log('Claude detected 0 objects, trying Gemini fallback');
+            try {
+              const geminiResult = await detectObjectsWithGemini(
+                image,
+                equipmentType,
+                detectObjects,
+                env.GEMINI_API_KEY,
+                userMessage
+              );
+              if (geminiResult.objects && geminiResult.objects.length > 0) {
+                detectedObjects = geminiResult.objects;
+                creditCard = geminiResult.creditCard;
+                brick = geminiResult.brick;
+                aiServiceUsed = 'gemini';
+                console.log(`Gemini found ${geminiResult.objects.length} objects`);
+              }
+            } catch (geminiError) {
+              console.log('Gemini fallback also failed:', geminiError.message);
+            }
           }
         }
       } catch (openaiError) {
-        console.log('OpenAI failed, trying Claude fallback:', openaiError.message);
+        console.log('OpenAI failed, trying fallback services:', openaiError.message);
 
         // Fallback to Claude if available
         if (env.ANTHROPIC_API_KEY) {
@@ -141,11 +165,51 @@ export default {
             brick = result.brick;
             aiServiceUsed = 'claude';
           } catch (claudeError) {
-            console.error('Both OpenAI and Claude failed:', { openaiError, claudeError });
-            throw new Error('AI detection failed: Both OpenAI and Claude services are unavailable');
+            console.log('Claude also failed, trying Gemini:', claudeError.message);
+
+            // Final fallback to Gemini
+            if (env.GEMINI_API_KEY) {
+              try {
+                const result = await detectObjectsWithGemini(
+                  image,
+                  equipmentType,
+                  detectObjects,
+                  env.GEMINI_API_KEY,
+                  userMessage
+                );
+                detectedObjects = result.objects;
+                creditCard = result.creditCard;
+                brick = result.brick;
+                aiServiceUsed = 'gemini';
+              } catch (geminiError) {
+                console.error('All AI services failed:', { openaiError, claudeError, geminiError });
+                throw new Error('AI detection failed: All services (OpenAI, Claude, Gemini) are unavailable');
+              }
+            } else {
+              console.error('OpenAI and Claude failed, no Gemini key available:', { openaiError, claudeError });
+              throw new Error('AI detection failed: OpenAI and Claude services are unavailable');
+            }
+          }
+        } else if (env.GEMINI_API_KEY) {
+          // Try Gemini if Claude not available
+          try {
+            const result = await detectObjectsWithGemini(
+              image,
+              equipmentType,
+              detectObjects,
+              env.GEMINI_API_KEY,
+              userMessage
+            );
+            detectedObjects = result.objects;
+            creditCard = result.creditCard;
+            brick = result.brick;
+            aiServiceUsed = 'gemini';
+          } catch (geminiError) {
+            console.error('OpenAI and Gemini failed:', { openaiError, geminiError });
+            throw new Error('AI detection failed: OpenAI and Gemini services are unavailable');
           }
         } else {
-          throw openaiError; // Re-throw if no Claude key available
+          throw openaiError; // Re-throw if no fallback keys available
         }
       }
 
@@ -656,6 +720,238 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
   } catch (error) {
     console.error('Claude detection error:', error);
     throw new Error(`Claude object detection failed: ${error.message}`);
+  }
+}
+
+/**
+ * Detect objects using Google Gemini Vision API
+ */
+async function detectObjectsWithGemini(image, equipmentType, detectObjects, apiKey, userMessage = '') {
+  // Build the same prompt as OpenAI and Claude
+  const objectList = detectObjects.join(', ');
+
+  let prompt = `You are an expert computer vision system for heating compliance detection.`;
+
+  // Add user message if provided
+  if (userMessage && userMessage.trim()) {
+    prompt += `\n\nUSER CONTEXT: ${userMessage.trim()}\nPlease take this context into account when analyzing the image. For example, if the user mentions items to be removed or ignored, adjust your detection accordingly.`;
+  }
+
+  prompt += `
+
+TASK 1: Detect calibration objects for scale measurement
+Look for the following objects in priority order:
+
+A) CREDIT CARD (highest priority):
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+B) STANDARD BRICK (fallback if no card found):
+- Standard UK/Imperial brick dimensions: 215mm x 102.5mm x 65mm
+- Red, orange, or clay colored rectangular block
+- Often has mortar between bricks
+- Look for typical brick texture and appearance
+- May be laid horizontally or vertically
+
+TASK 2: Detect compliance objects
+Analyze this image and identify ALL visible objects from this list: ${objectList}
+
+For EACH object you detect, provide:
+1. The exact object type from the list above
+2. A confidence score (0.0 to 1.0)
+3. Bounding box coordinates as percentages (x, y, width, height) where:
+   - x: left edge position (0-100%)
+   - y: top edge position (0-100%)
+   - width: object width (0-100%)
+   - height: object height (0-100%)
+4. **CRITICAL: Detailed polygon boundary** - An array of corner points that trace the ACTUAL boundary of the object:
+   - For rectangular objects (windows, vents): provide 4 corner points
+   - For irregular objects (pipes, flues): provide 6-12 points that trace the visible boundary
+   - Points should be in clockwise order starting from top-left
+   - Each point is {x: percentage 0-100, y: percentage 0-100}
+   - The polygon should HUG THE ACTUAL OBJECT EDGES with pixel-perfect accuracy
+   - For windows: trace the OPENING EDGE, not the surrounding brickwork
+
+Important guidelines:
+- Be thorough: detect ALL instances of the listed objects
+- Windows: distinguish between "window" (fixed) and "opening_window" (can open)
+  - For windows, the polygon should trace the OPENING portion only, excluding brick surround
+- Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
+- Pipes: "soil_pipe" (large drainage) vs "downpipe" (rainwater)
+  - For pipes/flues: trace the actual pipe edges, not the wall behind it
+- Only return objects from the provided list
+- Provide accurate bounding boxes AND detailed polygon boundaries
+
+Return ONLY a JSON object in this exact format:
+{
+  "creditCard": {
+    "detected": true,
+    "confidence": 0.95,
+    "bounds": {"x": 10.0, "y": 80.0, "width": 15.0, "height": 9.5}
+  },
+  "brick": {
+    "detected": true,
+    "confidence": 0.90,
+    "bounds": {"x": 20.0, "y": 30.0, "width": 18.0, "height": 8.5},
+    "orientation": "horizontal"
+  },
+  "objects": [
+    {
+      "type": "opening_window",
+      "confidence": 0.95,
+      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0},
+      "polygon": [
+        {"x": 45.5, "y": 20.0},
+        {"x": 75.5, "y": 20.0},
+        {"x": 75.5, "y": 60.0},
+        {"x": 45.5, "y": 60.0}
+      ]
+    },
+    {
+      "type": "downpipe",
+      "confidence": 0.88,
+      "bounds": {"x": 15.0, "y": 60.0, "width": 8.0, "height": 35.0},
+      "polygon": [
+        {"x": 15.2, "y": 60.0},
+        {"x": 22.8, "y": 60.5},
+        {"x": 23.0, "y": 75.0},
+        {"x": 22.5, "y": 94.5},
+        {"x": 15.5, "y": 95.0},
+        {"x": 15.0, "y": 75.0}
+      ]
+    }
+  ]
+}
+
+If no credit card is detected, set "creditCard" to null.
+If no brick is detected, set "brick" to null.
+For brick orientation: "horizontal" if width > height, "vertical" if height > width.`;
+
+  try {
+    // Extract base64 image data (remove data:image/...;base64, prefix)
+    const base64Data = image.split(',')[1] || image;
+    const mimeType = image.includes('image/png') ? 'image/png' : 'image/jpeg';
+
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              text: prompt
+            },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Data
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 2000
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+
+    // Extract the text response from Gemini
+    const content = data.candidates[0].content.parts[0].text;
+
+    // Parse the JSON - handle markdown code blocks
+    let jsonStr = content.trim();
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.replace(/^```json\n/, '').replace(/\n```$/, '');
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```\n/, '').replace(/\n```$/, '');
+    }
+
+    const result = JSON.parse(jsonStr);
+
+    // DEBUG: Log raw AI response
+    console.log('🔍 Gemini Vision Response:', JSON.stringify(result, null, 2));
+    console.log(`📊 Objects detected: ${result.objects?.length || 0}`);
+    if (result.objects && result.objects.length > 0) {
+      result.objects.forEach((obj, i) => {
+        console.log(`   Object ${i + 1}: ${obj.type} (confidence: ${obj.confidence})`);
+        console.log(`   - Bounds: x=${obj.bounds.x}%, y=${obj.bounds.y}%, w=${obj.bounds.width}%, h=${obj.bounds.height}%`);
+        console.log(`   - Polygon points: ${obj.polygon?.length || 0}`);
+      });
+    }
+
+    // Extract credit card detection
+    let creditCard = null;
+    if (result.creditCard && result.creditCard.detected) {
+      creditCard = {
+        confidence: result.creditCard.confidence,
+        bounds: {
+          x: Math.round(result.creditCard.bounds.x * 10),
+          y: Math.round(result.creditCard.bounds.y * 10),
+          width: Math.round(result.creditCard.bounds.width * 10),
+          height: Math.round(result.creditCard.bounds.height * 10)
+        }
+      };
+    }
+
+    // Extract brick detection
+    let brick = null;
+    if (result.brick && result.brick.detected) {
+      brick = {
+        confidence: result.brick.confidence,
+        orientation: result.brick.orientation || 'horizontal',
+        bounds: {
+          x: Math.round(result.brick.bounds.x * 10),
+          y: Math.round(result.brick.bounds.y * 10),
+          width: Math.round(result.brick.bounds.width * 10),
+          height: Math.round(result.brick.bounds.height * 10)
+        }
+      };
+    }
+
+    // Transform objects to our expected format
+    const objects = (result.objects || []).map(det => {
+      const obj = {
+        type: det.type,
+        label: det.type.toUpperCase().replace(/_/g, ' '),
+        bounds: {
+          x: Math.round(det.bounds.x * 10),
+          y: Math.round(det.bounds.y * 10),
+          width: Math.round(det.bounds.width * 10),
+          height: Math.round(det.bounds.height * 10)
+        },
+        confidence: det.confidence,
+        enabled: true
+      };
+
+      // Add polygon if provided by AI
+      if (det.polygon && Array.isArray(det.polygon) && det.polygon.length >= 3) {
+        obj.polygon = det.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      return obj;
+    });
+
+    return { objects, creditCard, brick };
+
+  } catch (error) {
+    console.error('Gemini detection error:', error);
+    throw new Error(`Gemini object detection failed: ${error.message}`);
   }
 }
 

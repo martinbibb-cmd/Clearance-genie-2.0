@@ -4028,8 +4028,13 @@
 
                 statusDiv.style.background = '#e8f5e9';
                 statusDiv.style.color = '#2e7d32';
-                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
-                const aiServiceBadge = `<span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${aiService}</span>`;
+                const aiServiceInfo = {
+                    'openai': { name: '🤖 OpenAI', color: '#e3f2fd' },
+                    'claude': { name: '🤖 Claude', color: '#f3e5f5' },
+                    'gemini': { name: '🤖 Gemini', color: '#e8f5e9' }
+                };
+                const serviceUsed = aiServiceInfo[result.aiServiceUsed] || aiServiceInfo['openai'];
+                const aiServiceBadge = `<span style="background: ${serviceUsed.color}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${serviceUsed.name}</span>`;
                 const clearanceText = getClearanceRequirementText(selectedType);
                 const clearanceLine = clearanceText ? `<br><strong>Clearance requirement:</strong> ${clearanceText}` : '<br><small>Select make/model to see clearance requirements.</small>';
                 statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[selectedType]} detected!</strong> ${aiServiceBadge}${clearanceLine}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
