@@ -9,5 +9,11 @@ workers_dev = true
 [vars]
 WORKER_ENV = "production"
 
+# D1 database binding for the agent knowledge base
+[[d1_databases]]
+binding = "AGENT_DB"
+database_name = "agent-db"
+database_id = "87400a56-0eff-4ac0-9bed-3f08ef2e0e79"
+
 # Secrets (set using: wrangler secret put OPENAI_API_KEY)
 # OPENAI_API_KEY will be set as a secret
