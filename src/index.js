@@ -36,7 +36,25 @@ export default {
 
     try {
       // Parse request body
-      const { image, equipmentType, detectObjects, userMessage } = await request.json();
+      const requestData = await request.json();
+      const { image, equipmentType, detectObjects, userMessage, transcription, transcriptionContext, knowledgeCategories } = requestData;
+
+      // Handle transcription-only requests first
+      if (transcription) {
+        const knowledge = await fetchLatestKnowledge(env, knowledgeCategories || ['pricebook']);
+        const transcriptionResult = await sanitizeTranscriptionWithAI(
+          transcription,
+          transcriptionContext,
+          env,
+          knowledge
+        );
+
+        return jsonResponse({
+          success: true,
+          mode: 'transcription',
+          ...transcriptionResult
+        });
+      }
 
       // Validate inputs
       if (!image || !equipmentType || !detectObjects) {
@@ -159,6 +177,10 @@ export default {
     }
   }
 };
+
+// Sanity constraints used during AI transcription cleanup
+const ALLOWED_PIPE_SIZES_MM = [8, 10, 15, 22, 28, 35];
+const PREFERRED_PRICEBOOK_VERSION = 'November 2025';
 
 /**
  * Detect objects using OpenAI Vision API (GPT-4 Vision)
@@ -543,6 +565,196 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
     console.error('Claude detection error:', error);
     throw new Error(`Claude object detection failed: ${error.message}`);
   }
+}
+
+/**
+ * Fetch the latest knowledge snippets from D1 to prime AI responses
+ */
+async function fetchLatestKnowledge(env, categories = []) {
+  const knowledge = {};
+
+  if (!env.AGENT_DB) {
+    return knowledge;
+  }
+
+  for (const category of categories) {
+    try {
+      const query = `SELECT content, version, effective_date FROM knowledge WHERE category = ? ORDER BY COALESCE(effective_date, version) DESC`;
+      const statement = env.AGENT_DB.prepare(query).bind(category);
+      const { results } = await statement.all();
+
+      if (!results || results.length === 0) {
+        continue;
+      }
+
+      const preferred = results.find(row => (row.version || '').toLowerCase().includes(PREFERRED_PRICEBOOK_VERSION.toLowerCase()));
+      const latest = preferred || results[0];
+
+      knowledge[category] = {
+        content: latest.content,
+        version: latest.version || 'unspecified',
+        effectiveDate: latest.effective_date || null,
+      };
+    } catch (dbError) {
+      console.warn(`Failed to load knowledge for category ${category}:`, dbError.message);
+    }
+  }
+
+  return knowledge;
+}
+
+/**
+ * Sanitize a transcription by applying domain-specific checks and using AI for context-driven corrections
+ */
+async function sanitizeTranscriptionWithAI(transcription, transcriptionContext = {}, env, knowledge = {}) {
+  if (!env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY) {
+    throw new Error('AI API key not configured');
+  }
+
+  const knowledgeSummary = Object.entries(knowledge).map(([category, data]) => {
+    const versionNote = data.version ? `Version: ${data.version}${data.version.toLowerCase().includes('2025') ? '' : ' (check for latest)'}` : 'Version unknown';
+    return `Category: ${category}\n${versionNote}\n${data.content || ''}`;
+  }).join('\n\n');
+
+  const sanityRules = `
+- Pipework sizes must be one of: ${ALLOWED_PIPE_SIZES_MM.join('mm, ')}mm.
+- If a size is ambiguous (e.g., 9mm), round to the nearest valid size and note the correction.
+- Use provided job context (location, appliance type, materials) to resolve unclear words.
+- If pricebook details are mentioned, prefer the latest available version (aim for ${PREFERRED_PRICEBOOK_VERSION}).
+- Correct obvious ASR mistakes ("price look" -> "pricebook", "ten mil" -> "10mm", etc.).
+`;
+
+  const prompt = `You are a heating industry transcription QA assistant. Clean up the provided raw transcription, applying domain sanity checks and contextual corrections.
+
+RAW TRANSCRIPTION:
+${transcription}
+
+CONTEXT:
+${JSON.stringify(transcriptionContext || {}, null, 2)}
+
+REFERENCE KNOWLEDGE (latest-first):
+${knowledgeSummary || 'None available'}
+
+SANITY RULES:
+${sanityRules}
+
+Return ONLY JSON with this shape:
+{
+  "sanitizedTranscript": "corrected text",
+  "corrections": [
+    { "issue": "what was wrong", "fix": "how it was corrected" }
+  ],
+  "notes": "any additional notes about confidence or assumptions"
+}`;
+
+  let aiResult;
+  try {
+    aiResult = env.OPENAI_API_KEY
+      ? await completeTextWithOpenAI(prompt, env.OPENAI_API_KEY)
+      : await completeTextWithClaude(prompt, env.ANTHROPIC_API_KEY);
+  } catch (primaryError) {
+    if (env.ANTHROPIC_API_KEY && env.OPENAI_API_KEY) {
+      aiResult = await completeTextWithClaude(prompt, env.ANTHROPIC_API_KEY);
+    } else {
+      throw primaryError;
+    }
+  }
+
+  const sanitizedTranscript = enforcePipeworkSizes(aiResult.sanitizedTranscript || transcription);
+
+  return {
+    sanitizedTranscript,
+    corrections: aiResult.corrections || [],
+    notes: aiResult.notes || '',
+    knowledgeUsed: knowledge,
+  };
+}
+
+async function completeTextWithOpenAI(prompt, apiKey) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: 'You are a meticulous compliance assistant for heating engineers.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 800,
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI text completion error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0].message.content.trim();
+  const parsed = parseJsonFromMarkdown(content);
+  return parsed;
+}
+
+async function completeTextWithClaude(prompt, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 800,
+      messages: [
+        { role: 'user', content: prompt }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Claude text completion error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.content[0].text.trim();
+  const parsed = parseJsonFromMarkdown(content);
+  return parsed;
+}
+
+function parseJsonFromMarkdown(content) {
+  let jsonStr = content;
+  if (jsonStr.startsWith('```json')) {
+    jsonStr = jsonStr.replace(/^```json\n/, '').replace(/\n```$/, '');
+  } else if (jsonStr.startsWith('```')) {
+    jsonStr = jsonStr.replace(/^```\n/, '').replace(/\n```$/, '');
+  }
+  return JSON.parse(jsonStr);
+}
+
+function enforcePipeworkSizes(text) {
+  if (!text) return text;
+
+  return text.replace(/\b(\d{1,2})\s*mm\b/gi, (match, size) => {
+    const numericSize = parseInt(size, 10);
+    let closest = ALLOWED_PIPE_SIZES_MM[0];
+    let minDiff = Math.abs(numericSize - closest);
+
+    for (const allowed of ALLOWED_PIPE_SIZES_MM) {
+      const diff = Math.abs(numericSize - allowed);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = allowed;
+      }
+    }
+
+    return `${closest}mm`;
+  });
 }
 
 /**
