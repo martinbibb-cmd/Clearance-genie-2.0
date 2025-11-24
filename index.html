@@ -1438,7 +1438,7 @@
         // Check if it's the equipment point
         if (obj.x !== undefined && obj.y !== undefined) {
             const dist = Math.sqrt((x - obj.x) ** 2 + (y - obj.y) ** 2);
-            return dist <= 15; // Equipment is drawn as 15px radius circle
+            return dist <= getEquipmentRenderRadius();
         }
 
         // Check obstacle based on shape
@@ -1454,6 +1454,8 @@
         } else if (obj.shape === 'circle' && obj.circle) {
             const dist = Math.sqrt((x - obj.circle.centerX) ** 2 + (y - obj.circle.centerY) ** 2);
             return Math.abs(dist - obj.circle.radius) <= 10; // Near the circle edge
+        } else if (obj.shape === 'mask' && obj.maskStrokes) {
+            return obj.maskStrokes.some(maskStroke => isPointNearStroke(x, y, maskStroke));
         }
 
         return false;
@@ -1489,6 +1491,52 @@
         const dy = py - yy;
 
         return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function isPointNearStroke(x, y, maskStroke) {
+        if (!maskStroke || !maskStroke.stroke || maskStroke.stroke.length === 0) return false;
+        const tolerance = Math.max(10, maskStroke.brushSize);
+        return maskStroke.stroke.some(point => {
+            const dx = x - point.x;
+            const dy = y - point.y;
+            return Math.sqrt(dx * dx + dy * dy) <= tolerance;
+        });
+    }
+
+    function buildMaskStrokesForBounds(bounds) {
+        const strokes = [];
+
+        state.paintMasks.forEach(mask => {
+            const filtered = mask.stroke.filter(point => (
+                point.x >= bounds.x - mask.brushSize &&
+                point.x <= bounds.x + bounds.width + mask.brushSize &&
+                point.y >= bounds.y - mask.brushSize &&
+                point.y <= bounds.y + bounds.height + mask.brushSize
+            ));
+
+            if (filtered.length > 1) {
+                strokes.push({
+                    stroke: filtered.map(p => ({ ...p })),
+                    brushSize: mask.brushSize
+                });
+            }
+        });
+
+        // Fallback: create a rectangle stroke so the obstacle remains visible
+        if (strokes.length === 0) {
+            strokes.push({
+                stroke: [
+                    { x: bounds.x, y: bounds.y },
+                    { x: bounds.x + bounds.width, y: bounds.y },
+                    { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+                    { x: bounds.x, y: bounds.y + bounds.height },
+                    { x: bounds.x, y: bounds.y }
+                ],
+                brushSize: 8
+            });
+        }
+
+        return strokes;
     }
 
     // Find object at position
@@ -1528,6 +1576,14 @@
             if (obstacle.circle) {
                 obstacle.circle.centerX += dx;
                 obstacle.circle.centerY += dy;
+            }
+            if (obstacle.maskStrokes) {
+                obstacle.maskStrokes.forEach(maskStroke => {
+                    maskStroke.stroke = maskStroke.stroke.map(point => ({
+                        x: point.x + dx,
+                        y: point.y + dy
+                    }));
+                });
             }
         }
     }
@@ -2900,10 +2956,18 @@
         canvas.height = state.photoHeight;
         
         drawPhotoWithEquipment(ctx);
-        
+
         canvas.addEventListener('click', handleEquipmentClick);
+        canvas.addEventListener('mousedown', startEquipmentDrag);
+        canvas.addEventListener('mousemove', handleEquipmentDragMove);
+        canvas.addEventListener('mouseup', endEquipmentDrag);
+        canvas.addEventListener('mouseleave', endEquipmentDrag);
         canvas.addEventListener('touchstart', handleEquipmentTouchStart);
+        canvas.addEventListener('touchmove', handleEquipmentTouchMove);
+        canvas.addEventListener('touchend', endEquipmentDrag);
     }
+
+    let equipmentDrag = { active: false, offsetX: 0, offsetY: 0 };
 
     function handleEquipmentClick(e) {
         const canvas = document.getElementById('photoCanvas2');
@@ -2919,6 +2983,20 @@
         e.preventDefault();
         const canvas = document.getElementById('photoCanvas2');
         const coords = getCanvasCoordinates(canvas, e);
+
+        // If equipment already placed and touch is near it, start drag
+        if (state.equipment) {
+            const dist = Math.sqrt((coords.x - state.equipment.x) ** 2 + (coords.y - state.equipment.y) ** 2);
+            if (dist <= getEquipmentRenderRadius()) {
+                equipmentDrag = {
+                    active: true,
+                    offsetX: coords.x - state.equipment.x,
+                    offsetY: coords.y - state.equipment.y
+                };
+                return;
+            }
+        }
+
         state.equipment = coords;
         autoSave();
         document.getElementById('confirmEquipmentBtn').disabled = false;
@@ -2926,19 +3004,75 @@
         drawPhotoWithEquipment(ctx);
     }
 
+    function handleEquipmentTouchMove(e) {
+        if (!equipmentDrag.active) return;
+        e.preventDefault();
+        const canvas = document.getElementById('photoCanvas2');
+        const coords = getCanvasCoordinates(canvas, e);
+        state.equipment = {
+            x: coords.x - equipmentDrag.offsetX,
+            y: coords.y - equipmentDrag.offsetY
+        };
+        const ctx = canvas.getContext('2d');
+        drawPhotoWithEquipment(ctx);
+        document.getElementById('confirmEquipmentBtn').disabled = false;
+    }
+
+    function startEquipmentDrag(e) {
+        if (!state.equipment) return;
+        const canvas = document.getElementById('photoCanvas2');
+        const coords = getCanvasCoordinates(canvas, e);
+        const dist = Math.sqrt((coords.x - state.equipment.x) ** 2 + (coords.y - state.equipment.y) ** 2);
+        if (dist <= getEquipmentRenderRadius()) {
+            equipmentDrag = {
+                active: true,
+                offsetX: coords.x - state.equipment.x,
+                offsetY: coords.y - state.equipment.y
+            };
+        }
+    }
+
+    function handleEquipmentDragMove(e) {
+        if (!equipmentDrag.active) return;
+        const canvas = document.getElementById('photoCanvas2');
+        const coords = getCanvasCoordinates(canvas, e);
+        state.equipment = {
+            x: coords.x - equipmentDrag.offsetX,
+            y: coords.y - equipmentDrag.offsetY
+        };
+        const ctx = canvas.getContext('2d');
+        drawPhotoWithEquipment(ctx);
+        document.getElementById('confirmEquipmentBtn').disabled = false;
+    }
+
+    function endEquipmentDrag() {
+        if (equipmentDrag.active) {
+            equipmentDrag.active = false;
+            autoSave();
+        }
+    }
+
     function drawPhotoWithEquipment(ctx) {
         ctx.clearRect(0, 0, state.photoWidth, state.photoHeight);
         ctx.drawImage(state.photo, 0, 0);
 
         if (state.equipment) {
+            const radius = getEquipmentRenderRadius();
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
-            ctx.arc(state.equipment.x, state.equipment.y, 15, 0, Math.PI * 2);
+            ctx.arc(state.equipment.x, state.equipment.y, radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 6;
+            ctx.lineWidth = Math.max(4, radius * 0.2);
             ctx.stroke();
         }
+    }
+
+    function getEquipmentRenderRadius() {
+        if (state.equipmentType === 'flue' && state.scale.pixelsPerMM) {
+            return (100 / 2) * state.scale.pixelsPerMM; // Render flue at 100mm diameter
+        }
+        return 15;
     }
 
     // Arrow key controls for equipment positioning
@@ -3587,12 +3721,17 @@
         drawPhotoWithObstacles(canvas.getContext('2d'));
     }
 
-    function drawPaintStroke(ctx, stroke, brushSize) {
+    function drawPaintStroke(ctx, stroke, brushSize, colors = {}) {
         if (!stroke || stroke.length < 2) return;
 
+        const {
+            strokeStyle = 'rgba(255, 255, 0, 0.7)',
+            fillStyle = 'rgba(255, 255, 0, 0.3)'
+        } = colors;
+
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+        ctx.strokeStyle = strokeStyle;
+        ctx.fillStyle = fillStyle;
         ctx.lineWidth = brushSize;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -3864,6 +4003,14 @@
                 ctx.beginPath();
                 ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, 5, 0, Math.PI * 2);
                 ctx.fill();
+            } else if (obstacle.shape === 'mask' && obstacle.maskStrokes) {
+                // Draw painted mask strokes for AI-detected shapes
+                obstacle.maskStrokes.forEach(maskStroke => {
+                    drawPaintStroke(ctx, maskStroke.stroke, maskStroke.brushSize, {
+                        strokeStyle: 'rgba(0, 255, 0, 0.7)',
+                        fillStyle: 'rgba(0, 255, 0, 0.2)'
+                    });
+                });
             }
 
             // Draw label with type and number (e.g., "Wall 1", "Window 2")
@@ -4373,15 +4520,20 @@
 
                 // Add detected objects as obstacles
                 result.objects.forEach(detection => {
+                    const mappedBounds = {
+                        x: (detection.bounds.x * scaleX) + minX,
+                        y: (detection.bounds.y * scaleY) + minY,
+                        width: detection.bounds.width * scaleX,
+                        height: detection.bounds.height * scaleY
+                    };
+
+                    const maskStrokes = buildMaskStrokesForBounds(mappedBounds);
+
                     const obstacle = {
                         type: detection.type,
-                        shape: 'rectangle',
-                        bounds: {
-                            x: (detection.bounds.x * scaleX) + minX,
-                            y: (detection.bounds.y * scaleY) + minY,
-                            width: detection.bounds.width * scaleX,
-                            height: detection.bounds.height * scaleY
-                        },
+                        shape: maskStrokes.length ? 'mask' : 'rectangle',
+                        bounds: mappedBounds,
+                        maskStrokes: maskStrokes.length ? maskStrokes : undefined,
                         aiConfirmed: true
                     };
                     state.obstacles.push(obstacle);
