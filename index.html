@@ -892,7 +892,8 @@
         cylinderSize: '120L', // Default cylinder size
         radiatorSize: '600x1200', // Default radiator size (height x width in mm)
         selectedObject: null, // Currently selected object for editing {type: 'equipment'|'obstacle', index: null}
-        dragOffset: null // Offset for dragging
+        dragOffset: null, // Offset for dragging
+        recentDetection: null // Temporary highlight of the latest AI-mapped obstacle
     };
 
     // Equipment type configurations
@@ -3103,6 +3104,32 @@
         }
     });
 
+    function getClearanceRequirementText(obstacleType) {
+        if (!state.brand || !state.model) {
+            return null;
+        }
+
+        const brandData = CLEARANCE_RULES[state.equipmentType]?.[state.brand];
+        const modelData = brandData?.models?.[state.model];
+
+        if (!modelData || !Array.isArray(modelData.rules)) {
+            return null;
+        }
+
+        const rule = modelData.rules.find(r => r.obstacle_type === obstacleType);
+        if (!rule || !rule.clearances) {
+            return null;
+        }
+
+        const { above, below, sides } = rule.clearances;
+        const parts = [];
+        if (above) parts.push(`Above ${above}mm`);
+        if (below) parts.push(`Below ${below}mm`);
+        if (sides) parts.push(`Side ${sides}mm`);
+
+        return parts.length > 0 ? parts.join(' • ') : null;
+    }
+
     // Detect obstacle within lasso selection
     async function detectObstacleInLasso() {
         const statusDiv = document.getElementById('obstacleLassoStatus');
@@ -3181,16 +3208,25 @@
                 const scaleY = cropHeight / 1000;
 
                 const obstacle = result.objects[0]; // Take first detected obstacle
+                const mappedBounds = {
+                    x: (obstacle.bounds.x * scaleX) + minX,
+                    y: (obstacle.bounds.y * scaleY) + minY,
+                    width: obstacle.bounds.width * scaleX,
+                    height: obstacle.bounds.height * scaleY
+                };
+
                 state.obstacles.push({
                     type: selectedType,
                     shape: 'rectangle',
-                    bounds: {
-                        x: (obstacle.bounds.x * scaleX) + minX,
-                        y: (obstacle.bounds.y * scaleY) + minY,
-                        width: obstacle.bounds.width * scaleX,
-                        height: obstacle.bounds.height * scaleY
-                    }
+                    bounds: mappedBounds
                 });
+
+                // Highlight the exact AI-mapped position in green
+                state.recentDetection = {
+                    bounds: mappedBounds,
+                    type: selectedType,
+                    timestamp: Date.now()
+                };
 
                 // Success! Reset lasso
                 state.lassoMode = false;
@@ -3206,7 +3242,9 @@
                 statusDiv.style.color = '#2e7d32';
                 const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
                 const aiServiceBadge = `<span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">${aiService}</span>`;
-                statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[selectedType]} detected!</strong> ${aiServiceBadge}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
+                const clearanceText = getClearanceRequirementText(selectedType);
+                const clearanceLine = clearanceText ? `<br><strong>Clearance requirement:</strong> ${clearanceText}` : '<br><small>Select make/model to see clearance requirements.</small>';
+                statusDiv.innerHTML = `✅ <strong>${OBSTACLE_LABELS[selectedType]} detected!</strong> ${aiServiceBadge}${clearanceLine}<br><small>Draw another lasso or use other methods to add more obstacles.</small>`;
 
                 // Update list and canvas
                 updateObstacleList();
@@ -3854,6 +3892,19 @@
         state.paintMasks.forEach(mask => {
             drawPaintStroke(ctx, mask.stroke, mask.brushSize);
         });
+
+        // Briefly highlight the most recent AI-mapped obstacle
+        if (state.recentDetection && Date.now() - state.recentDetection.timestamp < 4000) {
+            const { x, y, width, height } = state.recentDetection.bounds;
+            ctx.save();
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#00ff00';
+            ctx.setLineDash([12, 6]);
+            ctx.strokeRect(x, y, width, height);
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.12)';
+            ctx.fillRect(x, y, width, height);
+            ctx.restore();
+        }
 
         // Draw lasso
         if (state.lassoMode && state.lassoPoints.length > 0) {
