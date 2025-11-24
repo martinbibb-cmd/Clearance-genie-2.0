@@ -856,6 +856,22 @@
 </div>
 
 <script>
+    // Radiator reference data from November 2025 price book
+    const RADIATOR_MAKES = ['Stelrad', 'Myson', 'Kudox'];
+    const RADIATOR_TYPES = [
+        { value: 'type11', label: 'Single panel single convector (Type 11)' },
+        { value: 'type21', label: 'Double panel single convector (Type 21)' },
+        { value: 'type22', label: 'Double panel double convector (Type 22)' },
+        { value: 'vertical', label: 'Vertical radiator (selected sizes, usually 1800×400/600mm)' },
+        { value: 'towel_rail', label: 'Towel rail (300/400/500 × 800/1200/1600mm, chrome or white)' },
+        { value: 'column', label: 'Column radiator (varied sizes, mainly Stelrad)' }
+    ];
+    const RADIATOR_SIZES = [
+        '400x400', '600x400', '800x400', '1000x400', '1200x400', '1400x400', '1600x400', '1800x400', '2000x400',
+        '400x600', '600x600', '800x600', '1000x600', '1200x600', '1400x600', '1600x600', '1800x600', '2000x600',
+        '400x700', '600x700', '800x700', '1000x700', '1200x700'
+    ];
+
     // Application state
     const state = {
         equipmentType: null,
@@ -890,7 +906,9 @@
         magnifyEnabled: true,
         magnifyHandedness: 'right', // 'left' or 'right'
         cylinderSize: '120L', // Default cylinder size
-        radiatorSize: '600x1200', // Default radiator size (height x width in mm)
+        radiatorMake: 'Stelrad',
+        radiatorType: 'type22',
+        radiatorSize: '1200x600', // Default radiator size (width x height in mm)
         selectedObject: null, // Currently selected object for editing {type: 'equipment'|'obstacle', index: null}
         dragOffset: null, // Offset for dragging
         recentDetection: null // Temporary highlight of the latest AI-mapped obstacle
@@ -1653,20 +1671,28 @@
 
             // Add size selector for radiators
             if (state.equipmentType === 'radiator') {
+                const sizeOptions = RADIATOR_SIZES.map(size => {
+                    const label = size.replace('x', '×');
+                    const selected = state.radiatorSize === size ? 'selected' : '';
+                    return `<option value="${size}" ${selected}>${label} mm</option>`;
+                }).join('');
+                const makeOptions = RADIATOR_MAKES.map(make => {
+                    const selected = state.radiatorMake === make ? 'selected' : '';
+                    return `<option value="${make}" ${selected}>${make}</option>`;
+                }).join('');
+                const typeOptions = RADIATOR_TYPES.map(type => {
+                    const selected = state.radiatorType === type.value ? 'selected' : '';
+                    return `<option value="${type.value}" ${selected}>${type.label}</option>`;
+                }).join('');
                 sizeEditorHTML = `
                     <div class="size-editor">
-                        <label for="radiatorSizeSelect">Radiator Size (H×W mm):</label>
-                        <select id="radiatorSizeSelect" onchange="updateRadiatorSize(this.value)">
-                            <option value="400x600" ${state.radiatorSize === '400x600' ? 'selected' : ''}>400×600 mm</option>
-                            <option value="400x800" ${state.radiatorSize === '400x800' ? 'selected' : ''}>400×800 mm</option>
-                            <option value="400x1000" ${state.radiatorSize === '400x1000' ? 'selected' : ''}>400×1000 mm</option>
-                            <option value="600x600" ${state.radiatorSize === '600x600' ? 'selected' : ''}>600×600 mm</option>
-                            <option value="600x800" ${state.radiatorSize === '600x800' ? 'selected' : ''}>600×800 mm</option>
-                            <option value="600x1000" ${state.radiatorSize === '600x1000' ? 'selected' : ''}>600×1000 mm</option>
-                            <option value="600x1200" ${state.radiatorSize === '600x1200' ? 'selected' : ''}>600×1200 mm</option>
-                            <option value="600x1400" ${state.radiatorSize === '600x1400' ? 'selected' : ''}>600×1400 mm</option>
-                            <option value="600x1600" ${state.radiatorSize === '600x1600' ? 'selected' : ''}>600×1600 mm</option>
-                        </select>
+                        <label for="radiatorMakeSelect">Radiator Make:</label>
+                        <select id="radiatorMakeSelect" onchange="updateRadiatorMake(this.value)">${makeOptions}</select>
+                        <label for="radiatorTypeSelect">Radiator Type:</label>
+                        <select id="radiatorTypeSelect" onchange="updateRadiatorType(this.value)">${typeOptions}</select>
+                        <label for="radiatorSizeSelect">Radiator Size (W×H mm):</label>
+                        <select id="radiatorSizeSelect" onchange="updateRadiatorSize(this.value)">${sizeOptions}</select>
+                        <p style="margin-top: 6px; font-size: 12px; color: #555;">Based on November 2025 price book. Not all sizes are available for every make or type; Stelrad has the broadest coverage.</p>
                     </div>
                 `;
             }
@@ -1772,6 +1798,18 @@
     // Update radiator size
     function updateRadiatorSize(size) {
         state.radiatorSize = size;
+        autoSave();
+    }
+
+    // Update radiator make
+    function updateRadiatorMake(make) {
+        state.radiatorMake = make;
+        autoSave();
+    }
+
+    // Update radiator type
+    function updateRadiatorType(type) {
+        state.radiatorType = type;
         autoSave();
     }
 
