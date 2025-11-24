@@ -3960,10 +3960,23 @@
 
             const result = await response.json();
 
+            // DEBUG: Log AI detection results
+            console.log('🎯 AI Detection Result:', result);
+            console.log(`   AI Service Used: ${result.aiServiceUsed}`);
+            console.log(`   Objects Found: ${result.objects?.length || 0}`);
+            if (result.objects && result.objects.length > 0) {
+                console.log('   First Object:', result.objects[0]);
+            }
+
             if (result.objects && result.objects.length > 0) {
                 // Scale and translate obstacle coordinates
                 const scaleX = cropWidth / 1000;
                 const scaleY = cropHeight / 1000;
+
+                console.log(`📐 Coordinate Scaling:`);
+                console.log(`   Crop Size: ${cropWidth}x${cropHeight}px`);
+                console.log(`   Crop Origin: (${minX}, ${minY})`);
+                console.log(`   Scale Factors: x=${scaleX}, y=${scaleY}`);
 
                 const obstacle = result.objects[0]; // Take first detected obstacle
                 const mappedBounds = {
@@ -3982,12 +3995,16 @@
 
                 if (obstacle.polygon && obstacle.polygon.length >= 3) {
                     // AI provided detailed polygon - use it instead of rectangle
+                    console.log(`   ✅ AI provided polygon with ${obstacle.polygon.length} points`);
                     const mappedPolygon = obstacle.polygon.map(pt => ({
                         x: (pt.x * scaleX) + minX,
                         y: (pt.y * scaleY) + minY
                     }));
                     obstacleData.polygon = mappedPolygon;
                     obstacleData.shape = 'polygon';
+                    console.log(`   Mapped Polygon (first 3 points):`, mappedPolygon.slice(0, 3));
+                } else {
+                    console.log(`   ⚠️ No polygon data - using bounding box rectangle`);
                 }
 
                 state.obstacles.push(normalizeObstacleGeometry(obstacleData));
