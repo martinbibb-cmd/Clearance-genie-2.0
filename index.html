@@ -495,29 +495,21 @@
     <div class="step" id="step0">
         <h2><span class="step-number">0</span> Select Equipment Type</h2>
         <div class="equipment-type-selector">
+            <div class="equipment-type-btn" data-equipment-type="boiler">
+                <div class="icon">🔥</div>
+                <div class="label">Boiler</div>
+            </div>
             <div class="equipment-type-btn" data-equipment-type="flue">
                 <div class="icon">🌬️</div>
                 <div class="label">Flue Terminal</div>
             </div>
-            <div class="equipment-type-btn" data-equipment-type="combi_boiler">
-                <div class="icon">🔥</div>
-                <div class="label">Combi Boiler</div>
-            </div>
-            <div class="equipment-type-btn" data-equipment-type="system_boiler">
-                <div class="icon">⚙️</div>
-                <div class="label">System Boiler</div>
-            </div>
-            <div class="equipment-type-btn" data-equipment-type="regular_boiler">
-                <div class="icon">🏭</div>
-                <div class="label">Regular Boiler</div>
+            <div class="equipment-type-btn" data-equipment-type="cylinder">
+                <div class="icon">🛢️</div>
+                <div class="label">Cylinder</div>
             </div>
             <div class="equipment-type-btn" data-equipment-type="radiator">
                 <div class="icon">♨️</div>
                 <div class="label">Radiator</div>
-            </div>
-            <div class="equipment-type-btn" data-equipment-type="cylinder">
-                <div class="icon">🛢️</div>
-                <div class="label">Cylinder</div>
             </div>
         </div>
         <div class="info-box" id="equipmentInfo">
@@ -711,7 +703,8 @@
             <strong>✨ Option 1: Lasso + AI Detection (Recommended)</strong><br>
             <strong>Step 1:</strong> Draw a rough lasso around an obstacle<br>
             <strong>Step 2:</strong> AI will find exact boundaries within that area<br>
-            <strong>Step 3:</strong> Select the obstacle type and confirm
+            <strong>Step 3:</strong> Select the obstacle type and confirm<br>
+            The AI will lock onto the true edges only (e.g., just the window opening without surrounding brickwork) for pixel-perfect marking, including soffits.
         </div>
         <div class="instructions" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
             💡 <strong>Why use lasso+AI?</strong> Much more accurate and faster! You roughly circle obstacles like windows, doors, or walls, and AI refines the exact edges. This combines your knowledge of what's important with AI precision!
@@ -791,6 +784,15 @@
     <!-- Step 5: Select Brand & Model & Generate -->
     <div class="step hidden" id="step5">
         <h2><span class="step-number">5</span> Select Manufacturer & Model</h2>
+        <div class="input-group" id="boilerTypeGroup" style="display: none;">
+            <label for="boilerType">Boiler Type:</label>
+            <select id="boilerType">
+                <option value="">-- Select Boiler Type --</option>
+                <option value="combi">Combi</option>
+                <option value="system">System</option>
+                <option value="regular">Regular</option>
+            </select>
+        </div>
         <div class="input-group" id="brandSelectGroup">
             <label for="brand">Manufacturer:</label>
             <select id="brand">
@@ -805,6 +807,7 @@
         </div>
         <div class="info-box" style="background: #e3f2fd; border-color: #2196f3;">
             <strong>💡 Model-Specific Clearances:</strong> Each model has specific clearance requirements. Select the exact model for accurate compliance checking.
+            <br><strong>Boilers:</strong> Choose the boiler type (Combi/System/Regular) alongside the make and model so the correct clearances are applied.
         </div>
         <button id="generateBtn">Generate Clearance Overlay</button>
     </div>
@@ -816,6 +819,14 @@
 
         <div class="model-editor" id="modelEditorSection" style="display: none;">
             <h3>Change Make & Model</h3>
+            <div class="size-editor" id="boilerTypeResultsGroup" style="display: none;">
+                <label for="boilerTypeResults">Boiler Type:</label>
+                <select id="boilerTypeResults" onchange="updateBoilerTypeSelectionInResults()">
+                    <option value="combi">Combi</option>
+                    <option value="system">System</option>
+                    <option value="regular">Regular</option>
+                </select>
+            </div>
             <div class="size-editor">
                 <label for="brandSelectResults">Brand:</label>
                 <select id="brandSelectResults" onchange="updateBrandSelection()">
@@ -875,6 +886,7 @@
     // Application state
     const state = {
         equipmentType: null,
+        boilerType: null,
         photo: null,
         photoWidth: 0,
         photoHeight: 0,
@@ -919,28 +931,14 @@
         flue: {
             name: "Flue Terminal",
             icon: "🌬️",
-            description: "Check clearances around boiler flue terminals to windows, doors, vents, and building features.",
+            description: "Check clearances around boiler flue terminals to windows, doors, vents, soffits, and building features.",
             markingInstruction: "Tap the center of the flue terminal.",
             obstacles: ['opening_window', 'non_opening_window', 'vent', 'door', 'corner', 'ground', 'soffit', 'gutter', 'balcony', 'canopy']
         },
-        combi_boiler: {
-            name: "Combi Boiler",
+        boiler: {
+            name: "Boiler",
             icon: "🔥",
-            description: "Check service clearances around combination boilers for maintenance access and ventilation.",
-            markingInstruction: "Tap the center of the boiler.",
-            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
-        },
-        system_boiler: {
-            name: "System Boiler",
-            icon: "⚙️",
-            description: "Check service clearances around system boilers for maintenance access and ventilation.",
-            markingInstruction: "Tap the center of the boiler.",
-            obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
-        },
-        regular_boiler: {
-            name: "Regular Boiler",
-            icon: "🏭",
-            description: "Check service clearances around regular (heat only) boilers for maintenance access and ventilation.",
+            description: "Check service clearances around boilers for maintenance access, ventilation, and safe installation.",
             markingInstruction: "Tap the center of the boiler.",
             obstacles: ['wall', 'ceiling', 'floor', 'corner', 'door', 'window', 'pipe', 'duct', 'beam', 'cupboard']
         },
@@ -1268,6 +1266,24 @@
         }
     };
 
+    const BOILER_TYPE_KEYS = {
+        combi: 'combi_boiler',
+        system: 'system_boiler',
+        regular: 'regular_boiler'
+    };
+
+    function getRuleKeyForState() {
+        if (state.equipmentType === 'boiler') {
+            return state.boilerType ? BOILER_TYPE_KEYS[state.boilerType] : null;
+        }
+        return state.equipmentType;
+    }
+
+    function getCurrentManufacturers() {
+        const ruleKey = getRuleKeyForState();
+        return ruleKey ? CLEARANCE_RULES[ruleKey] : null;
+    }
+
     // Obstacle type labels
     const OBSTACLE_LABELS = {
         opening_window: "Opening Window",
@@ -1346,6 +1362,18 @@
 
             if (savedState) {
                 const parsedState = JSON.parse(savedState);
+
+                // Map legacy boiler selections to new boiler type picker
+                if (parsedState.equipmentType === 'combi_boiler') {
+                    parsedState.equipmentType = 'boiler';
+                    parsedState.boilerType = 'combi';
+                } else if (parsedState.equipmentType === 'system_boiler') {
+                    parsedState.equipmentType = 'boiler';
+                    parsedState.boilerType = 'system';
+                } else if (parsedState.equipmentType === 'regular_boiler') {
+                    parsedState.equipmentType = 'boiler';
+                    parsedState.boilerType = 'regular';
+                }
 
                 // Restore all state properties except photo
                 Object.keys(parsedState).forEach(key => {
@@ -1818,16 +1846,26 @@
         const editorSection = document.getElementById('modelEditorSection');
         const brandSelect = document.getElementById('brandSelectResults');
         const modelSelect = document.getElementById('modelSelectResults');
+        const boilerTypeGroup = document.getElementById('boilerTypeResultsGroup');
+
+        if (state.equipmentType === 'boiler') {
+            boilerTypeGroup.style.display = 'block';
+            document.getElementById('boilerTypeResults').value = state.boilerType || '';
+        } else {
+            boilerTypeGroup.style.display = 'none';
+        }
 
         // Populate brand options
-        const brands = CLEARANCE_RULES[state.equipmentType];
+        const brands = getCurrentManufacturers();
         brandSelect.innerHTML = '';
-        for (const [brandKey, brandData] of Object.entries(brands)) {
-            const option = document.createElement('option');
-            option.value = brandKey;
-            option.textContent = brandData.name;
-            option.selected = state.brand === brandKey;
-            brandSelect.appendChild(option);
+        if (brands) {
+            for (const [brandKey, brandData] of Object.entries(brands)) {
+                const option = document.createElement('option');
+                option.value = brandKey;
+                option.textContent = brandData.name;
+                option.selected = state.brand === brandKey;
+                brandSelect.appendChild(option);
+            }
         }
 
         // Populate model options for current brand
@@ -1843,13 +1881,24 @@
         const selectedBrand = brandSelect.value;
 
         modelSelect.innerHTML = '';
-        const models = CLEARANCE_RULES[state.equipmentType][selectedBrand].models;
-        for (const [modelKey, modelData] of Object.entries(models)) {
-            const option = document.createElement('option');
-            option.value = modelKey;
-            option.textContent = modelData.name;
-            option.selected = state.model === modelKey;
-            modelSelect.appendChild(option);
+        const manufacturers = getCurrentManufacturers();
+        const models = manufacturers?.[selectedBrand]?.models;
+        if (models) {
+            const modelEntries = Object.entries(models);
+            const hasExistingSelection = state.model && models[state.model];
+
+            for (const [modelKey, modelData] of modelEntries) {
+                const option = document.createElement('option');
+                option.value = modelKey;
+                option.textContent = modelData.name;
+                option.selected = state.model === modelKey;
+                modelSelect.appendChild(option);
+            }
+
+            if (!hasExistingSelection && modelEntries.length > 0) {
+                state.model = modelEntries[0][0];
+                modelSelect.value = state.model;
+            }
         }
     }
 
@@ -1876,6 +1925,35 @@
         autoSave();
     }
 
+    function updateBoilerTypeSelectionInResults() {
+        const selectedType = document.getElementById('boilerTypeResults').value;
+        state.boilerType = selectedType || null;
+        state.brand = null;
+        state.model = null;
+
+        // Rebuild brand/model options based on new type
+        const brandSelect = document.getElementById('brandSelectResults');
+        brandSelect.innerHTML = '';
+        const manufacturers = getCurrentManufacturers();
+        if (manufacturers) {
+            const brandEntries = Object.entries(manufacturers);
+            for (const [brandKey, brandData] of brandEntries) {
+                const option = document.createElement('option');
+                option.value = brandKey;
+                option.textContent = brandData.name;
+                brandSelect.appendChild(option);
+            }
+            if (brandEntries.length > 0) {
+                state.brand = brandEntries[0][0];
+                brandSelect.value = state.brand;
+            }
+        }
+
+        updateModelOptionsInResults();
+        showResults();
+        autoSave();
+    }
+
     function hideModelEditor() {
         document.getElementById('modelEditorSection').style.display = 'none';
     }
@@ -1883,6 +1961,12 @@
     // Step 0: Equipment Type Selection
     function selectEquipmentType(type, clickedButton) {
         state.equipmentType = type;
+
+        if (type !== 'boiler') {
+            state.boilerType = null;
+        }
+        state.brand = null;
+        state.model = null;
 
         // Update active button
         document.querySelectorAll('.equipment-type-btn').forEach(btn => {
@@ -3211,7 +3295,7 @@
                     detectObjects: detectObjects, // Request AI to detect these obstacles
                     cardColorHint: 'blue',
                     preciseBoundaries: true, // Request exact pixel-perfect boundary detection
-                    prompt: 'Detect the exact boundaries and edges of objects. Return precise bounding boxes that tightly fit each object with pixel-level accuracy. Identify the true edges of doors, windows, walls, and other obstacles.',
+                    prompt: 'Detect the exact boundaries and edges of objects. Return precise bounding boxes that tightly fit each object with pixel-level accuracy. Identify the true edges of doors, windows, soffits, walls, and other obstacles without including surrounding surfaces such as brickwork or trim.',
                     userMessage: aiMessage // User's optional context
                 }),
                 signal: AbortSignal.timeout(60000) // 60 second timeout for obstacle detection
@@ -3281,7 +3365,7 @@
             return null;
         }
 
-        const brandData = CLEARANCE_RULES[state.equipmentType]?.[state.brand];
+        const brandData = getCurrentManufacturers()?.[state.brand];
         const modelData = brandData?.models?.[state.model];
 
         if (!modelData || !Array.isArray(modelData.rules)) {
@@ -3362,7 +3446,7 @@
                     },
                     useHybridDetection: true,
                     preciseBoundaries: true,
-                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy.`,
+                    prompt: `Detect the ${OBSTACLE_LABELS[selectedType]} in this image. Find its exact boundaries with pixel-perfect accuracy (hug the real item only, e.g., the window opening without surrounding brickwork).`,
                     userMessage: aiMessage // User's optional context
                 }),
                 signal: AbortSignal.timeout(60000)
@@ -4159,19 +4243,48 @@
         document.getElementById('step4').classList.add('hidden');
         document.getElementById('step5').classList.remove('hidden');
 
-        // Populate manufacturer options
+        const boilerTypeGroup = document.getElementById('boilerTypeGroup');
+        if (state.equipmentType === 'boiler') {
+            boilerTypeGroup.style.display = 'block';
+            document.getElementById('boilerType').value = state.boilerType || '';
+        } else {
+            boilerTypeGroup.style.display = 'none';
+            state.boilerType = null;
+        }
+
+        populateManufacturerOptions();
+
+        // Show model select group
+        document.getElementById('modelSelectGroup').style.display = 'block';
+    });
+
+    function populateManufacturerOptions() {
         const brandSelect = document.getElementById('brand');
         brandSelect.innerHTML = '<option value="">-- Select Manufacturer --</option>';
-        const manufacturers = CLEARANCE_RULES[state.equipmentType];
+        const manufacturers = getCurrentManufacturers();
+        brandSelect.disabled = !manufacturers;
+        document.getElementById('generateBtn').disabled = true;
+
+        if (!manufacturers) {
+            return;
+        }
+
         Object.keys(manufacturers).forEach(key => {
             const option = document.createElement('option');
             option.value = key;
             option.textContent = manufacturers[key].name;
+            option.selected = state.brand === key;
             brandSelect.appendChild(option);
         });
+    }
 
-        // Show model select group
-        document.getElementById('modelSelectGroup').style.display = 'block';
+    document.getElementById('boilerType').addEventListener('change', (e) => {
+        state.boilerType = e.target.value || null;
+        state.brand = null;
+        state.model = null;
+        document.getElementById('generateBtn').disabled = true;
+        populateManufacturerOptions();
+        autoSave();
     });
 
     // Brand change handler - populate models
@@ -4185,13 +4298,16 @@
             return;
         }
 
-        const models = CLEARANCE_RULES[state.equipmentType][brandKey].models;
-        Object.keys(models).forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = models[key].name;
-            modelSelect.appendChild(option);
-        });
+        const manufacturers = getCurrentManufacturers();
+        const models = manufacturers?.[brandKey]?.models;
+        if (models) {
+            Object.keys(models).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = models[key].name;
+                modelSelect.appendChild(option);
+            });
+        }
 
         // Disable generate button until model is selected
         document.getElementById('generateBtn').disabled = true;
@@ -4205,6 +4321,10 @@
 
     // Step 5: Generate Clearance Overlay
     document.getElementById('generateBtn').addEventListener('click', () => {
+        if (state.equipmentType === 'boiler' && !state.boilerType) {
+            alert('Please choose a boiler type.');
+            return;
+        }
         state.brand = document.getElementById('brand').value;
         state.model = document.getElementById('model').value;
 
@@ -4293,7 +4413,12 @@
         ctx.drawImage(state.photo, 0, 0);
 
         // Get model data with dimensions and rules
-        const modelData = CLEARANCE_RULES[state.equipmentType][state.brand].models[state.model];
+        const manufacturers = getCurrentManufacturers();
+        const modelData = manufacturers?.[state.brand]?.models?.[state.model];
+        if (!modelData) {
+            console.error('Missing model data for clearance overlay');
+            return;
+        }
         const rules = modelData.rules;
         const dimensions = modelData.dimensions;
 
