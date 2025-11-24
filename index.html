@@ -4740,7 +4740,26 @@
             if (obstacle.shape === 'circle' && obstacle.circle) {
                 const clearanceRadius = obstacle.circle.radius + clearanceDistance;
 
-                // Draw original outline
+                // Draw clearance ring (band between inner and outer circles)
+                ctx.save();
+                ctx.fillStyle = rule.color;
+                ctx.strokeStyle = rule.stroke;
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+
+                // Draw outer clearance circle
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, clearanceRadius, 0, Math.PI * 2);
+
+                // Draw inner obstacle circle (counter-clockwise for evenodd fill)
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2, true);
+
+                // Fill the ring using evenodd rule
+                ctx.fill('evenodd');
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw original circle outline on top
                 ctx.save();
                 ctx.strokeStyle = isSelected ? '#4caf50' : '#00ff00';
                 ctx.lineWidth = isSelected ? 5 : 3;
@@ -4748,15 +4767,6 @@
                 ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.restore();
-
-                // Draw circular clearance zone
-                ctx.fillStyle = rule.color;
-                ctx.strokeStyle = rule.stroke;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, clearanceRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
 
                 // Check if equipment rectangle intersects with circular clearance zone
                 // Check each corner of equipment rectangle against circle
