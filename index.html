@@ -1382,6 +1382,9 @@
                     }
                 });
 
+                // Rebuild polygons/bounds for restored obstacles
+                state.obstacles = (state.obstacles || []).map(ob => normalizeObstacleGeometry(ob));
+
                 // Restore photo if it exists
                 if (savedPhoto) {
                     const img = new Image();
@@ -1398,6 +1401,286 @@
         } catch (e) {
             console.error('Error restoring state:', e);
         }
+    }
+
+    // ============================================
+    // GEOMETRY HELPERS
+    // ============================================
+
+    function polygonArea(points) {
+        let area = 0;
+        for (let i = 0; i < points.length; i++) {
+            const current = points[i];
+            const next = points[(i + 1) % points.length];
+            area += (current.x * next.y) - (next.x * current.y);
+        }
+        return area / 2;
+    }
+
+    function getPolygonBounds(polygon) {
+        if (!polygon || polygon.length === 0) return null;
+        const xs = polygon.map(p => p.x);
+        const ys = polygon.map(p => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    function normalizeVector(vec) {
+        const length = Math.hypot(vec.x, vec.y) || 1;
+        return { x: vec.x / length, y: vec.y / length };
+    }
+
+    function lineIntersection(p1, p2, p3, p4) {
+        const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+        if (Math.abs(denom) < 1e-6) {
+            return p2;
+        }
+        const det1 = (p1.x * p2.y) - (p1.y * p2.x);
+        const det2 = (p3.x * p4.y) - (p3.y * p4.x);
+        const x = (det1 * (p3.x - p4.x) - (p1.x - p2.x) * det2) / denom;
+        const y = (det1 * (p3.y - p4.y) - (p1.y - p2.y) * det2) / denom;
+        return { x, y };
+    }
+
+    function offsetPolygon(polygon, distance) {
+        if (!polygon || polygon.length < 3) return [];
+        if (!distance) return polygon.map(p => ({ ...p }));
+
+        const offsetEdges = [];
+        const area = polygonArea(polygon);
+        const outward = area >= 0 ? 1 : -1; // Positive area means CCW
+
+        for (let i = 0; i < polygon.length; i++) {
+            const current = polygon[i];
+            const next = polygon[(i + 1) % polygon.length];
+            const edge = { x: next.x - current.x, y: next.y - current.y };
+            const unit = normalizeVector(edge);
+            const normal = { x: unit.y * outward, y: -unit.x * outward };
+            const start = { x: current.x + normal.x * distance, y: current.y + normal.y * distance };
+            const end = { x: next.x + normal.x * distance, y: next.y + normal.y * distance };
+            offsetEdges.push({ start, end });
+        }
+
+        const result = [];
+        for (let i = 0; i < offsetEdges.length; i++) {
+            const prev = offsetEdges[(i - 1 + offsetEdges.length) % offsetEdges.length];
+            const current = offsetEdges[i];
+            const intersection = lineIntersection(prev.start, prev.end, current.start, current.end);
+            result.push(intersection);
+        }
+
+        return result;
+    }
+
+    function tracePolygon(ctx, polygon) {
+        if (!polygon || polygon.length === 0) return;
+        ctx.beginPath();
+        ctx.moveTo(polygon[0].x, polygon[0].y);
+        for (let i = 1; i < polygon.length; i++) {
+            ctx.lineTo(polygon[i].x, polygon[i].y);
+        }
+        ctx.closePath();
+    }
+
+    function isPointInPolygon(point, polygon) {
+        if (!polygon || polygon.length < 3) return false;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            const intersect = ((yi > point.y) !== (yj > point.y)) &&
+                (point.x < (xj - xi) * (point.y - yi) / ((yj - yi) || 1e-6) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function segmentsIntersect(p1, p2, q1, q2) {
+        function cross(a, b, c) {
+            return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        }
+        const d1 = cross(p1, p2, q1);
+        const d2 = cross(p1, p2, q2);
+        const d3 = cross(q1, q2, p1);
+        const d4 = cross(q1, q2, p2);
+
+        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+            ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+            return true;
+        }
+
+        const onSegment = (a, b, c) => Math.min(a.x, b.x) <= c.x && c.x <= Math.max(a.x, b.x) &&
+            Math.min(a.y, b.y) <= c.y && c.y <= Math.max(a.y, b.y);
+
+        return (d1 === 0 && onSegment(p1, p2, q1)) ||
+            (d2 === 0 && onSegment(p1, p2, q2)) ||
+            (d3 === 0 && onSegment(q1, q2, p1)) ||
+            (d4 === 0 && onSegment(q1, q2, p2));
+    }
+
+    function polygonIntersectsRect(polygon, rect) {
+        if (!polygon || polygon.length < 3 || !rect) return false;
+        const rectPoints = [
+            { x: rect.x, y: rect.y },
+            { x: rect.x + rect.width, y: rect.y },
+            { x: rect.x + rect.width, y: rect.y + rect.height },
+            { x: rect.x, y: rect.y + rect.height }
+        ];
+
+        // Check if any rectangle corner is inside the polygon
+        if (rectPoints.some(p => isPointInPolygon(p, polygon))) return true;
+
+        // Check if any polygon vertex is inside the rectangle
+        const pointInRect = (p) => p.x >= rect.x && p.x <= rect.x + rect.width && p.y >= rect.y && p.y <= rect.y + rect.height;
+        if (polygon.some(pointInRect)) return true;
+
+        // Check edge intersections
+        const rectEdges = [
+            [rectPoints[0], rectPoints[1]],
+            [rectPoints[1], rectPoints[2]],
+            [rectPoints[2], rectPoints[3]],
+            [rectPoints[3], rectPoints[0]]
+        ];
+
+        for (let i = 0; i < polygon.length; i++) {
+            const p1 = polygon[i];
+            const p2 = polygon[(i + 1) % polygon.length];
+            for (const [r1, r2] of rectEdges) {
+                if (segmentsIntersect(p1, p2, r1, r2)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    function drawClearanceRing(ctx, innerPolygon, outerPolygon, fillStyle, strokeStyle) {
+        if (!innerPolygon || !outerPolygon || innerPolygon.length < 3 || outerPolygon.length < 3) return;
+        ctx.save();
+        ctx.fillStyle = fillStyle;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(outerPolygon[0].x, outerPolygon[0].y);
+        for (let i = 1; i < outerPolygon.length; i++) {
+            ctx.lineTo(outerPolygon[i].x, outerPolygon[i].y);
+        }
+        ctx.closePath();
+
+        ctx.moveTo(innerPolygon[0].x, innerPolygon[0].y);
+        for (let i = 1; i < innerPolygon.length; i++) {
+            ctx.lineTo(innerPolygon[i].x, innerPolygon[i].y);
+        }
+        ctx.closePath();
+
+        ctx.fill('evenodd');
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function createPolygonFromBounds(bounds) {
+        if (!bounds) return null;
+        return [
+            { x: bounds.x, y: bounds.y },
+            { x: bounds.x + bounds.width, y: bounds.y },
+            { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+            { x: bounds.x, y: bounds.y + bounds.height }
+        ];
+    }
+
+    function createPolygonFromCircle(circle, segments = 32) {
+        if (!circle) return null;
+        const points = [];
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            points.push({
+                x: circle.centerX + Math.cos(angle) * circle.radius,
+                y: circle.centerY + Math.sin(angle) * circle.radius
+            });
+        }
+        return points;
+    }
+
+    function updateBoundsFromPolygon(obstacle) {
+        if (obstacle.polygon && obstacle.polygon.length > 2) {
+            obstacle.bounds = getPolygonBounds(obstacle.polygon);
+        }
+    }
+
+    function normalizeObstacleGeometry(obstacle) {
+        if (!obstacle) return obstacle;
+
+        // Build polygon representations for each shape
+        if (obstacle.shape === 'rectangle' || !obstacle.shape) {
+            if (!obstacle.polygon && obstacle.bounds) {
+                obstacle.polygon = createPolygonFromBounds(obstacle.bounds);
+            }
+        } else if (obstacle.shape === 'line' && obstacle.line) {
+            if (!obstacle.polygon) {
+                const thickness = 6;
+                const lineVec = { x: obstacle.line.x2 - obstacle.line.x1, y: obstacle.line.y2 - obstacle.line.y1 };
+                const unit = normalizeVector(lineVec);
+                const normal = { x: -unit.y, y: unit.x };
+                obstacle.polygon = [
+                    { x: obstacle.line.x1 + normal.x * thickness, y: obstacle.line.y1 + normal.y * thickness },
+                    { x: obstacle.line.x2 + normal.x * thickness, y: obstacle.line.y2 + normal.y * thickness },
+                    { x: obstacle.line.x2 - normal.x * thickness, y: obstacle.line.y2 - normal.y * thickness },
+                    { x: obstacle.line.x1 - normal.x * thickness, y: obstacle.line.y1 - normal.y * thickness }
+                ];
+            }
+        } else if (obstacle.shape === 'circle' && obstacle.circle) {
+            if (!obstacle.polygon) {
+                obstacle.polygon = createPolygonFromCircle(obstacle.circle, 32);
+            }
+            obstacle.bounds = obstacle.bounds || {
+                x: obstacle.circle.centerX - obstacle.circle.radius,
+                y: obstacle.circle.centerY - obstacle.circle.radius,
+                width: obstacle.circle.radius * 2,
+                height: obstacle.circle.radius * 2
+            };
+        } else if (obstacle.shape === 'mask' && obstacle.maskStrokes) {
+            const allPoints = obstacle.maskStrokes.flatMap(ms => ms.stroke || []);
+            if (allPoints.length > 0) {
+                const xs = allPoints.map(p => p.x);
+                const ys = allPoints.map(p => p.y);
+                const bounds = {
+                    x: Math.min(...xs),
+                    y: Math.min(...ys),
+                    width: Math.max(...xs) - Math.min(...xs),
+                    height: Math.max(...ys) - Math.min(...ys)
+                };
+                obstacle.bounds = obstacle.bounds || bounds;
+                obstacle.polygon = obstacle.polygon || createPolygonFromBounds(bounds);
+            }
+        }
+
+        if (!obstacle.bounds && obstacle.polygon) {
+            updateBoundsFromPolygon(obstacle);
+        }
+
+        return obstacle;
+    }
+
+    function getObstaclePolygon(obstacle) {
+        if (!obstacle) return null;
+        normalizeObstacleGeometry(obstacle);
+        return obstacle.polygon || null;
+    }
+
+    function getObstacleBounds(obstacle) {
+        if (!obstacle) return null;
+        if (obstacle.bounds) return obstacle.bounds;
+        const polygon = getObstaclePolygon(obstacle);
+        return polygon ? getPolygonBounds(polygon) : null;
     }
 
     // Update UI after restoring state
@@ -1488,13 +1771,12 @@
         }
 
         // Check obstacle based on shape
-        if (obj.shape === 'rectangle' || !obj.shape) {
-            return x >= obj.bounds.x &&
-                   x <= obj.bounds.x + obj.bounds.width &&
-                   y >= obj.bounds.y &&
-                   y <= obj.bounds.y + obj.bounds.height;
-        } else if (obj.shape === 'line' && obj.line) {
-            // Check if point is near the line (within 10px)
+        const polygon = getObstaclePolygon(obj);
+        if (polygon && polygon.length >= 3) {
+            return isPointInPolygon({ x, y }, polygon);
+        }
+
+        if (obj.shape === 'line' && obj.line) {
             const dist = distanceToLineSegment(x, y, obj.line.x1, obj.line.y1, obj.line.x2, obj.line.y2);
             return dist <= 10;
         } else if (obj.shape === 'circle' && obj.circle) {
@@ -1609,7 +1891,10 @@
             state.equipment.y += dy;
         } else if (objectRef.type === 'obstacle') {
             const obstacle = state.obstacles[objectRef.index];
-            if (obstacle.bounds) {
+            if (obstacle.polygon) {
+                obstacle.polygon = obstacle.polygon.map(p => ({ x: p.x + dx, y: p.y + dy }));
+                updateBoundsFromPolygon(obstacle);
+            } else if (obstacle.bounds) {
                 obstacle.bounds.x += dx;
                 obstacle.bounds.y += dy;
             }
@@ -3315,8 +3600,9 @@
 
                 // Add detected obstacles to state
                 result.objects.forEach(obstacle => {
-                    state.obstacles.push({
+                    const mappedObstacle = normalizeObstacleGeometry({
                         type: obstacle.type,
+                        shape: 'rectangle',
                         bounds: {
                             x: obstacle.bounds.x * scaleX,
                             y: obstacle.bounds.y * scaleY,
@@ -3324,6 +3610,7 @@
                             height: obstacle.bounds.height * scaleY
                         }
                     });
+                    state.obstacles.push(mappedObstacle);
                 });
 
                 // Show success message
@@ -3471,11 +3758,11 @@
                     height: obstacle.bounds.height * scaleY
                 };
 
-                state.obstacles.push({
+                state.obstacles.push(normalizeObstacleGeometry({
                     type: selectedType,
                     shape: 'rectangle',
                     bounds: mappedBounds
-                });
+                }));
 
                 // Highlight the exact AI-mapped position in green
                 state.recentDetection = {
@@ -3835,7 +4122,7 @@
             };
         }
 
-        state.obstacles.push(obstacle);
+        state.obstacles.push(normalizeObstacleGeometry(obstacle));
         autoSave();
 
         state.currentObstacleStart = null;
@@ -4060,7 +4347,7 @@
             };
         }
 
-        state.obstacles.push(obstacle);
+        state.obstacles.push(normalizeObstacleGeometry(obstacle));
         autoSave();
 
         state.currentObstacleStart = null;
@@ -4089,25 +4376,24 @@
         const currentTypeCounts = {};
 
         state.obstacles.forEach((obstacle, index) => {
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 6;
+            const polygon = getObstaclePolygon(obstacle);
+            const bounds = getObstacleBounds(obstacle);
+            const isSelected = state.selectedObject?.type === 'obstacle' && state.selectedObject.index === index;
 
-            // Draw based on shape type
-            if (obstacle.shape === 'rectangle' || !obstacle.shape) {
-                // Rectangle (default for legacy obstacles)
-                ctx.strokeRect(
-                    obstacle.bounds.x,
-                    obstacle.bounds.y,
-                    obstacle.bounds.width,
-                    obstacle.bounds.height
-                );
+            ctx.save();
+            ctx.strokeStyle = isSelected ? '#4caf50' : '#00ff00';
+            ctx.lineWidth = isSelected ? 6 : 4;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            if (polygon && polygon.length >= 3) {
+                tracePolygon(ctx, polygon);
+                ctx.stroke();
             } else if (obstacle.shape === 'line' && obstacle.line) {
-                // Line
                 ctx.beginPath();
                 ctx.moveTo(obstacle.line.x1, obstacle.line.y1);
                 ctx.lineTo(obstacle.line.x2, obstacle.line.y2);
                 ctx.stroke();
-                // Draw small circles at endpoints
                 ctx.fillStyle = '#00ff00';
                 ctx.beginPath();
                 ctx.arc(obstacle.line.x1, obstacle.line.y1, 5, 0, Math.PI * 2);
@@ -4116,17 +4402,14 @@
                 ctx.arc(obstacle.line.x2, obstacle.line.y2, 5, 0, Math.PI * 2);
                 ctx.fill();
             } else if (obstacle.shape === 'circle' && obstacle.circle) {
-                // Circle
                 ctx.beginPath();
                 ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2);
                 ctx.stroke();
-                // Draw center point
                 ctx.fillStyle = '#00ff00';
                 ctx.beginPath();
                 ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, 5, 0, Math.PI * 2);
                 ctx.fill();
             } else if (obstacle.shape === 'mask' && obstacle.maskStrokes) {
-                // Draw painted mask strokes for AI-detected shapes
                 obstacle.maskStrokes.forEach(maskStroke => {
                     drawPaintStroke(ctx, maskStroke.stroke, maskStroke.brushSize, {
                         strokeStyle: 'rgba(0, 255, 0, 0.7)',
@@ -4134,6 +4417,7 @@
                     });
                 });
             }
+            ctx.restore();
 
             // Draw label with type and number (e.g., "Wall 1", "Window 2")
             currentTypeCounts[obstacle.type] = (currentTypeCounts[obstacle.type] || 0) + 1;
@@ -4142,13 +4426,15 @@
                 `${typeLabel} ${currentTypeCounts[obstacle.type]}` :
                 typeLabel;
 
+            if (!bounds) return;
+
             // Draw label background for better visibility
             ctx.font = 'bold 16px Arial';
             const textMetrics = ctx.measureText(labelText);
             const textWidth = textMetrics.width;
             const textHeight = 16;
-            const labelX = obstacle.bounds.x + 5;
-            const labelY = obstacle.bounds.y + 5;
+            const labelX = bounds.x + 5;
+            const labelY = bounds.y + 5;
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(labelX - 2, labelY - textHeight, textWidth + 4, textHeight + 4);
@@ -4436,7 +4722,7 @@
 
         const violations = [];
 
-        state.obstacles.forEach(obstacle => {
+        state.obstacles.forEach((obstacle, index) => {
             const rule = rules.find(r => r.obstacle_type === obstacle.type);
             if (!rule) return;
 
@@ -4446,19 +4732,27 @@
                 sides: rule.clearances.sides * state.scale.pixelsPerMM
             };
 
-            ctx.fillStyle = rule.color;
-            ctx.strokeStyle = rule.stroke;
-            ctx.lineWidth = 6;
+            const clearanceDistance = Math.max(clearancePx.above, clearancePx.below, clearancePx.sides);
+            const isSelected = state.selectedObject?.type === 'obstacle' && state.selectedObject.index === index;
 
             let equipmentIntersects = false;
 
-            // Check if obstacle is circular - draw circular clearance zone
             if (obstacle.shape === 'circle' && obstacle.circle) {
-                // For circular objects, use circular clearance zone
-                const maxClearance = Math.max(clearancePx.above, clearancePx.below, clearancePx.sides);
-                const clearanceRadius = obstacle.circle.radius + maxClearance;
+                const clearanceRadius = obstacle.circle.radius + clearanceDistance;
+
+                // Draw original outline
+                ctx.save();
+                ctx.strokeStyle = isSelected ? '#4caf50' : '#00ff00';
+                ctx.lineWidth = isSelected ? 5 : 3;
+                ctx.beginPath();
+                ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, obstacle.circle.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
 
                 // Draw circular clearance zone
+                ctx.fillStyle = rule.color;
+                ctx.strokeStyle = rule.stroke;
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(obstacle.circle.centerX, obstacle.circle.centerY, clearanceRadius, 0, Math.PI * 2);
                 ctx.fill();
@@ -4490,25 +4784,25 @@
 
                 equipmentIntersects = circleInRect || cornerInCircle;
             } else {
-                // For rectangular/line objects, use rectangular clearance zone with rounded corners
-                const zoneX = obstacle.bounds.x - clearancePx.sides;
-                const zoneY = obstacle.bounds.y - clearancePx.above;
-                const zoneWidth = obstacle.bounds.width + (2 * clearancePx.sides);
-                const zoneHeight = obstacle.bounds.height + clearancePx.above + clearancePx.below;
+                const polygon = getObstaclePolygon(obstacle);
+                if (!polygon || polygon.length < 3) return;
 
-                // Corner radius for 90° arcs - use the smaller of the clearances for natural rounding
-                const cornerRadius = Math.min(clearancePx.above, clearancePx.below, clearancePx.sides);
+                const clearancePolygon = offsetPolygon(polygon, clearanceDistance);
 
-                // Draw clearance zone with rounded corners (90° arcs)
-                drawRoundedRect(ctx, zoneX, zoneY, zoneWidth, zoneHeight, cornerRadius, true, true);
+                // Draw original polygon outline
+                ctx.save();
+                ctx.strokeStyle = isSelected ? '#4caf50' : '#00ff00';
+                ctx.lineWidth = isSelected ? 5 : 3;
+                ctx.lineJoin = 'round';
+                tracePolygon(ctx, polygon);
+                ctx.stroke();
+                ctx.restore();
 
-                // Check if equipment rectangle intersects with clearance zone
-                equipmentIntersects = !(
-                    equipmentRect.x + equipmentRect.width < zoneX ||
-                    equipmentRect.x > zoneX + zoneWidth ||
-                    equipmentRect.y + equipmentRect.height < zoneY ||
-                    equipmentRect.y > zoneY + zoneHeight
-                );
+                // Draw clearance band following polygon shape
+                drawClearanceRing(ctx, polygon, clearancePolygon, rule.color, rule.stroke);
+
+                // Check if equipment rectangle intersects with clearance polygon
+                equipmentIntersects = polygonIntersectsRect(clearancePolygon, equipmentRect);
             }
 
             if (equipmentIntersects) {
@@ -4692,13 +4986,13 @@
 
                     const maskStrokes = buildMaskStrokesForBounds(mappedBounds);
 
-                    const obstacle = {
+                    const obstacle = normalizeObstacleGeometry({
                         type: detection.type,
                         shape: maskStrokes.length ? 'mask' : 'rectangle',
                         bounds: mappedBounds,
                         maskStrokes: maskStrokes.length ? maskStrokes : undefined,
                         aiConfirmed: true
-                    };
+                    });
                     state.obstacles.push(obstacle);
                 });
 
