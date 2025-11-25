@@ -3916,8 +3916,7 @@
                 const scaleX = state.photoWidth / 1000;
                 const scaleY = state.photoHeight / 1000;
 
-                // Add detected obstacles to state (with validation)
-                let rejectedCount = 0;
+                // Add detected obstacles to state
                 result.objects.forEach(obstacle => {
                     let obstacleData = {
                         type: obstacle.type,
@@ -3939,17 +3938,8 @@
                         obstacleData.shape = 'polygon';
                     }
 
-                    // Validate that object is substantially within frame boundaries
-                    const validation = validateObjectInFrame(obstacleData, state.photoWidth, state.photoHeight);
-                    console.log(`   🔍 Auto-detect validation for ${obstacle.type}: ${validation.isValid ? '✅' : '❌'} (${validation.visiblePercent.toFixed(1)}% visible)`);
-
-                    if (!validation.isValid) {
-                        console.warn(`   ⚠️ Rejecting ${obstacle.type}: ${validation.reason}`);
-                        rejectedCount++;
-                        return; // Skip this object
-                    }
-
-                    // Clamp coordinates to frame boundaries for safety
+                    // Clamp coordinates to frame boundaries to prevent invalid coordinates
+                    // (but allow partially visible objects - they're valid for clearance checking)
                     if (obstacleData.polygon) {
                         obstacleData.polygon = clampPolygonToFrame(obstacleData.polygon, state.photoWidth, state.photoHeight);
                     }
@@ -3959,40 +3949,19 @@
                     state.obstacles.push(mappedObstacle);
                 });
 
-                // Calculate accepted count
-                const acceptedCount = result.objects.length - rejectedCount;
+                // Show success message
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
+                statusDiv.innerHTML = `✅ <strong>Detected ${result.objects.length} obstacle(s)!</strong> <span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${aiService}</span><br>` +
+                    `<small>${result.objects.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
+                    `You can add more obstacles manually if needed.`;
 
-                if (acceptedCount > 0) {
-                    // Show success message
-                    statusDiv.style.background = '#e8f5e9';
-                    statusDiv.style.color = '#2e7d32';
-                    const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
-                    let message = `✅ <strong>Detected ${acceptedCount} obstacle(s)!</strong> <span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${aiService}</span><br>` +
-                        `<small>${state.obstacles.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small>`;
-
-                    if (rejectedCount > 0) {
-                        message += `<br><small style="color: #e65100;">⚠️ ${rejectedCount} object(s) rejected (too close to frame edge)</small>`;
-                    }
-
-                    message += `<br>You can add more obstacles manually if needed.`;
-                    statusDiv.innerHTML = message;
-
-                    // Update obstacle list and canvas
-                    updateObstacleList();
-                    const canvas3 = document.getElementById('photoCanvas3');
-                    const ctx3 = canvas3.getContext('2d');
-                    drawPhotoWithObstacles(ctx3);
-                } else {
-                    // All objects were rejected or none found
-                    statusDiv.style.background = '#fff3e0';
-                    statusDiv.style.color = '#e65100';
-                    let message = '⚠️ <strong>No valid obstacles detected</strong><br>';
-                    if (rejectedCount > 0) {
-                        message += `${rejectedCount} object(s) were too close to the frame edge.<br>`;
-                    }
-                    message += 'Use manual marking below to draw rectangles around obstacles.';
-                    statusDiv.innerHTML = message;
-                }
+                // Update obstacle list and canvas
+                updateObstacleList();
+                const canvas3 = document.getElementById('photoCanvas3');
+                const ctx3 = canvas3.getContext('2d');
+                drawPhotoWithObstacles(ctx3);
             } else {
                 // No obstacles detected
                 statusDiv.style.background = '#fff3e0';
@@ -4159,20 +4128,8 @@
                     console.log(`   ⚠️ No polygon data - using bounding box rectangle`);
                 }
 
-                // Validate that object is substantially within frame boundaries
-                const validation = validateObjectInFrame(obstacleData, state.photoWidth, state.photoHeight);
-                console.log(`   🔍 Frame Validation: ${validation.isValid ? '✅ PASS' : '❌ FAIL'} (${validation.visiblePercent.toFixed(1)}% visible)`);
-
-                if (!validation.isValid) {
-                    // Object is mostly outside frame - reject it
-                    statusDiv.style.background = '#fff3e0';
-                    statusDiv.style.color = '#e65100';
-                    statusDiv.innerHTML = `⚠️ <strong>Detection rejected:</strong> ${validation.reason}<br><small>Object appears to be cut off by the frame edge. Please select a fully visible object or adjust your photo framing.</small>`;
-                    state.isDetecting = false;
-                    return;
-                }
-
-                // Clamp coordinates to frame boundaries for safety
+                // Clamp coordinates to frame boundaries to prevent invalid coordinates
+                // (but allow partially visible objects - they're valid for clearance checking)
                 if (obstacleData.polygon) {
                     obstacleData.polygon = clampPolygonToFrame(obstacleData.polygon, state.photoWidth, state.photoHeight);
                 }
