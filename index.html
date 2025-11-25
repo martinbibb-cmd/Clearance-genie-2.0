@@ -543,9 +543,18 @@
     <div class="step hidden" id="step2">
         <h2><span class="step-number">2</span> Set Scale</h2>
 
+        <!-- Live Camera Calibration Section -->
+        <div class="instructions" style="background: linear-gradient(135deg, #667eea22 0%, #764ba244 100%); border-left: 4px solid #667eea;">
+            <strong>📹 Option 1: Live Camera Calibration (New!)</strong><br>
+            Point your camera at a 🔵 <strong>blue credit card</strong> on the wall. A red box will turn <strong style="color: #22c55e;">GREEN ✓</strong> when the card is properly detected and will auto-calibrate!
+        </div>
+        <button id="startLiveCameraBtn" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 16px; padding: 12px 24px;">
+            📹 Start Live Camera Calibration
+        </button>
+
         <!-- AI Detection with Lasso Section -->
         <div class="instructions">
-            <strong>🤖 Option 1: AI-Assisted Detection (Recommended)</strong><br>
+            <strong>🤖 Option 2: AI-Assisted Detection (Photo)</strong><br>
             <strong>Step 1:</strong> Draw a rough lasso around your reference object (🔵 blue card or brick)<br>
             <strong>Step 2:</strong> AI will find exact edges within that area
             <ul style="margin: 5px 0 5px 20px;">
@@ -588,7 +597,7 @@
 
         <!-- Manual Calibration Section -->
         <div class="instructions" style="background: #fff9e6; border-left: 4px solid #ff9800; margin-top: 20px;">
-            <strong>📏 Option 2: Manual Calibration</strong><br>
+            <strong>📏 Option 3: Manual Calibration</strong><br>
             <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; font-family: monospace; text-align: center;">
                 <strong>Example: Measuring credit card width</strong><br>
                 <div style="margin: 10px 0; font-size: 18px;">
@@ -869,6 +878,35 @@
         <button id="downloadBtn">Download Annotated Photo</button>
         <button class="secondary" id="startOverBtn">Start Over</button>
         <button class="danger" id="forceResetBtn">🔄 Force Reset (Clear All Data)</button>
+    </div>
+</div>
+
+<!-- Live Camera Calibration Modal -->
+<div id="liveCameraModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; overflow: auto;">
+    <div style="position: relative; max-width: 900px; margin: 20px auto; padding: 20px;">
+        <button id="closeLiveCameraBtn" style="position: absolute; top: 10px; right: 10px; background: #e74c3c; padding: 10px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; z-index: 10001;">
+            ✖ Close
+        </button>
+
+        <h2 style="color: white; text-align: center; margin-bottom: 10px;">📹 Live Camera Calibration</h2>
+        <div id="liveCameraStatus" style="text-align: center; color: #ffd700; font-size: 16px; margin-bottom: 15px; min-height: 24px;">
+            Initializing camera...
+        </div>
+
+        <div style="position: relative; max-width: 100%; margin: 0 auto; background: #000;">
+            <video id="liveCameraVideo" autoplay playsinline style="width: 100%; display: block; border-radius: 8px;"></video>
+            <canvas id="liveCameraCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+        </div>
+
+        <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+            <div style="font-size: 14px; line-height: 1.6;">
+                <strong>Instructions:</strong><br>
+                1. Hold your phone steady and position a 🔵 <strong>blue credit card</strong> flat against the wall<br>
+                2. Center the card in the <span style="color: #ef4444;">RED</span> box outline<br>
+                3. When the card is detected, the box will turn <strong style="color: #22c55e;">GREEN ✓</strong><br>
+                4. Keep steady for a moment - it will auto-calibrate!
+            </div>
+        </div>
     </div>
 </div>
 
@@ -2661,6 +2699,270 @@
 
     document.getElementById('photoCameraInput').addEventListener('change', handlePhotoUpload);
     document.getElementById('photoUploadInput').addEventListener('change', handlePhotoUpload);
+
+    // Live Camera Calibration
+    let liveCameraStream = null;
+    let liveCameraAnimationFrame = null;
+    let isDetectingCard = false;
+    let cardDetectedCount = 0;
+    const CARD_DETECTED_THRESHOLD = 3; // Need 3 successful detections before auto-calibrating
+
+    async function startLiveCamera() {
+        const modal = document.getElementById('liveCameraModal');
+        const video = document.getElementById('liveCameraVideo');
+        const status = document.getElementById('liveCameraStatus');
+
+        // Show modal
+        modal.style.display = 'block';
+
+        try {
+            // Request camera access
+            liveCameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                },
+                audio: false
+            });
+
+            video.srcObject = liveCameraStream;
+            status.innerHTML = '📹 Camera ready! Position a 🔵 blue card in the red box...';
+            status.style.color = '#22c55e';
+
+            // Wait for video to be ready, then start drawing overlay
+            video.addEventListener('loadedmetadata', () => {
+                startLiveCameraOverlay();
+            });
+
+        } catch (err) {
+            console.error('Camera error:', err);
+            status.innerHTML = '❌ Camera access denied. Please enable camera permissions.';
+            status.style.color = '#ef4444';
+        }
+    }
+
+    function startLiveCameraOverlay() {
+        const video = document.getElementById('liveCameraVideo');
+        const canvas = document.getElementById('liveCameraCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawOverlay() {
+            // Match canvas size to video
+            const rect = video.getBoundingClientRect();
+            canvas.width = video.videoWidth || rect.width;
+            canvas.height = video.videoHeight || rect.height;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Calculate card box dimensions (credit card ratio: 85.6mm x 54mm = 1.585:1)
+            const boxWidth = canvas.width * 0.6; // 60% of screen width
+            const boxHeight = boxWidth / 1.585; // Maintain credit card aspect ratio
+            const boxX = (canvas.width - boxWidth) / 2;
+            const boxY = (canvas.height - boxHeight) / 2;
+
+            // Draw card outline box (red by default, green when detected)
+            ctx.strokeStyle = cardDetectedCount >= CARD_DETECTED_THRESHOLD ? '#22c55e' : '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+            // Draw corner markers
+            const markerSize = 20;
+            ctx.fillStyle = ctx.strokeStyle;
+
+            // Top-left corner
+            ctx.fillRect(boxX, boxY, markerSize, 3);
+            ctx.fillRect(boxX, boxY, 3, markerSize);
+
+            // Top-right corner
+            ctx.fillRect(boxX + boxWidth - markerSize, boxY, markerSize, 3);
+            ctx.fillRect(boxX + boxWidth - 3, boxY, 3, markerSize);
+
+            // Bottom-left corner
+            ctx.fillRect(boxX, boxY + boxHeight - 3, markerSize, 3);
+            ctx.fillRect(boxX, boxY + boxHeight - markerSize, 3, markerSize);
+
+            // Bottom-right corner
+            ctx.fillRect(boxX + boxWidth - markerSize, boxY + boxHeight - 3, markerSize, 3);
+            ctx.fillRect(boxX + boxWidth - 3, boxY + boxHeight - markerSize, 3, markerSize);
+
+            // Add text hint
+            ctx.font = 'bold 16px system-ui';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 4;
+            ctx.fillText('Position card here', canvas.width / 2, boxY - 15);
+            ctx.shadowBlur = 0;
+
+            liveCameraAnimationFrame = requestAnimationFrame(drawOverlay);
+        }
+
+        drawOverlay();
+
+        // Start checking for card every 2 seconds
+        setInterval(() => {
+            if (!isDetectingCard) {
+                detectCardInLiveCamera();
+            }
+        }, 2000);
+    }
+
+    async function detectCardInLiveCamera() {
+        if (isDetectingCard) return;
+
+        isDetectingCard = true;
+        const video = document.getElementById('liveCameraVideo');
+        const status = document.getElementById('liveCameraStatus');
+
+        try {
+            // Capture current frame
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0);
+
+            // Convert to base64
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Call AI to detect card
+            status.innerHTML = '🔍 Detecting card...';
+            status.style.color = '#ffd700';
+
+            const response = await fetch('https://clearance.martinbibb.workers.dev', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image: imageData,
+                    detectCard: true,
+                    aiModel: state.aiProvider || localStorage.getItem('aiProvider') || 'openai'
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.cardDetected) {
+                cardDetectedCount++;
+                status.innerHTML = `✓ Card detected! (${cardDetectedCount}/${CARD_DETECTED_THRESHOLD})`;
+                status.style.color = '#22c55e';
+
+                if (cardDetectedCount >= CARD_DETECTED_THRESHOLD) {
+                    // Auto-calibrate!
+                    await calibrateFromDetectedCard(result, tempCanvas);
+                }
+            } else {
+                cardDetectedCount = 0;
+                status.innerHTML = '📹 Position a 🔵 blue card in the red box...';
+                status.style.color = '#ffd700';
+            }
+
+        } catch (err) {
+            console.error('Card detection error:', err);
+            status.innerHTML = '⚠ Detection error. Retrying...';
+            status.style.color = '#ffa500';
+        } finally {
+            isDetectingCard = false;
+        }
+    }
+
+    async function calibrateFromDetectedCard(detectionResult, frameCanvas) {
+        const status = document.getElementById('liveCameraStatus');
+
+        status.innerHTML = '✓ Card detected! Calibrating...';
+        status.style.color = '#22c55e';
+
+        // Store the captured frame as the main photo
+        const img = new Image();
+        img.onload = function() {
+            state.photo = img;
+            state.photoWidth = img.width;
+            state.photoHeight = img.height;
+
+            // Set calibration data from AI detection
+            if (detectionResult.corners && detectionResult.corners.length === 4) {
+                // Use detected corners for 4-point calibration
+                state.scale.calibrationMode = 'four-point';
+                state.scale.point1 = detectionResult.corners[0];
+                state.scale.point2 = detectionResult.corners[1];
+                state.scale.point3 = detectionResult.corners[2];
+                state.scale.point4 = detectionResult.corners[3];
+                state.scale.pixelsPerMM = calculatePixelsPerMMFrom4Points(detectionResult.corners);
+                state.scale.distanceMM = 85.6; // Credit card width
+            } else if (detectionResult.width && detectionResult.height) {
+                // Use width/height for simple calibration
+                const pixelWidth = detectionResult.width || 0;
+                state.scale.calibrationMode = 'two-point';
+                state.scale.pixelsPerMM = pixelWidth / 85.6; // Credit card width in mm
+                state.scale.distanceMM = 85.6;
+            }
+
+            autoSave();
+
+            // Close modal and proceed to next step
+            closeLiveCamera();
+
+            status.innerHTML = '✓ Calibration complete!';
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+            setupEquipmentCanvas();
+        };
+        img.src = frameCanvas.toDataURL('image/jpeg', 0.95);
+    }
+
+    function closeLiveCamera() {
+        const modal = document.getElementById('liveCameraModal');
+
+        // Stop camera stream
+        if (liveCameraStream) {
+            liveCameraStream.getTracks().forEach(track => track.stop());
+            liveCameraStream = null;
+        }
+
+        // Cancel animation frame
+        if (liveCameraAnimationFrame) {
+            cancelAnimationFrame(liveCameraAnimationFrame);
+            liveCameraAnimationFrame = null;
+        }
+
+        // Reset state
+        isDetectingCard = false;
+        cardDetectedCount = 0;
+
+        // Hide modal
+        modal.style.display = 'none';
+    }
+
+    // Helper function to calculate pixels per MM from 4 corner points
+    function calculatePixelsPerMMFrom4Points(corners) {
+        if (!corners || corners.length !== 4) return 0;
+
+        const [p1, p2, p3, p4] = corners; // TL, TR, BR, BL
+
+        // Calculate distances
+        const topWidthPx = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        const bottomWidthPx = Math.sqrt(Math.pow(p3.x - p4.x, 2) + Math.pow(p3.y - p4.y, 2));
+        const leftHeightPx = Math.sqrt(Math.pow(p4.x - p1.x, 2) + Math.pow(p4.y - p1.y, 2));
+        const rightHeightPx = Math.sqrt(Math.pow(p3.x - p2.x, 2) + Math.pow(p3.y - p2.y, 2));
+
+        // Credit card dimensions
+        const cardWidthMM = 85.6;
+        const cardHeightMM = 54;
+
+        // Calculate scale from each measurement
+        const scaleFromTopWidth = topWidthPx / cardWidthMM;
+        const scaleFromBottomWidth = bottomWidthPx / cardWidthMM;
+        const scaleFromLeftHeight = leftHeightPx / cardHeightMM;
+        const scaleFromRightHeight = rightHeightPx / cardHeightMM;
+
+        // Return average scale
+        return (scaleFromTopWidth + scaleFromBottomWidth + scaleFromLeftHeight + scaleFromRightHeight) / 4;
+    }
+
+    // Event listeners for live camera
+    document.getElementById('startLiveCameraBtn').addEventListener('click', startLiveCamera);
+    document.getElementById('closeLiveCameraBtn').addEventListener('click', closeLiveCamera);
 
     // Step 2: Scale Calibration
     function setupScaleCanvas() {
