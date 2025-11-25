@@ -234,11 +234,10 @@ For EACH object you detect, provide:
    - For windows: trace the OPENING EDGE, not the surrounding brickwork
 
 Important guidelines:
-- Be thorough: detect ALL instances of the listed objects
-- **CRITICAL: Only detect objects that are FULLY or SUBSTANTIALLY visible (at least 70% in frame)**
-  - DO NOT detect objects that are cut off by frame edges
-  - DO NOT detect objects where significant portions extend outside the image boundaries
-  - If an object is partially out of frame, skip it entirely
+- Be thorough: detect ALL instances of the listed objects, including partially visible ones
+- Partially visible objects are VALID and IMPORTANT for clearance checking
+  - If an object extends beyond the frame edge, detect and trace the visible portion
+  - The system will handle coordinate clamping automatically
 - Windows: distinguish between "window" (fixed) and "opening_window" (can open)
   - For windows, the polygon should trace the OPENING portion only, excluding brick surround
 - Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
@@ -477,11 +476,10 @@ For EACH object you detect, provide:
    - For windows: trace the OPENING EDGE, not the surrounding brickwork
 
 Important guidelines:
-- Be thorough: detect ALL instances of the listed objects
-- **CRITICAL: Only detect objects that are FULLY or SUBSTANTIALLY visible (at least 70% in frame)**
-  - DO NOT detect objects that are cut off by frame edges
-  - DO NOT detect objects where significant portions extend outside the image boundaries
-  - If an object is partially out of frame, skip it entirely
+- Be thorough: detect ALL instances of the listed objects, including partially visible ones
+- Partially visible objects are VALID and IMPORTANT for clearance checking
+  - If an object extends beyond the frame edge, detect and trace the visible portion
+  - The system will handle coordinate clamping automatically
 - Windows: distinguish between "window" (fixed) and "opening_window" (can open)
   - For windows, the polygon should trace the OPENING portion only, excluding brick surround
 - Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
