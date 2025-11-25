@@ -1508,6 +1508,109 @@
         };
     }
 
+    /**
+     * Validates if an object (polygon or bounds) is substantially within frame boundaries.
+     * Returns an object with validation results and percentage visible.
+     * @param {Object} obstacle - Obstacle with bounds and/or polygon
+     * @param {number} frameWidth - Frame width in pixels
+     * @param {number} frameHeight - Frame height in pixels
+     * @returns {Object} - {isValid: boolean, visiblePercent: number, reason: string}
+     */
+    function validateObjectInFrame(obstacle, frameWidth, frameHeight) {
+        const MINIMUM_VISIBLE_PERCENT = 70; // Object must be at least 70% visible
+
+        let bounds = obstacle.bounds;
+
+        // If obstacle has a polygon, use its bounds
+        if (obstacle.polygon && obstacle.polygon.length > 0) {
+            bounds = getPolygonBounds(obstacle.polygon);
+        }
+
+        if (!bounds) {
+            return { isValid: false, visiblePercent: 0, reason: 'No bounds available' };
+        }
+
+        // Calculate the object's bounding rectangle
+        const objLeft = bounds.x;
+        const objRight = bounds.x + bounds.width;
+        const objTop = bounds.y;
+        const objBottom = bounds.y + bounds.height;
+
+        // Calculate the visible portion (intersection with frame)
+        const visibleLeft = Math.max(0, objLeft);
+        const visibleRight = Math.min(frameWidth, objRight);
+        const visibleTop = Math.max(0, objTop);
+        const visibleBottom = Math.min(frameHeight, objBottom);
+
+        // Calculate visible area
+        const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+        const visibleArea = visibleWidth * visibleHeight;
+
+        // Calculate total object area
+        const totalArea = bounds.width * bounds.height;
+
+        if (totalArea <= 0) {
+            return { isValid: false, visiblePercent: 0, reason: 'Invalid object dimensions' };
+        }
+
+        // Calculate percentage visible
+        const visiblePercent = (visibleArea / totalArea) * 100;
+
+        // Check if object is substantially visible
+        const isValid = visiblePercent >= MINIMUM_VISIBLE_PERCENT;
+
+        let reason = '';
+        if (!isValid) {
+            if (visiblePercent === 0) {
+                reason = 'Object completely outside frame';
+            } else {
+                reason = `Object only ${visiblePercent.toFixed(1)}% visible (minimum ${MINIMUM_VISIBLE_PERCENT}% required)`;
+            }
+        }
+
+        return { isValid, visiblePercent, reason };
+    }
+
+    /**
+     * Clamps polygon coordinates to stay within frame boundaries.
+     * @param {Array} polygon - Array of {x, y} points
+     * @param {number} frameWidth - Frame width in pixels
+     * @param {number} frameHeight - Frame height in pixels
+     * @returns {Array} - Clamped polygon points
+     */
+    function clampPolygonToFrame(polygon, frameWidth, frameHeight) {
+        if (!polygon || polygon.length === 0) return polygon;
+
+        return polygon.map(pt => ({
+            x: Math.max(0, Math.min(frameWidth, pt.x)),
+            y: Math.max(0, Math.min(frameHeight, pt.y))
+        }));
+    }
+
+    /**
+     * Clamps bounds to stay within frame boundaries.
+     * @param {Object} bounds - Object with {x, y, width, height}
+     * @param {number} frameWidth - Frame width in pixels
+     * @param {number} frameHeight - Frame height in pixels
+     * @returns {Object} - Clamped bounds
+     */
+    function clampBoundsToFrame(bounds, frameWidth, frameHeight) {
+        if (!bounds) return bounds;
+
+        const x = Math.max(0, Math.min(frameWidth, bounds.x));
+        const y = Math.max(0, Math.min(frameHeight, bounds.y));
+        const maxWidth = frameWidth - x;
+        const maxHeight = frameHeight - y;
+
+        return {
+            x: x,
+            y: y,
+            width: Math.min(bounds.width, maxWidth),
+            height: Math.min(bounds.height, maxHeight)
+        };
+    }
+
     function normalizeVector(vec) {
         const length = Math.hypot(vec.x, vec.y) || 1;
         return { x: vec.x / length, y: vec.y / length };
@@ -3813,9 +3916,10 @@
                 const scaleX = state.photoWidth / 1000;
                 const scaleY = state.photoHeight / 1000;
 
-                // Add detected obstacles to state
+                // Add detected obstacles to state (with validation)
+                let rejectedCount = 0;
                 result.objects.forEach(obstacle => {
-                    const mappedObstacle = normalizeObstacleGeometry({
+                    let obstacleData = {
                         type: obstacle.type,
                         shape: 'rectangle',
                         bounds: {
@@ -3824,23 +3928,71 @@
                             width: obstacle.bounds.width * scaleX,
                             height: obstacle.bounds.height * scaleY
                         }
-                    });
+                    };
+
+                    // Add polygon if provided by AI
+                    if (obstacle.polygon && obstacle.polygon.length >= 3) {
+                        obstacleData.polygon = obstacle.polygon.map(pt => ({
+                            x: pt.x * scaleX,
+                            y: pt.y * scaleY
+                        }));
+                        obstacleData.shape = 'polygon';
+                    }
+
+                    // Validate that object is substantially within frame boundaries
+                    const validation = validateObjectInFrame(obstacleData, state.photoWidth, state.photoHeight);
+                    console.log(`   🔍 Auto-detect validation for ${obstacle.type}: ${validation.isValid ? '✅' : '❌'} (${validation.visiblePercent.toFixed(1)}% visible)`);
+
+                    if (!validation.isValid) {
+                        console.warn(`   ⚠️ Rejecting ${obstacle.type}: ${validation.reason}`);
+                        rejectedCount++;
+                        return; // Skip this object
+                    }
+
+                    // Clamp coordinates to frame boundaries for safety
+                    if (obstacleData.polygon) {
+                        obstacleData.polygon = clampPolygonToFrame(obstacleData.polygon, state.photoWidth, state.photoHeight);
+                    }
+                    obstacleData.bounds = clampBoundsToFrame(obstacleData.bounds, state.photoWidth, state.photoHeight);
+
+                    const mappedObstacle = normalizeObstacleGeometry(obstacleData);
                     state.obstacles.push(mappedObstacle);
                 });
 
-                // Show success message
-                statusDiv.style.background = '#e8f5e9';
-                statusDiv.style.color = '#2e7d32';
-                const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
-                statusDiv.innerHTML = `✅ <strong>Detected ${result.objects.length} obstacle(s)!</strong> <span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${aiService}</span><br>` +
-                    `<small>${result.objects.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small><br>` +
-                    `You can add more obstacles manually if needed.`;
+                // Calculate accepted count
+                const acceptedCount = result.objects.length - rejectedCount;
 
-                // Update obstacle list and canvas
-                updateObstacleList();
-                const canvas3 = document.getElementById('photoCanvas3');
-                const ctx3 = canvas3.getContext('2d');
-                drawPhotoWithObstacles(ctx3);
+                if (acceptedCount > 0) {
+                    // Show success message
+                    statusDiv.style.background = '#e8f5e9';
+                    statusDiv.style.color = '#2e7d32';
+                    const aiService = result.aiServiceUsed === 'claude' ? '🤖 Claude' : '🤖 OpenAI';
+                    let message = `✅ <strong>Detected ${acceptedCount} obstacle(s)!</strong> <span style="background: ${result.aiServiceUsed === 'claude' ? '#f3e5f5' : '#e3f2fd'}; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${aiService}</span><br>` +
+                        `<small>${state.obstacles.map(o => OBSTACLE_LABELS[o.type]).join(', ')}</small>`;
+
+                    if (rejectedCount > 0) {
+                        message += `<br><small style="color: #e65100;">⚠️ ${rejectedCount} object(s) rejected (too close to frame edge)</small>`;
+                    }
+
+                    message += `<br>You can add more obstacles manually if needed.`;
+                    statusDiv.innerHTML = message;
+
+                    // Update obstacle list and canvas
+                    updateObstacleList();
+                    const canvas3 = document.getElementById('photoCanvas3');
+                    const ctx3 = canvas3.getContext('2d');
+                    drawPhotoWithObstacles(ctx3);
+                } else {
+                    // All objects were rejected or none found
+                    statusDiv.style.background = '#fff3e0';
+                    statusDiv.style.color = '#e65100';
+                    let message = '⚠️ <strong>No valid obstacles detected</strong><br>';
+                    if (rejectedCount > 0) {
+                        message += `${rejectedCount} object(s) were too close to the frame edge.<br>`;
+                    }
+                    message += 'Use manual marking below to draw rectangles around obstacles.';
+                    statusDiv.innerHTML = message;
+                }
             } else {
                 // No obstacles detected
                 statusDiv.style.background = '#fff3e0';
@@ -4006,6 +4158,25 @@
                 } else {
                     console.log(`   ⚠️ No polygon data - using bounding box rectangle`);
                 }
+
+                // Validate that object is substantially within frame boundaries
+                const validation = validateObjectInFrame(obstacleData, state.photoWidth, state.photoHeight);
+                console.log(`   🔍 Frame Validation: ${validation.isValid ? '✅ PASS' : '❌ FAIL'} (${validation.visiblePercent.toFixed(1)}% visible)`);
+
+                if (!validation.isValid) {
+                    // Object is mostly outside frame - reject it
+                    statusDiv.style.background = '#fff3e0';
+                    statusDiv.style.color = '#e65100';
+                    statusDiv.innerHTML = `⚠️ <strong>Detection rejected:</strong> ${validation.reason}<br><small>Object appears to be cut off by the frame edge. Please select a fully visible object or adjust your photo framing.</small>`;
+                    state.isDetecting = false;
+                    return;
+                }
+
+                // Clamp coordinates to frame boundaries for safety
+                if (obstacleData.polygon) {
+                    obstacleData.polygon = clampPolygonToFrame(obstacleData.polygon, state.photoWidth, state.photoHeight);
+                }
+                obstacleData.bounds = clampBoundsToFrame(obstacleData.bounds, state.photoWidth, state.photoHeight);
 
                 state.obstacles.push(normalizeObstacleGeometry(obstacleData));
 
