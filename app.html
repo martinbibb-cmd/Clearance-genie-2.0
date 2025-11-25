@@ -252,6 +252,9 @@
             background: #f0f0f0;
             display: block;
             margin: 20px auto;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* Legend */
@@ -472,6 +475,11 @@
                 <span class="status-badge complete">Ready</span>
             </div>
 
+            <div class="instructions">
+                <strong>💡 Interactive Canvas:</strong>
+                Long press (or click and hold) on any equipment to drag and reposition it. The selected item will be highlighted in gold. Release to place it in the new position.
+            </div>
+
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-color" style="background: white; border-color: #333;"></div>
@@ -515,7 +523,14 @@
             cameraStream: null,
             detectionInterval: null,
             detectionCount: 0,
-            requiredDetections: 3
+            requiredDetections: 3,
+            // Drag state
+            dragging: false,
+            draggedItemIndex: null,
+            dragStartX: 0,
+            dragStartY: 0,
+            longPressTimer: null,
+            longPressThreshold: 500 // ms
         };
 
         // API endpoint for card detection
@@ -750,7 +765,7 @@
                                 <button class="btn-remove" onclick="removeEquipment(${index})">Remove</button>
                             </div>
                             <div class="equipment-details">
-                                Position: (${item.x}mm, ${item.y}mm)<br>
+                                Position: (${Math.round(item.x)}mm, ${Math.round(item.y)}mm)<br>
                                 Zones: 100mm / 150mm / 200mm / 300mm
                             </div>
                         </div>
@@ -765,9 +780,9 @@
                                 <button class="btn-remove" onclick="removeEquipment(${index})">Remove</button>
                             </div>
                             <div class="equipment-details">
-                                Position: (${item.x}mm, ${item.y}mm)<br>
-                                Size: ${item.width}mm × ${item.height}mm<br>
-                                Clearance: ${item.clearance}mm
+                                Position: (${Math.round(item.x)}mm, ${Math.round(item.y)}mm)<br>
+                                Size: ${Math.round(item.width)}mm × ${Math.round(item.height)}mm<br>
+                                Clearance: ${Math.round(item.clearance)}mm
                             </div>
                         </div>
                     `;
@@ -794,7 +809,7 @@
         });
 
         // Draw visualization
-        function drawVisualization() {
+        function drawVisualization(highlightIndex = null) {
             const canvas = visualizationCanvas;
             const ctx = canvas.getContext('2d');
 
@@ -803,7 +818,9 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw equipment
-            state.equipment.forEach(item => {
+            state.equipment.forEach((item, index) => {
+                const isHighlighted = highlightIndex !== null && index === highlightIndex;
+
                 if (item.type === 'flue') {
                     // Draw flue with halos
                     const centerX = item.x * state.pixelsPerMM;
@@ -828,15 +845,24 @@
                     ctx.fill();
 
                     // 100mm red center
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fillStyle = isHighlighted ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)';
                     ctx.beginPath();
                     ctx.arc(centerX, centerY, 50 * state.pixelsPerMM, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Flue outline
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
+                    // Flue outline - highlight if selected
+                    ctx.strokeStyle = isHighlighted ? '#FFD700' : '#000';
+                    ctx.lineWidth = isHighlighted ? 4 : 2;
                     ctx.stroke();
+
+                    // Add highlight ring
+                    if (isHighlighted) {
+                        ctx.strokeStyle = '#FFD700';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, 55 * state.pixelsPerMM, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
                 } else {
                     // Draw equipment box (white)
                     const x = item.x * state.pixelsPerMM;
@@ -846,22 +872,22 @@
 
                     ctx.fillStyle = 'white';
                     ctx.fillRect(x, y, width, height);
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = isHighlighted ? '#FFD700' : '#333';
+                    ctx.lineWidth = isHighlighted ? 5 : 3;
                     ctx.strokeRect(x, y, width, height);
 
                     // Draw clearance zone
                     if (item.clearance) {
                         const clearancePx = item.clearance * state.pixelsPerMM;
-                        ctx.fillStyle = 'rgba(102, 126, 234, 0.2)';
+                        ctx.fillStyle = isHighlighted ? 'rgba(102, 126, 234, 0.4)' : 'rgba(102, 126, 234, 0.2)';
                         ctx.fillRect(
                             x - clearancePx,
                             y - clearancePx,
                             width + 2 * clearancePx,
                             height + 2 * clearancePx
                         );
-                        ctx.strokeStyle = '#667eea';
-                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = isHighlighted ? '#FFD700' : '#667eea';
+                        ctx.lineWidth = isHighlighted ? 3 : 2;
                         ctx.setLineDash([5, 5]);
                         ctx.strokeRect(
                             x - clearancePx,
@@ -874,7 +900,7 @@
 
                     // Label
                     ctx.fillStyle = '#000';
-                    ctx.font = 'bold 16px sans-serif';
+                    ctx.font = isHighlighted ? 'bold 18px sans-serif' : 'bold 16px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(item.type.toUpperCase(), x + width / 2, y + height / 2);
                 }
@@ -893,6 +919,160 @@
             link.href = visualizationCanvas.toDataURL();
             link.click();
         });
+
+        // ========== DRAG AND DROP FUNCTIONALITY ==========
+
+        // Get canvas coordinates from event
+        function getCanvasCoordinates(event, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            let clientX, clientY;
+            if (event.touches && event.touches.length > 0) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // Find which equipment item is at the given position
+        function findEquipmentAtPosition(x, y) {
+            // Check in reverse order (top items first)
+            for (let i = state.equipment.length - 1; i >= 0; i--) {
+                const item = state.equipment[i];
+
+                if (item.type === 'flue') {
+                    // Check if click is within flue center (100mm diameter)
+                    const centerX = item.x * state.pixelsPerMM;
+                    const centerY = item.y * state.pixelsPerMM;
+                    const radius = 50 * state.pixelsPerMM; // 100mm diameter = 50mm radius
+
+                    const distance = Math.sqrt(
+                        Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
+                    );
+
+                    if (distance <= radius) {
+                        return i;
+                    }
+                } else {
+                    // Check if click is within box
+                    const boxX = item.x * state.pixelsPerMM;
+                    const boxY = item.y * state.pixelsPerMM;
+                    const boxWidth = item.width * state.pixelsPerMM;
+                    const boxHeight = item.height * state.pixelsPerMM;
+
+                    if (x >= boxX && x <= boxX + boxWidth &&
+                        y >= boxY && y <= boxY + boxHeight) {
+                        return i;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Handle mouse/touch start
+        function handleDragStart(event) {
+            event.preventDefault();
+            const coords = getCanvasCoordinates(event, visualizationCanvas);
+            const itemIndex = findEquipmentAtPosition(coords.x, coords.y);
+
+            if (itemIndex !== null) {
+                // Start long press timer
+                state.longPressTimer = setTimeout(() => {
+                    state.dragging = true;
+                    state.draggedItemIndex = itemIndex;
+                    state.dragStartX = coords.x;
+                    state.dragStartY = coords.y;
+                    visualizationCanvas.style.cursor = 'grabbing';
+
+                    // Highlight the selected item
+                    drawVisualization(itemIndex);
+                }, state.longPressThreshold);
+            }
+        }
+
+        // Handle mouse/touch move
+        function handleDragMove(event) {
+            if (!state.dragging || state.draggedItemIndex === null) {
+                return;
+            }
+
+            event.preventDefault();
+            const coords = getCanvasCoordinates(event, visualizationCanvas);
+            const item = state.equipment[state.draggedItemIndex];
+
+            // Calculate delta
+            const deltaX = (coords.x - state.dragStartX) / state.pixelsPerMM;
+            const deltaY = (coords.y - state.dragStartY) / state.pixelsPerMM;
+
+            // Update item position
+            item.x += deltaX;
+            item.y += deltaY;
+
+            // Update drag start for next move
+            state.dragStartX = coords.x;
+            state.dragStartY = coords.y;
+
+            // Redraw
+            drawVisualization(state.draggedItemIndex);
+        }
+
+        // Handle mouse/touch end
+        function handleDragEnd(event) {
+            // Clear long press timer
+            if (state.longPressTimer) {
+                clearTimeout(state.longPressTimer);
+                state.longPressTimer = null;
+            }
+
+            if (state.dragging) {
+                event.preventDefault();
+                state.dragging = false;
+                state.draggedItemIndex = null;
+                visualizationCanvas.style.cursor = 'grab';
+
+                // Update equipment list to show new positions
+                updateEquipmentList();
+
+                // Redraw without highlight
+                drawVisualization();
+            }
+        }
+
+        // Handle touch cancel
+        function handleTouchCancel(event) {
+            if (state.longPressTimer) {
+                clearTimeout(state.longPressTimer);
+                state.longPressTimer = null;
+            }
+            state.dragging = false;
+            state.draggedItemIndex = null;
+            visualizationCanvas.style.cursor = 'grab';
+            drawVisualization();
+        }
+
+        // Add event listeners to canvas
+        visualizationCanvas.style.cursor = 'grab';
+
+        // Mouse events
+        visualizationCanvas.addEventListener('mousedown', handleDragStart);
+        visualizationCanvas.addEventListener('mousemove', handleDragMove);
+        visualizationCanvas.addEventListener('mouseup', handleDragEnd);
+        visualizationCanvas.addEventListener('mouseleave', handleDragEnd);
+
+        // Touch events
+        visualizationCanvas.addEventListener('touchstart', handleDragStart, { passive: false });
+        visualizationCanvas.addEventListener('touchmove', handleDragMove, { passive: false });
+        visualizationCanvas.addEventListener('touchend', handleDragEnd, { passive: false });
+        visualizationCanvas.addEventListener('touchcancel', handleTouchCancel, { passive: false });
 
         // Make removeEquipment globally accessible
         window.removeEquipment = removeEquipment;
