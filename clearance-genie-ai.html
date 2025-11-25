@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Clearance Genie AI - Intelligent Clearance Checker</title>
+
+    <!-- OpenCV.js for perspective correction -->
+    <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onOpenCvReady()"></script>
+
     <style>
         * {
             margin: 0;
@@ -427,6 +431,36 @@
             <button class="btn btn-secondary" onclick="goToStep(1)">Back to Equipment Selection</button>
         </div>
 
+        <!-- Step 2.5: Perspective Correction -->
+        <div class="card hidden" id="step2_5">
+            <h2>Step 2.5: Perspective Correction</h2>
+            <div class="instructions">
+                <strong>📐 Correct Camera Angle:</strong> Mark 4 corners of a rectangle to fix perspective distortion.
+                <br><br>
+                <strong>Choose one:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>🃏 <strong>Calibration card</strong> (if visible)</li>
+                    <li>🪟 <strong>Window frame</strong></li>
+                    <li>🧱 <strong>Brick</strong> (try to find one that's rectangular and flat to camera)</li>
+                    <li>📦 <strong>Any rectangular object</strong></li>
+                </ul>
+                <br>
+                <strong style="color: #667eea;">Click/tap the 4 corners in clockwise order</strong> starting from top-left.
+            </div>
+            <div id="perspectiveStatus" style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px;">
+                <strong>Corners marked:</strong> <span id="cornersCount">0 / 4</span>
+                <div id="cornersList" style="margin-top: 10px; font-size: 13px;"></div>
+            </div>
+            <div class="canvas-container" style="cursor: crosshair;">
+                <canvas id="perspectiveCanvas"></canvas>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-secondary" onclick="resetPerspectiveCorners()">🔄 Reset Corners</button>
+                <button class="btn" id="applyPerspectiveBtn" disabled onclick="applyPerspectiveCorrection()">✓ Apply Correction & Continue</button>
+                <button class="btn btn-secondary" onclick="skipPerspectiveCorrection()">Skip (Not Recommended)</button>
+            </div>
+        </div>
+
         <!-- Step 3: Processing & Calibration -->
         <div class="card hidden" id="step3">
             <h2>Step 3: AI Processing & Calibration</h2>
@@ -439,6 +473,9 @@
         <!-- Step 4: Review Detected Objects -->
         <div class="card hidden" id="step4">
             <h2>Step 4: Review Detected Objects</h2>
+            <div id="perspectiveCorrectionInfo" style="background: #e8f4f8; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                <strong>Perspective Correction:</strong> <span id="perspectiveCorrectionDisplay">Loading...</span>
+            </div>
             <div id="detectionModelInfo" style="background: #e8f4f8; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
                 <strong>Detection Model:</strong> <span id="currentModelDisplay">Loading...</span>
             </div>
@@ -497,10 +534,19 @@
     </div>
 
     <script>
+        // OpenCV ready flag
+        let cvReady = false;
+
+        function onOpenCvReady() {
+            cvReady = true;
+            console.log('✓ OpenCV.js loaded and ready for perspective correction');
+        }
+
         // Application State
         const state = {
             equipmentType: null,
             photo: null,
+            originalPhoto: null, // Store original before correction
             photoWidth: 0,
             photoHeight: 0,
             scale: {
@@ -509,7 +555,12 @@
             },
             detectedObjects: [],
             equipmentPosition: null,
-            currentStep: 1
+            currentStep: 1,
+            perspectiveCorrection: {
+                enabled: false,
+                corners: [], // Array of 4 points {x, y}
+                correctedImage: null
+            }
         };
 
         // Equipment Configurations
@@ -609,8 +660,9 @@
         function goToStep(stepNumber) {
             // Hide all steps
             for (let i = 1; i <= 6; i++) {
-                document.getElementById(`step${i}`).classList.add('hidden');
+                document.getElementById(`step${i}`)?.classList.add('hidden');
             }
+            document.getElementById('step2_5')?.classList.add('hidden');
 
             // Show target step
             document.getElementById(`step${stepNumber}`).classList.remove('hidden');
@@ -630,16 +682,238 @@
                 const img = new Image();
                 img.onload = function() {
                     state.photo = img;
+                    state.originalPhoto = img; // Store original
                     state.photoWidth = img.width;
                     state.photoHeight = img.height;
 
-                    // Move to processing step
-                    goToStep(3);
-                    processPhoto();
+                    // Check if OpenCV is loaded
+                    if (!cvReady) {
+                        console.warn('⚠️  OpenCV not ready yet, skipping perspective correction');
+                        goToStep(3);
+                        processPhoto();
+                        return;
+                    }
+
+                    // Move to perspective correction step
+                    goToPerspectiveCorrection();
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        function goToPerspectiveCorrection() {
+            // Show perspective correction step
+            for (let i = 1; i <= 6; i++) {
+                const stepId = i === 2.5 ? 'step2_5' : `step${i}`;
+                document.getElementById(stepId)?.classList.add('hidden');
+            }
+            document.getElementById('step2_5').classList.remove('hidden');
+
+            // Reset corners
+            state.perspectiveCorrection.corners = [];
+            updateCornersDisplay();
+
+            // Draw photo on canvas
+            const canvas = document.getElementById('perspectiveCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = state.photoWidth;
+            canvas.height = state.photoHeight;
+            ctx.drawImage(state.photo, 0, 0);
+
+            // Setup click handler for marking corners
+            canvas.onclick = handleCanvasClick;
+        }
+
+        function handleCanvasClick(e) {
+            const canvas = document.getElementById('perspectiveCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            // Add corner if we have less than 4
+            if (state.perspectiveCorrection.corners.length < 4) {
+                state.perspectiveCorrection.corners.push({ x, y });
+                drawPerspectiveCanvas();
+                updateCornersDisplay();
+
+                // Enable apply button when we have 4 corners
+                if (state.perspectiveCorrection.corners.length === 4) {
+                    document.getElementById('applyPerspectiveBtn').disabled = false;
+                }
+            }
+        }
+
+        function drawPerspectiveCanvas() {
+            const canvas = document.getElementById('perspectiveCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Clear and redraw photo
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(state.photo, 0, 0);
+
+            // Draw corners
+            const corners = state.perspectiveCorrection.corners;
+            corners.forEach((corner, index) => {
+                // Draw circle
+                ctx.beginPath();
+                ctx.arc(corner.x, corner.y, 10, 0, 2 * Math.PI);
+                ctx.fillStyle = '#667eea';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw number
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText((index + 1).toString(), corner.x, corner.y);
+
+                // Draw lines connecting corners
+                if (index > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(corners[index - 1].x, corners[index - 1].y);
+                    ctx.lineTo(corner.x, corner.y);
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Close the quadrilateral if we have 4 corners
+                if (corners.length === 4 && index === 3) {
+                    ctx.beginPath();
+                    ctx.moveTo(corners[3].x, corners[3].y);
+                    ctx.lineTo(corners[0].x, corners[0].y);
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function updateCornersDisplay() {
+            const count = state.perspectiveCorrection.corners.length;
+            document.getElementById('cornersCount').textContent = `${count} / 4`;
+
+            const listDiv = document.getElementById('cornersList');
+            if (count === 0) {
+                listDiv.innerHTML = '<em style="color: #999;">Click 4 corners of a rectangle</em>';
+            } else {
+                const labels = ['Top-Left', 'Top-Right', 'Bottom-Right', 'Bottom-Left'];
+                listDiv.innerHTML = state.perspectiveCorrection.corners
+                    .map((c, i) => `✓ ${labels[i]}: (${Math.round(c.x)}, ${Math.round(c.y)})`)
+                    .join('<br>');
+            }
+        }
+
+        function resetPerspectiveCorners() {
+            state.perspectiveCorrection.corners = [];
+            drawPerspectiveCanvas();
+            updateCornersDisplay();
+            document.getElementById('applyPerspectiveBtn').disabled = true;
+        }
+
+        function skipPerspectiveCorrection() {
+            console.warn('⚠️  Skipping perspective correction - measurements may be inaccurate!');
+            state.perspectiveCorrection.enabled = false;
+            goToStep(3);
+            processPhoto();
+        }
+
+        async function applyPerspectiveCorrection() {
+            if (state.perspectiveCorrection.corners.length !== 4) {
+                alert('Please mark all 4 corners first!');
+                return;
+            }
+
+            console.log('🔧 === APPLYING PERSPECTIVE CORRECTION ===');
+            console.log('Corner points:', state.perspectiveCorrection.corners);
+
+            try {
+                // Get source corners (as marked by user)
+                const corners = state.perspectiveCorrection.corners;
+
+                // Calculate width and height of destination rectangle
+                // Use the maximum distances to preserve detail
+                const width1 = Math.sqrt(Math.pow(corners[1].x - corners[0].x, 2) + Math.pow(corners[1].y - corners[0].y, 2));
+                const width2 = Math.sqrt(Math.pow(corners[2].x - corners[3].x, 2) + Math.pow(corners[2].y - corners[3].y, 2));
+                const height1 = Math.sqrt(Math.pow(corners[3].x - corners[0].x, 2) + Math.pow(corners[3].y - corners[0].y, 2));
+                const height2 = Math.sqrt(Math.pow(corners[2].x - corners[1].x, 2) + Math.pow(corners[2].y - corners[1].y, 2));
+
+                const maxWidth = Math.max(width1, width2);
+                const maxHeight = Math.max(height1, height2);
+
+                console.log('Destination dimensions:', maxWidth, 'x', maxHeight);
+
+                // Create OpenCV mats
+                const src = cv.imread('perspectiveCanvas');
+
+                // Source points (the distorted quadrilateral)
+                const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    corners[0].x, corners[0].y,  // Top-left
+                    corners[1].x, corners[1].y,  // Top-right
+                    corners[2].x, corners[2].y,  // Bottom-right
+                    corners[3].x, corners[3].y   // Bottom-left
+                ]);
+
+                // Destination points (perfect rectangle)
+                const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    0, 0,                    // Top-left
+                    maxWidth, 0,             // Top-right
+                    maxWidth, maxHeight,     // Bottom-right
+                    0, maxHeight             // Bottom-left
+                ]);
+
+                // Calculate perspective transform matrix
+                const M = cv.getPerspectiveTransform(srcPoints, dstPoints);
+
+                // Create destination mat
+                const dst = new cv.Mat();
+                const dsize = new cv.Size(maxWidth, maxHeight);
+
+                // Apply warp
+                cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+                console.log('✓ Perspective transform applied');
+
+                // Convert corrected image to Image object
+                const correctedCanvas = document.createElement('canvas');
+                cv.imshow(correctedCanvas, dst);
+
+                const correctedImg = new Image();
+                correctedImg.onload = function() {
+                    // Update state with corrected image
+                    state.photo = correctedImg;
+                    state.photoWidth = correctedImg.width;
+                    state.photoHeight = correctedImg.height;
+                    state.perspectiveCorrection.enabled = true;
+                    state.perspectiveCorrection.correctedImage = correctedImg;
+
+                    console.log('✓ Corrected image dimensions:', state.photoWidth, 'x', state.photoHeight);
+                    console.log('=========================================');
+
+                    // Clean up OpenCV mats
+                    src.delete();
+                    dst.delete();
+                    srcPoints.delete();
+                    dstPoints.delete();
+                    M.delete();
+
+                    // Proceed to AI processing with corrected image
+                    goToStep(3);
+                    processPhoto();
+                };
+                correctedImg.src = correctedCanvas.toDataURL();
+
+            } catch (error) {
+                console.error('❌ Perspective correction failed:', error);
+                alert('Perspective correction failed. You can skip this step or try again with different corners.');
+            }
         }
 
         // Step 3: Process Photo with AI
@@ -926,6 +1200,18 @@
 
             canvas.width = state.photoWidth;
             canvas.height = state.photoHeight;
+
+            // Update perspective correction display
+            const perspectiveDisplay = document.getElementById('perspectiveCorrectionDisplay');
+            if (perspectiveDisplay) {
+                if (state.perspectiveCorrection.enabled) {
+                    perspectiveDisplay.innerHTML = `✅ <strong>Applied</strong> - Image corrected for camera angle`;
+                    perspectiveDisplay.parentElement.style.background = '#d4edda';
+                } else {
+                    perspectiveDisplay.innerHTML = `⚠️ <strong>Not Applied</strong> - Measurements may be less accurate`;
+                    perspectiveDisplay.parentElement.style.background = '#fff3cd';
+                }
+            }
 
             // Update model display
             const modelDisplay = document.getElementById('currentModelDisplay');
