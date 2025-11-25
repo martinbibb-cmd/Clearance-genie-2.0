@@ -396,9 +396,21 @@
 
         <!-- Step 2: Photo Upload -->
         <div class="card hidden" id="step2">
-            <h2>Step 2: Upload Photo</h2>
+            <h2>Step 2: Upload Photo & Select AI Model</h2>
             <div class="instructions">
-                <strong>Important:</strong> Include a credit card (any color) in your photo for automatic calibration. The AI will detect it automatically!
+                <strong>For Flue Terminal:</strong> The AI will detect the flue terminal (100mm diameter) for calibration.<br>
+                <strong>For other equipment:</strong> Include a credit card in your photo for automatic calibration.
+            </div>
+            <div style="margin: 15px 0;">
+                <label for="aiModelSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                    🤖 Select AI Detection Model:
+                </label>
+                <select id="aiModelSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 2px solid #667eea; font-size: 15px;">
+                    <option value="openai">OpenAI GPT-4 Vision (Default - Best Overall)</option>
+                    <option value="together">Together AI - Llama Vision Free (Experimental)</option>
+                    <option value="claude">Anthropic Claude 3.5 Sonnet (High Accuracy)</option>
+                </select>
+                <div id="modelFeedback" style="margin-top: 8px; font-size: 13px; color: #667eea;"></div>
             </div>
             <div class="upload-area" onclick="document.getElementById('cameraInput').click()">
                 <div class="icon">📸</div>
@@ -427,6 +439,12 @@
         <!-- Step 4: Review Detected Objects -->
         <div class="card hidden" id="step4">
             <h2>Step 4: Review Detected Objects</h2>
+            <div id="detectionModelInfo" style="background: #e8f4f8; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                <strong>Detection Model:</strong> <span id="currentModelDisplay">Loading...</span>
+            </div>
+            <div id="calibrationInfo" style="background: #e8ffe8; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                <strong>Calibration:</strong> <span id="calibrationMethodDisplay">Loading...</span>
+            </div>
             <div class="instructions">
                 <strong>AI detected the following objects.</strong> Toggle any incorrect detections off.
             </div>
@@ -435,6 +453,7 @@
             </div>
             <div class="objects-list" id="detectedObjectsList"></div>
             <button class="btn" onclick="goToStep(5)">Continue to Placement</button>
+            <button class="btn btn-secondary" onclick="retryWithDifferentModel()">🔄 Retry with Different Model</button>
             <button class="btn btn-secondary" onclick="goToStep(2)">Retake Photo</button>
         </div>
 
@@ -713,6 +732,9 @@
         async function detectObjects() {
             const config = EQUIPMENT_CONFIG[state.equipmentType];
 
+            // Get selected AI model
+            const selectedModel = document.getElementById('aiModelSelect').value;
+
             // Convert image to base64
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -720,6 +742,11 @@
             canvas.height = state.photoHeight;
             ctx.drawImage(state.photo, 0, 0);
             const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            console.log('=== DETECTION ATTEMPT ===');
+            console.log('Selected AI Model:', selectedModel);
+            console.log('Equipment Type:', state.equipmentType);
+            console.log('Image Dimensions:', state.photoWidth, 'x', state.photoHeight);
 
             try {
                 const response = await fetch('https://clearance.martinbibb.workers.dev', {
@@ -730,7 +757,8 @@
                     body: JSON.stringify({
                         image: imageBase64,
                         equipmentType: state.equipmentType,
-                        detectObjects: config.detectObjects
+                        detectObjects: config.detectObjects,
+                        aiModel: selectedModel
                     })
                 });
 
@@ -739,6 +767,21 @@
                 }
 
                 const result = await response.json();
+
+                console.log('Raw API Response:', result);
+                console.log('AI Service Used:', result.aiServiceUsed);
+                console.log('Model Name:', result.modelName);
+
+                // Update model feedback
+                const modelFeedback = document.getElementById('modelFeedback');
+                if (modelFeedback) {
+                    modelFeedback.textContent = `✓ Using ${result.modelName || result.aiServiceUsed}`;
+                    modelFeedback.style.color = '#2ecc71';
+                }
+
+                // Store AI model used
+                state.aiModelUsed = result.aiServiceUsed;
+                state.modelName = result.modelName;
 
                 // Scale factor: API returns coordinates based on 1000x1000 reference
                 const scaleX = state.photoWidth / 1000;
@@ -752,12 +795,51 @@
                         y: obj.bounds.y * scaleY,
                         width: obj.bounds.width * scaleX,
                         height: obj.bounds.height * scaleY
-                    }
+                    },
+                    polygon: obj.polygon ? obj.polygon.map(pt => ({
+                        x: pt.x * scaleX,
+                        y: pt.y * scaleY
+                    })) : undefined
                 }));
 
-                // Process credit card calibration if detected
-                if (result.calibration && result.calibration.creditCardDetected) {
+                console.log(`Objects detected: ${state.detectedObjects.length}`);
+                state.detectedObjects.forEach((obj, i) => {
+                    console.log(`Object ${i + 1}: ${obj.type}`);
+                    console.log(`  Confidence: ${obj.confidence}`);
+                    console.log(`  Bounds: x=${obj.bounds.x.toFixed(1)}px, y=${obj.bounds.y.toFixed(1)}px, w=${obj.bounds.width.toFixed(1)}px, h=${obj.bounds.height.toFixed(1)}px`);
+                    console.log(`  Polygon points: ${obj.polygon?.length || 0}`);
+                });
+
+                // PRIORITY 1: Try flue terminal calibration (most accurate for flue equipment)
+                if (result.calibration && result.calibration.flueTerminalDetected) {
+                    const flueBounds = result.calibration.flueTerminalBounds.bounds;
+                    const flueConfidence = result.calibration.flueTerminalBounds.confidence;
+                    const flueDiameter = result.calibration.flueTerminalBounds.diameter || 100;
+
+                    // Scale flue bounds to actual image dimensions
+                    const flueWidthPx = flueBounds.width * scaleX;
+                    const flueHeightPx = flueBounds.height * scaleY;
+
+                    // For circular flue, use average of width and height
+                    const flueActualDiameterPx = (flueWidthPx + flueHeightPx) / 2;
+
+                    // Calculate pixels per mm based on flue diameter (default 100mm)
+                    state.scale.pixelsPerMM = flueActualDiameterPx / flueDiameter;
+                    state.scale.calibrationComplete = true;
+                    state.scale.calibrationMethod = 'flue_terminal';
+
+                    console.log('🎯 === FLUE TERMINAL CALIBRATION (PRIMARY) ===');
+                    console.log(`Flue diameter detected: ${flueActualDiameterPx.toFixed(1)}px`);
+                    console.log(`Known diameter: ${flueDiameter}mm`);
+                    console.log(`Calibration: ${state.scale.pixelsPerMM.toFixed(3)} pixels per mm`);
+                    console.log(`Confidence: ${(flueConfidence * 100).toFixed(1)}%`);
+                    console.log(`Green box dimensions: ${flueWidthPx.toFixed(1)}px × ${flueHeightPx.toFixed(1)}px`);
+                    console.log('===========================================');
+                }
+                // PRIORITY 2: Try credit card calibration (fallback)
+                else if (result.calibration && result.calibration.creditCardDetected) {
                     const cardBounds = result.calibration.creditCardBounds.bounds;
+                    const cardConfidence = result.calibration.creditCardBounds.confidence;
 
                     // Scale card bounds to actual image dimensions
                     const cardWidthPx = cardBounds.width * scaleX;
@@ -769,12 +851,19 @@
                     // Calculate pixels per mm based on 85mm credit card width
                     state.scale.pixelsPerMM = actualCardWidthPx / 85;
                     state.scale.calibrationComplete = true;
+                    state.scale.calibrationMethod = 'credit_card';
 
-                    console.log(`AI Calibration: ${state.scale.pixelsPerMM.toFixed(2)} pixels per mm (credit card: ${actualCardWidthPx.toFixed(0)}px = 85mm)`);
-                    console.log(`Credit card confidence: ${result.calibration.creditCardBounds.confidence.toFixed(2)}`);
+                    console.log('💳 === CREDIT CARD CALIBRATION (FALLBACK) ===');
+                    console.log(`Card width detected: ${actualCardWidthPx.toFixed(1)}px`);
+                    console.log(`Known width: 85mm`);
+                    console.log(`Calibration: ${state.scale.pixelsPerMM.toFixed(3)} pixels per mm`);
+                    console.log(`Confidence: ${(cardConfidence * 100).toFixed(1)}%`);
+                    console.log('============================================');
                 } else {
-                    console.log('Credit card not detected by AI, will try fallback methods');
+                    console.log('⚠️  No flue or credit card detected by AI, will try blue card fallback');
                 }
+
+                console.log('========================');
 
             } catch (error) {
                 console.error('AI Detection Error:', error);
@@ -812,6 +901,24 @@
             return mockObjects;
         }
 
+        // Retry with Different Model
+        function retryWithDifferentModel() {
+            if (!state.photo) {
+                alert('No photo loaded. Please upload a photo first.');
+                return;
+            }
+
+            // Go back to step 2 to select a different model
+            goToStep(2);
+
+            // Show message
+            const modelFeedback = document.getElementById('modelFeedback');
+            if (modelFeedback) {
+                modelFeedback.textContent = '⚡ Select a different model and the photo will be re-analyzed';
+                modelFeedback.style.color = '#667eea';
+            }
+        }
+
         // Step 4: Draw Detected Objects
         function drawDetectedObjects() {
             const canvas = document.getElementById('detectionCanvas');
@@ -819,6 +926,29 @@
 
             canvas.width = state.photoWidth;
             canvas.height = state.photoHeight;
+
+            // Update model display
+            const modelDisplay = document.getElementById('currentModelDisplay');
+            if (modelDisplay) {
+                modelDisplay.textContent = `${state.modelName || state.aiModelUsed || 'Unknown'} (${state.detectedObjects.length} objects detected)`;
+            }
+
+            // Update calibration display
+            const calibrationDisplay = document.getElementById('calibrationMethodDisplay');
+            if (calibrationDisplay && state.scale.calibrationComplete) {
+                const method = state.scale.calibrationMethod || 'unknown';
+                const ppmm = state.scale.pixelsPerMM.toFixed(3);
+                if (method === 'flue_terminal') {
+                    calibrationDisplay.innerHTML = `🎯 <strong>Flue Terminal (100mm)</strong> - ${ppmm} px/mm`;
+                    calibrationDisplay.parentElement.style.background = '#d4edda';
+                } else if (method === 'credit_card') {
+                    calibrationDisplay.innerHTML = `💳 <strong>Credit Card (85mm)</strong> - ${ppmm} px/mm`;
+                    calibrationDisplay.parentElement.style.background = '#fff3cd';
+                } else {
+                    calibrationDisplay.innerHTML = `📏 <strong>Default</strong> - ${ppmm} px/mm`;
+                    calibrationDisplay.parentElement.style.background = '#f8d7da';
+                }
+            }
 
             // Draw photo
             ctx.drawImage(state.photo, 0, 0);
@@ -876,6 +1006,16 @@
         // Step 5: Place Equipment
         function goToStep5() {
             goToStep(5);
+
+            // Show calibration warning if using flue equipment without flue calibration
+            if (state.equipmentType === 'flue' && state.scale.calibrationMethod !== 'flue_terminal') {
+                console.warn('⚠️  CALIBRATION WARNING: Using flue equipment but calibration was not done with flue terminal.');
+                console.warn('    For most accurate results, ensure the flue terminal is visible and detected by the AI.');
+                console.warn(`    Current calibration method: ${state.scale.calibrationMethod}`);
+
+                alert('⚠️ Calibration Notice:\n\nYou are checking flue clearances but the calibration was not done using the flue terminal itself.\n\nFor most accurate results:\n1. Ensure the flue terminal is visible in the photo\n2. Use a model that can detect the flue (try different models)\n3. The flue terminal (100mm diameter) provides the most reliable calibration\n\nCurrent calibration: ' + (state.scale.calibrationMethod || 'unknown'));
+            }
+
             setupPlacementCanvas();
         }
 
@@ -908,9 +1048,18 @@
             // Draw photo
             ctx.drawImage(state.photo, 0, 0);
 
+            // Log calibration info
+            console.log('=== PLACEMENT & CLEARANCE CALCULATION ===');
+            console.log('Calibration method:', state.scale.calibrationMethod);
+            console.log('Pixels per mm:', state.scale.pixelsPerMM.toFixed(3));
+
             // Calculate equipment dimensions in pixels
             const equipWidthPx = config.dimensions.width * state.scale.pixelsPerMM;
             const equipHeightPx = config.dimensions.height * state.scale.pixelsPerMM;
+
+            console.log('Equipment dimensions:');
+            console.log(`  Physical: ${config.dimensions.width}mm × ${config.dimensions.height}mm`);
+            console.log(`  On screen: ${equipWidthPx.toFixed(1)}px × ${equipHeightPx.toFixed(1)}px`);
 
             // Equipment rectangle (centered on position)
             const equipRect = {
@@ -945,22 +1094,30 @@
 
             // Check for violations with detected objects
             const violations = [];
-            state.detectedObjects.forEach(obj => {
+            console.log(`Checking clearances for ${state.detectedObjects.filter(o => o.enabled).length} enabled objects:`);
+
+            state.detectedObjects.forEach((obj, index) => {
                 if (!obj.enabled) return;
 
                 const clearanceMM = config.clearances[obj.type] || 100;
                 const clearancePx = clearanceMM * state.scale.pixelsPerMM;
 
+                console.log(`Object ${index + 1}: ${obj.type}`);
+                console.log(`  Required clearance: ${clearanceMM}mm = ${clearancePx.toFixed(1)}px`);
+                console.log(`  Object bounds: x=${obj.bounds.x.toFixed(1)}px, y=${obj.bounds.y.toFixed(1)}px, w=${obj.bounds.width.toFixed(1)}px, h=${obj.bounds.height.toFixed(1)}px`);
+
                 // Check if detected object intrudes into equipment's clearance zone
-                const isOverlapping = checkRectOverlap(
-                    {
-                        x: equipRect.x - clearancePx,
-                        y: equipRect.y - clearancePx,
-                        width: equipRect.width + (2 * clearancePx),
-                        height: equipRect.height + (2 * clearancePx)
-                    },
-                    obj.bounds
-                );
+                const clearanceZone = {
+                    x: equipRect.x - clearancePx,
+                    y: equipRect.y - clearancePx,
+                    width: equipRect.width + (2 * clearancePx),
+                    height: equipRect.height + (2 * clearancePx)
+                };
+
+                const isOverlapping = checkRectOverlap(clearanceZone, obj.bounds);
+
+                console.log(`  Clearance zone: x=${clearanceZone.x.toFixed(1)}px, y=${clearanceZone.y.toFixed(1)}px, w=${clearanceZone.width.toFixed(1)}px, h=${clearanceZone.height.toFixed(1)}px`);
+                console.log(`  Overlapping: ${isOverlapping ? '❌ VIOLATION' : '✓ OK'}`);
 
                 // Draw detected object with clearance zone
                 if (isOverlapping) {
@@ -1029,6 +1186,11 @@
 
             // Store violations for later
             state.violations = violations;
+
+            console.log(`\nSummary:`);
+            console.log(`  Total violations: ${violations.length}`);
+            console.log(`  Status: ${violations.length > 0 ? '❌ NON-COMPLIANT' : '✓ COMPLIANT'}`);
+            console.log('=========================================');
         }
 
         function checkOverlap(point, rect) {

@@ -37,7 +37,7 @@ export default {
     try {
       // Parse request body
       const requestData = await request.json();
-      const { image, equipmentType, detectObjects, userMessage, transcription, transcriptionContext, knowledgeCategories } = requestData;
+      const { image, equipmentType, detectObjects, userMessage, transcription, transcriptionContext, knowledgeCategories, aiModel } = requestData;
 
       // Handle transcription-only requests first
       if (transcription) {
@@ -83,21 +83,52 @@ export default {
         }, 500);
       }
 
-      // Try OpenAI first, fallback to Claude if it fails or detects nothing
-      let detectedObjects, creditCard, brick;
-      let aiServiceUsed = 'openai'; // Track which AI service was used
+      // Try requested AI model, with fallbacks
+      let detectedObjects, creditCard, brick, flueTerminal;
+      let aiServiceUsed = aiModel || 'openai'; // Track which AI service was used
+      let modelName = null; // Specific model name
 
+      // Select AI service based on user preference
       try {
-        const result = await detectObjectsWithOpenAI(
-          image,
-          equipmentType,
-          detectObjects,
-          env.OPENAI_API_KEY,
-          userMessage
-        );
+        let result;
+
+        if (aiModel === 'together') {
+          // Use Together AI if requested
+          result = await detectObjectsWithTogether(
+            image,
+            equipmentType,
+            detectObjects,
+            env.TOGETHER_API_KEY,
+            userMessage
+          );
+          modelName = result.modelName;
+        } else if (aiModel === 'claude') {
+          // Use Claude if requested
+          result = await detectObjectsWithClaude(
+            image,
+            equipmentType,
+            detectObjects,
+            env.ANTHROPIC_API_KEY,
+            userMessage
+          );
+          modelName = 'claude-3.5-sonnet';
+        } else {
+          // Default to OpenAI
+          result = await detectObjectsWithOpenAI(
+            image,
+            equipmentType,
+            detectObjects,
+            env.OPENAI_API_KEY,
+            userMessage
+          );
+          aiServiceUsed = 'openai';
+          modelName = 'gpt-4o';
+        }
+
         detectedObjects = result.objects;
         creditCard = result.creditCard;
         brick = result.brick;
+        flueTerminal = result.flueTerminal;
 
         // If OpenAI returned 0 objects and Claude is available, try Claude as fallback
         if ((!detectedObjects || detectedObjects.length === 0) && env.ANTHROPIC_API_KEY) {
@@ -155,6 +186,8 @@ export default {
         creditCardBounds: creditCard,
         brickDetected: brick !== null,
         brickBounds: brick,
+        flueTerminalDetected: flueTerminal !== null,
+        flueTerminalBounds: flueTerminal,
         pixelsPerMM: null  // Will be calculated on frontend
       };
 
@@ -163,7 +196,8 @@ export default {
         success: true,
         objects: detectedObjects,
         calibration: calibration,
-        aiServiceUsed: aiServiceUsed // Indicate which AI service was used
+        aiServiceUsed: aiServiceUsed, // Indicate which AI service was used
+        modelName: modelName // Specific model name
       });
 
     } catch (error) {
@@ -186,7 +220,7 @@ const PREFERRED_PRICEBOOK_VERSION = 'November 2025';
  * Detect objects using OpenAI Vision API (GPT-4 Vision)
  */
 async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiKey, userMessage = '') {
-  // Build a detailed prompt for object detection AND credit card detection
+  // Build a detailed prompt for object detection AND calibration detection
   const objectList = detectObjects.join(', ');
 
   let prompt = `You are an expert computer vision system for heating compliance detection.`;
@@ -201,13 +235,28 @@ async function detectObjectsWithOpenAI(image, equipmentType, detectObjects, apiK
 TASK 1: Detect calibration objects for scale measurement
 Look for the following objects in priority order:
 
-A) CREDIT CARD (highest priority):
+${equipmentType === 'flue' ? `A) FLUE TERMINAL (HIGHEST PRIORITY for flue equipment):
+- Circular or oval terminal protruding from wall
+- Typically 100mm diameter (standard Worcester flue size)
+- Usually white, grey, or black plastic/metal
+- May have concentric circles or ridges
+- CRITICAL: Detect the FULL OUTER BOUNDARY/DIAMETER of the terminal
+- The flue terminal is the PRIMARY calibration reference (100mm diameter)
+- Provide detailed polygon points (8-12 points) tracing the circular boundary
+
+B) CREDIT CARD (secondary priority):
 - Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
 - Rectangular shape with rounded corners
 - Typically has visible text, numbers, or logos
 - Can be any color or design
 
-B) STANDARD BRICK (fallback if no card found):
+C) STANDARD BRICK (fallback if no card/flue found):` : `A) CREDIT CARD (highest priority):
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+B) STANDARD BRICK (fallback if no card found):`}
 - Standard UK/Imperial brick dimensions: 215mm x 102.5mm x 65mm
 - Red, orange, or clay colored rectangular block
 - Often has mortar between bricks
@@ -248,6 +297,22 @@ Important guidelines:
 
 Return ONLY a JSON object in this exact format:
 {
+  "flueTerminal": {
+    "detected": true,
+    "confidence": 0.95,
+    "bounds": {"x": 40.0, "y": 30.0, "width": 12.0, "height": 12.0},
+    "diameter": 100,
+    "polygon": [
+      {"x": 46.0, "y": 30.0},
+      {"x": 51.0, "y": 32.0},
+      {"x": 52.0, "y": 36.0},
+      {"x": 52.0, "y": 40.0},
+      {"x": 51.0, "y": 42.0},
+      {"x": 46.0, "y": 42.0},
+      {"x": 41.0, "y": 40.0},
+      {"x": 40.0, "y": 36.0}
+    ]
+  },
   "creditCard": {
     "detected": true,
     "confidence": 0.95,
@@ -287,6 +352,7 @@ Return ONLY a JSON object in this exact format:
   ]
 }
 
+If no flue terminal is detected, set "flueTerminal" to null.
 If no credit card is detected, set "creditCard" to null.
 If no brick is detected, set "brick" to null.
 For brick orientation: "horizontal" if width > height, "vertical" if height > width.`;
@@ -356,6 +422,31 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
       });
     }
 
+    // Extract flue terminal detection (HIGHEST PRIORITY for calibration)
+    let flueTerminal = null;
+    if (result.flueTerminal && result.flueTerminal.detected) {
+      flueTerminal = {
+        confidence: result.flueTerminal.confidence,
+        diameter: result.flueTerminal.diameter || 100, // Default 100mm
+        bounds: {
+          x: Math.round(result.flueTerminal.bounds.x * 10),
+          y: Math.round(result.flueTerminal.bounds.y * 10),
+          width: Math.round(result.flueTerminal.bounds.width * 10),
+          height: Math.round(result.flueTerminal.bounds.height * 10)
+        }
+      };
+
+      // Add polygon if provided
+      if (result.flueTerminal.polygon && Array.isArray(result.flueTerminal.polygon)) {
+        flueTerminal.polygon = result.flueTerminal.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      console.log(`🎯 Flue terminal detected! Diameter: ${flueTerminal.diameter}mm, Confidence: ${flueTerminal.confidence}`);
+    }
+
     // Extract credit card detection
     let creditCard = null;
     if (result.creditCard && result.creditCard.detected) {
@@ -416,7 +507,7 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
       return obj;
     });
 
-    return { objects, creditCard, brick };
+    return { objects, creditCard, brick, flueTerminal };
 
   } catch (error) {
     console.error('OpenAI detection error:', error);
@@ -443,13 +534,28 @@ async function detectObjectsWithClaude(image, equipmentType, detectObjects, apiK
 TASK 1: Detect calibration objects for scale measurement
 Look for the following objects in priority order:
 
-A) CREDIT CARD (highest priority):
+${equipmentType === 'flue' ? `A) FLUE TERMINAL (HIGHEST PRIORITY for flue equipment):
+- Circular or oval terminal protruding from wall
+- Typically 100mm diameter (standard Worcester flue size)
+- Usually white, grey, or black plastic/metal
+- May have concentric circles or ridges
+- CRITICAL: Detect the FULL OUTER BOUNDARY/DIAMETER of the terminal
+- The flue terminal is the PRIMARY calibration reference (100mm diameter)
+- Provide detailed polygon points (8-12 points) tracing the circular boundary
+
+B) CREDIT CARD (secondary priority):
 - Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
 - Rectangular shape with rounded corners
 - Typically has visible text, numbers, or logos
 - Can be any color or design
 
-B) STANDARD BRICK (fallback if no card found):
+C) STANDARD BRICK (fallback if no card/flue found):` : `A) CREDIT CARD (highest priority):
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+B) STANDARD BRICK (fallback if no card found):`}
 - Standard UK/Imperial brick dimensions: 215mm x 102.5mm x 65mm
 - Red, orange, or clay colored rectangular block
 - Often has mortar between bricks
@@ -490,6 +596,22 @@ Important guidelines:
 
 Return ONLY a JSON object in this exact format:
 {
+  "flueTerminal": {
+    "detected": true,
+    "confidence": 0.95,
+    "bounds": {"x": 40.0, "y": 30.0, "width": 12.0, "height": 12.0},
+    "diameter": 100,
+    "polygon": [
+      {"x": 46.0, "y": 30.0},
+      {"x": 51.0, "y": 32.0},
+      {"x": 52.0, "y": 36.0},
+      {"x": 52.0, "y": 40.0},
+      {"x": 51.0, "y": 42.0},
+      {"x": 46.0, "y": 42.0},
+      {"x": 41.0, "y": 40.0},
+      {"x": 40.0, "y": 36.0}
+    ]
+  },
   "creditCard": {
     "detected": true,
     "confidence": 0.95,
@@ -529,6 +651,7 @@ Return ONLY a JSON object in this exact format:
   ]
 }
 
+If no flue terminal is detected, set "flueTerminal" to null.
 If no credit card is detected, set "creditCard" to null.
 If no brick is detected, set "brick" to null.
 For brick orientation: "horizontal" if width > height, "vertical" if height > width.`;
@@ -602,6 +725,31 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
       });
     }
 
+    // Extract flue terminal detection (HIGHEST PRIORITY for calibration)
+    let flueTerminal = null;
+    if (result.flueTerminal && result.flueTerminal.detected) {
+      flueTerminal = {
+        confidence: result.flueTerminal.confidence,
+        diameter: result.flueTerminal.diameter || 100, // Default 100mm
+        bounds: {
+          x: Math.round(result.flueTerminal.bounds.x * 10),
+          y: Math.round(result.flueTerminal.bounds.y * 10),
+          width: Math.round(result.flueTerminal.bounds.width * 10),
+          height: Math.round(result.flueTerminal.bounds.height * 10)
+        }
+      };
+
+      // Add polygon if provided
+      if (result.flueTerminal.polygon && Array.isArray(result.flueTerminal.polygon)) {
+        flueTerminal.polygon = result.flueTerminal.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      console.log(`🎯 Flue terminal detected! Diameter: ${flueTerminal.diameter}mm, Confidence: ${flueTerminal.confidence}`);
+    }
+
     // Extract credit card detection
     let creditCard = null;
     if (result.creditCard && result.creditCard.detected) {
@@ -657,11 +805,295 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
       return obj;
     });
 
-    return { objects, creditCard, brick };
+    return { objects, creditCard, brick, flueTerminal };
 
   } catch (error) {
     console.error('Claude detection error:', error);
     throw new Error(`Claude object detection failed: ${error.message}`);
+  }
+}
+
+/**
+ * Detect objects using Together AI Vision API
+ */
+async function detectObjectsWithTogether(image, equipmentType, detectObjects, apiKey, userMessage = '', model = 'meta-llama/Llama-Vision-Free') {
+  // Build the same prompt as OpenAI
+  const objectList = detectObjects.join(', ');
+
+  let prompt = `You are an expert computer vision system for heating compliance detection.`;
+
+  // Add user message if provided
+  if (userMessage && userMessage.trim()) {
+    prompt += `\n\nUSER CONTEXT: ${userMessage.trim()}\nPlease take this context into account when analyzing the image. For example, if the user mentions items to be removed or ignored, adjust your detection accordingly.`;
+  }
+
+  prompt += `
+
+TASK 1: Detect calibration objects for scale measurement
+Look for the following objects in priority order:
+
+${equipmentType === 'flue' ? `A) FLUE TERMINAL (HIGHEST PRIORITY for flue equipment):
+- Circular or oval terminal protruding from wall
+- Typically 100mm diameter (standard Worcester flue size)
+- Usually white, grey, or black plastic/metal
+- May have concentric circles or ridges
+- CRITICAL: Detect the FULL OUTER BOUNDARY/DIAMETER of the terminal
+- The flue terminal is the PRIMARY calibration reference (100mm diameter)
+- Provide detailed polygon points (8-12 points) tracing the circular boundary
+
+B) CREDIT CARD (secondary priority):
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+C) STANDARD BRICK (fallback if no card/flue found):` : `A) CREDIT CARD (highest priority):
+- Standard dimensions with aspect ratio of approximately 1.586:1 (85.6mm x 53.98mm)
+- Rectangular shape with rounded corners
+- Typically has visible text, numbers, or logos
+- Can be any color or design
+
+B) STANDARD BRICK (fallback if no card found):`}
+- Standard UK/Imperial brick dimensions: 215mm x 102.5mm x 65mm
+- Red, orange, or clay colored rectangular block
+- Often has mortar between bricks
+- Look for typical brick texture and appearance
+- May be laid horizontally or vertically
+
+TASK 2: Detect compliance objects
+Analyze this image and identify ALL visible objects from this list: ${objectList}
+
+For EACH object you detect, provide:
+1. The exact object type from the list above
+2. A confidence score (0.0 to 1.0)
+3. Bounding box coordinates as percentages (x, y, width, height) where:
+   - x: left edge position (0-100%)
+   - y: top edge position (0-100%)
+   - width: object width (0-100%)
+   - height: object height (0-100%)
+4. **CRITICAL: Detailed polygon boundary** - An array of corner points that trace the ACTUAL boundary of the object:
+   - For rectangular objects (windows, vents): provide 4 corner points
+   - For irregular objects (pipes, flues): provide 6-12 points that trace the visible boundary
+   - Points should be in clockwise order starting from top-left
+   - Each point is {x: percentage 0-100, y: percentage 0-100}
+   - The polygon should HUG THE ACTUAL OBJECT EDGES with pixel-perfect accuracy
+   - For windows: trace the OPENING EDGE, not the surrounding brickwork
+
+Important guidelines:
+- Be thorough: detect ALL instances of the listed objects, including partially visible ones
+- Partially visible objects are VALID and IMPORTANT for clearance checking
+  - If an object extends beyond the frame edge, detect and trace the visible portion
+  - The system will handle coordinate clamping automatically
+- Windows: distinguish between "window" (fixed) and "opening_window" (can open)
+  - For windows, the polygon should trace the OPENING portion only, excluding brick surround
+- Vents: "air_vent" (passive) vs "fan_vent" (mechanical)
+- Pipes: "soil_pipe" (large drainage) vs "downpipe" (rainwater)
+  - For pipes/flues: trace the actual pipe edges, not the wall behind it
+- Only return objects from the provided list
+- Provide accurate bounding boxes AND detailed polygon boundaries
+
+Return ONLY a JSON object in this exact format:
+{
+  "flueTerminal": {
+    "detected": true,
+    "confidence": 0.95,
+    "bounds": {"x": 40.0, "y": 30.0, "width": 12.0, "height": 12.0},
+    "diameter": 100,
+    "polygon": [
+      {"x": 46.0, "y": 30.0},
+      {"x": 51.0, "y": 32.0},
+      {"x": 52.0, "y": 36.0},
+      {"x": 52.0, "y": 40.0},
+      {"x": 51.0, "y": 42.0},
+      {"x": 46.0, "y": 42.0},
+      {"x": 41.0, "y": 40.0},
+      {"x": 40.0, "y": 36.0}
+    ]
+  },
+  "creditCard": {
+    "detected": true,
+    "confidence": 0.95,
+    "bounds": {"x": 10.0, "y": 80.0, "width": 15.0, "height": 9.5}
+  },
+  "brick": {
+    "detected": true,
+    "confidence": 0.90,
+    "bounds": {"x": 20.0, "y": 30.0, "width": 18.0, "height": 8.5},
+    "orientation": "horizontal"
+  },
+  "objects": [
+    {
+      "type": "opening_window",
+      "confidence": 0.95,
+      "bounds": {"x": 45.5, "y": 20.0, "width": 30.0, "height": 40.0},
+      "polygon": [
+        {"x": 45.5, "y": 20.0},
+        {"x": 75.5, "y": 20.0},
+        {"x": 75.5, "y": 60.0},
+        {"x": 45.5, "y": 60.0}
+      ]
+    },
+    {
+      "type": "downpipe",
+      "confidence": 0.88,
+      "bounds": {"x": 15.0, "y": 60.0, "width": 8.0, "height": 35.0},
+      "polygon": [
+        {"x": 15.2, "y": 60.0},
+        {"x": 22.8, "y": 60.5},
+        {"x": 23.0, "y": 75.0},
+        {"x": 22.5, "y": 94.5},
+        {"x": 15.5, "y": 95.0},
+        {"x": 15.0, "y": 75.0}
+      ]
+    }
+  ]
+}
+
+If no flue terminal is detected, set "flueTerminal" to null.
+If no credit card is detected, set "creditCard" to null.
+If no brick is detected, set "brick" to null.
+For brick orientation: "horizontal" if width > height, "vertical" if height > width.`;
+
+  try {
+    // Extract base64 image data
+    const base64Data = image.split(',')[1] || image;
+    const mediaType = image.includes('image/png') ? 'image/png' : 'image/jpeg';
+
+    // Call Together AI API
+    const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mediaType};base64,${base64Data}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.1
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Together AI API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content.trim();
+
+    // Parse JSON
+    let jsonStr = content;
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.replace(/^```json\n/, '').replace(/\n```$/, '');
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```\n/, '').replace(/\n```$/, '');
+    }
+
+    const result = JSON.parse(jsonStr);
+
+    console.log('🔍 Together AI Response:', JSON.stringify(result, null, 2));
+    console.log(`📊 Objects detected: ${result.objects?.length || 0}`);
+
+    // Extract flue terminal detection
+    let flueTerminal = null;
+    if (result.flueTerminal && result.flueTerminal.detected) {
+      flueTerminal = {
+        confidence: result.flueTerminal.confidence,
+        diameter: result.flueTerminal.diameter || 100,
+        bounds: {
+          x: Math.round(result.flueTerminal.bounds.x * 10),
+          y: Math.round(result.flueTerminal.bounds.y * 10),
+          width: Math.round(result.flueTerminal.bounds.width * 10),
+          height: Math.round(result.flueTerminal.bounds.height * 10)
+        }
+      };
+
+      if (result.flueTerminal.polygon && Array.isArray(result.flueTerminal.polygon)) {
+        flueTerminal.polygon = result.flueTerminal.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      console.log(`🎯 Flue terminal detected! Diameter: ${flueTerminal.diameter}mm, Confidence: ${flueTerminal.confidence}`);
+    }
+
+    // Extract credit card
+    let creditCard = null;
+    if (result.creditCard && result.creditCard.detected) {
+      creditCard = {
+        confidence: result.creditCard.confidence,
+        bounds: {
+          x: Math.round(result.creditCard.bounds.x * 10),
+          y: Math.round(result.creditCard.bounds.y * 10),
+          width: Math.round(result.creditCard.bounds.width * 10),
+          height: Math.round(result.creditCard.bounds.height * 10)
+        }
+      };
+    }
+
+    // Extract brick
+    let brick = null;
+    if (result.brick && result.brick.detected) {
+      brick = {
+        confidence: result.brick.confidence,
+        orientation: result.brick.orientation || 'horizontal',
+        bounds: {
+          x: Math.round(result.brick.bounds.x * 10),
+          y: Math.round(result.brick.bounds.y * 10),
+          width: Math.round(result.brick.bounds.width * 10),
+          height: Math.round(result.brick.bounds.height * 10)
+        }
+      };
+    }
+
+    // Transform objects
+    const objects = (result.objects || []).map(det => {
+      const obj = {
+        type: det.type,
+        label: det.type.toUpperCase().replace(/_/g, ' '),
+        bounds: {
+          x: Math.round(det.bounds.x * 10),
+          y: Math.round(det.bounds.y * 10),
+          width: Math.round(det.bounds.width * 10),
+          height: Math.round(det.bounds.height * 10)
+        },
+        confidence: det.confidence,
+        enabled: true
+      };
+
+      if (det.polygon && Array.isArray(det.polygon) && det.polygon.length >= 3) {
+        obj.polygon = det.polygon.map(pt => ({
+          x: Math.round(pt.x * 10),
+          y: Math.round(pt.y * 10)
+        }));
+      }
+
+      return obj;
+    });
+
+    return { objects, creditCard, brick, flueTerminal, modelName: model };
+
+  } catch (error) {
+    console.error('Together AI detection error:', error);
+    throw new Error(`Together AI detection failed: ${error.message}`);
   }
 }
 
