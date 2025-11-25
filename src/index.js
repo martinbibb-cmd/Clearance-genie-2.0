@@ -37,7 +37,19 @@ export default {
     try {
       // Parse request body
       const requestData = await request.json();
-      const { image, equipmentType, detectObjects, userMessage, transcription, transcriptionContext, knowledgeCategories, aiModel } = requestData;
+      const { image, equipmentType, detectObjects, userMessage, transcription, transcriptionContext, knowledgeCategories, aiModel, detectCard } = requestData;
+
+      // Handle card detection requests
+      if (detectCard) {
+        const cardResult = await detectCreditCard(image, env, aiModel || 'openai');
+        return jsonResponse({
+          success: true,
+          cardDetected: cardResult.cardDetected,
+          corners: cardResult.corners,
+          width: cardResult.width,
+          height: cardResult.height
+        });
+      }
 
       // Handle transcription-only requests first
       if (transcription) {
@@ -1094,6 +1106,119 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
   } catch (error) {
     console.error('Together AI detection error:', error);
     throw new Error(`Together AI detection failed: ${error.message}`);
+  }
+}
+
+/**
+ * Detect credit card in image for live camera calibration
+ */
+async function detectCreditCard(image, env, aiModel = 'openai') {
+  try {
+    const prompt = `Analyze this image and detect if there is a BLUE credit card or debit card visible.
+
+IMPORTANT: Only detect BLUE colored credit/debit cards. Ignore cards of other colors.
+
+If a blue card is detected, provide:
+1. cardDetected: true/false
+2. corners: Array of 4 corner points [{x, y}, ...] in order: top-left, top-right, bottom-right, bottom-left (normalized 0-1000)
+3. width: pixel width of the card
+4. height: pixel height of the card
+
+Return JSON in this exact format:
+{
+  "cardDetected": true,
+  "corners": [
+    {"x": 100, "y": 200},
+    {"x": 500, "y": 200},
+    {"x": 500, "y": 400},
+    {"x": 100, "y": 400}
+  ],
+  "width": 400,
+  "height": 200
+}
+
+If no blue card is detected, return:
+{
+  "cardDetected": false
+}`;
+
+    let result;
+
+    if (aiModel === 'claude' && env.ANTHROPIC_API_KEY) {
+      // Use Claude
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+                  data: image.replace(/^data:image\/\w+;base64,/, '')
+                }
+              },
+              {
+                type: 'text',
+                text: prompt
+              }
+            ]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '{}';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { cardDetected: false };
+
+    } else {
+      // Use OpenAI (default)
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: image }
+              },
+              {
+                type: 'text',
+                text: prompt
+              }
+            ]
+          }],
+          max_tokens: 500
+        })
+      });
+
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content || '{}';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { cardDetected: false };
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Credit card detection error:', error);
+    return { cardDetected: false };
   }
 }
 
