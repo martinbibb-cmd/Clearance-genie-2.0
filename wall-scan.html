@@ -138,7 +138,7 @@
     <button id="captureBtn" disabled>Capture Frame</button>
     <button id="resetPointsBtn" class="secondary" disabled>Reset Card Points</button>
     <span class="status" id="statusText">
-      <strong>Step 1:</strong> Tap <strong>Start Camera</strong>, hold the phone roughly square to the wall, with your card visible.
+      <strong>Step 1:</strong> Wait for “OpenCV loaded…” above, then start the camera and capture a frame.
     </span>
   </section>
 
@@ -173,13 +173,20 @@
     let correctedCanvas = null;
     let origCtx = null;
     let cardPoints = []; // [{x, y}, ...]
+    let pendingPerspective = false; // NEW: remember we owe a warp
 
     // OpenCV runtime ready flag
     window.cv = window.cv || {};
     cv['onRuntimeInitialized'] = () => {
       cvReady = true;
       const status = document.getElementById('statusText');
-      status.innerHTML = "<strong>OpenCV loaded.</strong> You can capture a frame and start marking card corners.";
+      status.innerHTML = "<strong>OpenCV loaded.</strong> Capture a frame and mark the 4 card corners.";
+
+      // If user already picked 4 points while we were loading, do the warp now
+      if (pendingPerspective && cardPoints.length === 4) {
+        pendingPerspective = false;
+        applyPerspectiveCorrection();
+      }
     };
 
     // DOM references
@@ -289,7 +296,9 @@
 
       if (cardPoints.length === 4) {
         if (!cvReady) {
-          statusText.innerHTML = "You’ve selected 4 points, but OpenCV is still loading. Wait a moment, then click again or reset.";
+          statusText.innerHTML = "4 points selected, waiting for OpenCV to finish loading…";
+          // remember that we need to warp once OpenCV is ready
+          pendingPerspective = true;
           return;
         }
         statusText.innerHTML = "<strong>4 points selected.</strong> Computing perspective correction…";
@@ -300,11 +309,9 @@
     function redrawOriginalWithMarkers() {
       if (!origCtx || !originalCanvas.width) return;
 
-      // Redraw the underlying frame
-      const frame = video.srcObject ? video : originalCanvas;
-      // If camera stopped, we already have the frame in the canvas, so just clear & redraw from itself
-      const temp = origCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
-      origCtx.putImageData(temp, 0, 0);
+      // Get existing pixels (the captured frame) and re-put them
+      const snapshot = origCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+      origCtx.putImageData(snapshot, 0, 0);
 
       // Draw point markers and lines
       origCtx.lineWidth = 3;
@@ -318,7 +325,6 @@
         for (let i = 1; i < cardPoints.length; i++) {
           origCtx.lineTo(cardPoints[i].x, cardPoints[i].y);
         }
-        // If we have all 4, close the path
         if (cardPoints.length === 4) {
           origCtx.closePath();
         }
@@ -329,7 +335,6 @@
         origCtx.beginPath();
         origCtx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
         origCtx.fill();
-        // Number label
         origCtx.fillText(String(index + 1), p.x + 10, p.y - 10);
       });
     }
@@ -338,8 +343,8 @@
       if (cardPoints.length !== 4) {
         return;
       }
-      if (!cvReady) {
-        statusText.innerHTML = "OpenCV is not ready yet. Please wait a moment and try again.";
+      if (!cvReady || typeof cv === "undefined") {
+        statusText.innerHTML = "OpenCV is not ready or failed to load.";
         return;
       }
 
