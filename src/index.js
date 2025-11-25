@@ -1111,33 +1111,42 @@ For brick orientation: "horizontal" if width > height, "vertical" if height > wi
 
 /**
  * Detect credit card in image for live camera calibration
+ * Now looks for a blue card with a thick black X drawn corner-to-corner
  */
 async function detectCreditCard(image, env, aiModel = 'openai') {
   try {
-    const prompt = `Analyze this image and detect if there is a BLUE credit card or debit card visible.
+    const prompt = `You are a vision model analyzing a single frame from a camera.
+The user is holding a calibration card against a wall.
 
-IMPORTANT: Only detect BLUE colored credit/debit cards. Ignore cards of other colors.
+The calibration card has ALL of the following properties:
+- It is a BLUE, credit-card-sized plastic rectangle
+- It has a thick BLACK "X" drawn from corner to corner on one side
+- The side with the black X is facing the camera
+- The card is roughly flat against the wall
 
-If a blue card is detected, provide:
-1. cardDetected: true/false
-2. corners: Array of 4 corner points [{x, y}, ...] in order: top-left, top-right, bottom-right, bottom-left (normalized 0-1000)
-3. width: pixel width of the card
-4. height: pixel height of the card
+Your task:
+- Find this blue rectangle with the black X
+- Ignore other objects, even if they are blue but do NOT have a black X
+- Return whether the card is confidently detected
+- If detected, return the pixel coordinates of the 4 OUTER CORNERS of the card (not the X lines)
+  - The corners must be the outermost points of the card's rectangle
+  - Order: top-left, top-right, bottom-right, bottom-left
+  - Normalized to 0-1000 range
 
-Return JSON in this exact format:
+Respond in strict JSON with the following shape:
 {
-  "cardDetected": true,
+  "cardDetected": boolean,
   "corners": [
-    {"x": 100, "y": 200},
-    {"x": 500, "y": 200},
-    {"x": 500, "y": 400},
-    {"x": 100, "y": 400}
+    {"x": number, "y": number},
+    {"x": number, "y": number},
+    {"x": number, "y": number},
+    {"x": number, "y": number}
   ],
-  "width": 400,
-  "height": 200
+  "width": number,
+  "height": number
 }
 
-If no blue card is detected, return:
+If no blue card with black X is detected, return:
 {
   "cardDetected": false
 }`;

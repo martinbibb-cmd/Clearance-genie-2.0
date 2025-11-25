@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clearance Genie - App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .section-header h2 {
+            color: #2c3e50;
+            font-size: 22px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.pending {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+
+        .status-badge.complete {
+            background: #55efc4;
+            color: #00b894;
+        }
+
+        /* Camera View */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #calibrationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Instructions Box */
+        .instructions {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .instructions strong {
+            color: #667eea;
+        }
+
+        .instructions ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Equipment List */
+        .equipment-list {
+            margin: 20px 0;
+        }
+
+        .equipment-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .equipment-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .equipment-type {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .equipment-details {
+            color: #7f8c8d;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .btn-remove {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+        /* Canvas for visualization */
+        #visualizationCanvas {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f0f0f0;
+            display: block;
+            margin: 20px auto;
+        }
+
+        /* Legend */
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            margin-right: 10px;
+            border: 2px solid #333;
+        }
+
+        .legend-text {
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Camera Detection Box */
+        .detection-status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .detection-status.detected {
+            background: rgba(39, 174, 96, 0.9);
+        }
+
+        .detection-status.searching {
+            background: rgba(241, 196, 15, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Clearance Genie</h1>
+        </div>
+
+        <!-- Step 1: Camera Calibration -->
+        <div class="card" id="calibrationSection">
+            <div class="section-header">
+                <h2>Step 1: Camera Calibration</h2>
+                <span class="status-badge pending" id="calibrationStatus">Not Started</span>
+            </div>
+
+            <div class="instructions">
+                <strong>📋 Calibration Instructions:</strong>
+                <ul>
+                    <li>Use a <strong>blue credit-card-sized card</strong></li>
+                    <li>Draw a thick <strong>black "X"</strong> from corner to corner on one side</li>
+                    <li>Hold the card with the X facing the camera, <strong>flat against the wall</strong></li>
+                    <li>Keep it inside the red box until it turns <strong>green</strong></li>
+                    <li>The system will automatically detect the card and calibrate</li>
+                </ul>
+            </div>
+
+            <div id="cameraControls">
+                <button class="btn" id="startCameraBtn">Start Camera 📷</button>
+            </div>
+
+            <div class="camera-container hidden" id="cameraContainer">
+                <div class="detection-status searching" id="detectionStatus">
+                    Position blue card with black X in the red box
+                </div>
+                <video id="cameraFeed" autoplay playsinline></video>
+                <canvas id="calibrationCanvas"></canvas>
+            </div>
+
+            <div id="calibrationResult" class="hidden"></div>
+        </div>
+
+        <!-- Step 2: Add Equipment -->
+        <div class="card hidden" id="equipmentSection">
+            <div class="section-header">
+                <h2>Step 2: Add Equipment</h2>
+                <span class="status-badge pending" id="equipmentStatus">Add Items</span>
+            </div>
+
+            <div class="form-group">
+                <label for="equipmentType">Equipment Type:</label>
+                <select id="equipmentType">
+                    <option value="">-- Select Type --</option>
+                    <option value="boiler">Boiler</option>
+                    <option value="radiator">Radiator</option>
+                    <option value="cylinder">Cylinder</option>
+                    <option value="flue">Flue</option>
+                </select>
+            </div>
+
+            <div id="equipmentForm" class="hidden">
+                <!-- Boiler/Radiator/Cylinder Form -->
+                <div id="boxForm" class="hidden">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>X Position (mm):</label>
+                            <input type="number" id="boxX" placeholder="e.g., 100">
+                        </div>
+                        <div class="form-group">
+                            <label>Y Position (mm):</label>
+                            <input type="number" id="boxY" placeholder="e.g., 100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Width (mm):</label>
+                            <input type="number" id="boxWidth" placeholder="e.g., 400">
+                        </div>
+                        <div class="form-group">
+                            <label>Height (mm):</label>
+                            <input type="number" id="boxHeight" placeholder="e.g., 600">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Required Clearance (mm):</label>
+                        <input type="number" id="boxClearance" placeholder="e.g., 50" value="50">
+                    </div>
+                </div>
+
+                <!-- Flue Form -->
+                <div id="flueForm" class="hidden">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Center X Position (mm):</label>
+                            <input type="number" id="flueX" placeholder="e.g., 400">
+                        </div>
+                        <div class="form-group">
+                            <label>Center Y Position (mm):</label>
+                            <input type="number" id="flueY" placeholder="e.g., 300">
+                        </div>
+                    </div>
+                    <div class="instructions">
+                        <strong>Flue Clearance Zones:</strong>
+                        <ul>
+                            <li><strong>Red:</strong> 100mm diameter (flue center)</li>
+                            <li><strong>Orange:</strong> 150mm clearance zone</li>
+                            <li><strong>Yellow:</strong> 200mm clearance zone</li>
+                            <li><strong>Green:</strong> 300mm safe zone</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button class="btn" id="addEquipmentBtn">Add Equipment</button>
+            </div>
+
+            <div class="equipment-list" id="equipmentList"></div>
+
+            <button class="btn btn-success hidden" id="showVisualizationBtn">Show Clearance Visualization 🎨</button>
+        </div>
+
+        <!-- Step 3: Visualization -->
+        <div class="card hidden" id="visualizationSection">
+            <div class="section-header">
+                <h2>Step 3: Clearance Visualization</h2>
+                <span class="status-badge complete">Ready</span>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: white; border-color: #333;"></div>
+                    <span class="legend-text">Equipment Box</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(255, 0, 0, 0.3);"></div>
+                    <span class="legend-text">Flue Center (100mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(255, 165, 0, 0.3);"></div>
+                    <span class="legend-text">150mm Zone</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(255, 255, 0, 0.3);"></div>
+                    <span class="legend-text">200mm Zone</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(0, 255, 0, 0.3);"></div>
+                    <span class="legend-text">300mm Safe Zone</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(102, 126, 234, 0.2);"></div>
+                    <span class="legend-text">Equipment Clearance</span>
+                </div>
+            </div>
+
+            <canvas id="visualizationCanvas"></canvas>
+
+            <button class="btn btn-secondary" id="backToEquipmentBtn">Back to Equipment</button>
+            <button class="btn btn-success" id="downloadBtn">Download Image 📥</button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            calibrated: false,
+            pixelsPerMM: null,
+            equipment: [],
+            cameraStream: null,
+            detectionInterval: null,
+            detectionCount: 0,
+            requiredDetections: 3
+        };
+
+        // API endpoint for card detection
+        const API_ENDPOINT = 'https://clearance-genie-ai.martinbibb.workers.dev/';
+
+        // Elements
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const cameraFeed = document.getElementById('cameraFeed');
+        const calibrationCanvas = document.getElementById('calibrationCanvas');
+        const detectionStatus = document.getElementById('detectionStatus');
+        const calibrationResult = document.getElementById('calibrationResult');
+        const calibrationStatus = document.getElementById('calibrationStatus');
+        const equipmentSection = document.getElementById('equipmentSection');
+        const equipmentType = document.getElementById('equipmentType');
+        const equipmentForm = document.getElementById('equipmentForm');
+        const boxForm = document.getElementById('boxForm');
+        const flueForm = document.getElementById('flueForm');
+        const addEquipmentBtn = document.getElementById('addEquipmentBtn');
+        const equipmentList = document.getElementById('equipmentList');
+        const showVisualizationBtn = document.getElementById('showVisualizationBtn');
+        const visualizationSection = document.getElementById('visualizationSection');
+        const visualizationCanvas = document.getElementById('visualizationCanvas');
+        const backToEquipmentBtn = document.getElementById('backToEquipmentBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Start camera
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                state.cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: 640, height: 480 }
+                });
+                cameraFeed.srcObject = state.cameraStream;
+                cameraContainer.classList.remove('hidden');
+                startCameraBtn.classList.add('hidden');
+
+                // Set up canvas
+                cameraFeed.addEventListener('loadedmetadata', () => {
+                    calibrationCanvas.width = cameraFeed.videoWidth;
+                    calibrationCanvas.height = cameraFeed.videoHeight;
+                    startCardDetection();
+                });
+            } catch (error) {
+                alert('Failed to access camera: ' + error.message);
+            }
+        });
+
+        // Start card detection
+        function startCardDetection() {
+            const ctx = calibrationCanvas.getContext('2d');
+            const boxSize = 0.4; // 40% of canvas
+            const boxX = (1 - boxSize) / 2;
+            const boxY = (1 - boxSize) / 2;
+
+            // Draw red box
+            function drawBox(color = 'red') {
+                ctx.clearRect(0, 0, calibrationCanvas.width, calibrationCanvas.height);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.strokeRect(
+                    boxX * calibrationCanvas.width,
+                    boxY * calibrationCanvas.height,
+                    boxSize * calibrationCanvas.width,
+                    boxSize * calibrationCanvas.height
+                );
+            }
+
+            drawBox('red');
+
+            // Detect card every 500ms
+            state.detectionInterval = setInterval(async () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = cameraFeed.videoWidth;
+                canvas.height = cameraFeed.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(cameraFeed, 0, 0);
+
+                // Crop to red box
+                const cropX = boxX * canvas.width;
+                const cropY = boxY * canvas.height;
+                const cropWidth = boxSize * canvas.width;
+                const cropHeight = boxSize * canvas.height;
+
+                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas.width = cropWidth;
+                croppedCanvas.height = cropHeight;
+                const croppedContext = croppedCanvas.getContext('2d');
+                croppedContext.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+                const imageData = croppedCanvas.toDataURL('image/jpeg', 0.8);
+
+                try {
+                    const response = await fetch(API_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: imageData,
+                            detectCard: true,
+                            aiModel: 'openai'
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.cardDetected) {
+                        state.detectionCount++;
+                        detectionStatus.textContent = `Card detected! (${state.detectionCount}/${state.requiredDetections})`;
+                        detectionStatus.className = 'detection-status detected';
+                        drawBox('green');
+
+                        if (state.detectionCount >= state.requiredDetections) {
+                            // Calibration complete!
+                            clearInterval(state.detectionInterval);
+                            completeCalibration(result);
+                        }
+                    } else {
+                        state.detectionCount = 0;
+                        detectionStatus.textContent = 'Position blue card with black X in the red box';
+                        detectionStatus.className = 'detection-status searching';
+                        drawBox('red');
+                    }
+                } catch (error) {
+                    console.error('Detection error:', error);
+                }
+            }, 500);
+        }
+
+        // Complete calibration
+        function completeCalibration(result) {
+            // Credit card dimensions
+            const cardWidthMM = 85.6;
+            const cardHeightMM = 53.98;
+
+            // Calculate pixels per mm
+            state.pixelsPerMM = result.width / cardWidthMM;
+
+            // Stop camera
+            if (state.cameraStream) {
+                state.cameraStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Update UI
+            calibrationStatus.textContent = 'Complete ✓';
+            calibrationStatus.className = 'status-badge complete';
+            cameraContainer.classList.add('hidden');
+
+            calibrationResult.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✓ Calibration Successful!</strong><br>
+                    Scale: ${state.pixelsPerMM.toFixed(2)} pixels per mm
+                </div>
+            `;
+            calibrationResult.classList.remove('hidden');
+
+            // Enable equipment section
+            equipmentSection.classList.remove('hidden');
+            state.calibrated = true;
+        }
+
+        // Equipment type selection
+        equipmentType.addEventListener('change', (e) => {
+            const type = e.target.value;
+
+            if (type === '') {
+                equipmentForm.classList.add('hidden');
+                boxForm.classList.add('hidden');
+                flueForm.classList.add('hidden');
+            } else if (type === 'flue') {
+                equipmentForm.classList.remove('hidden');
+                boxForm.classList.add('hidden');
+                flueForm.classList.remove('hidden');
+            } else {
+                equipmentForm.classList.remove('hidden');
+                boxForm.classList.remove('hidden');
+                flueForm.classList.add('hidden');
+            }
+        });
+
+        // Add equipment
+        addEquipmentBtn.addEventListener('click', () => {
+            const type = equipmentType.value;
+
+            if (type === 'flue') {
+                const x = parseFloat(document.getElementById('flueX').value);
+                const y = parseFloat(document.getElementById('flueY').value);
+
+                if (isNaN(x) || isNaN(y)) {
+                    alert('Please enter valid flue position');
+                    return;
+                }
+
+                state.equipment.push({ type: 'flue', x, y });
+
+                // Clear form
+                document.getElementById('flueX').value = '';
+                document.getElementById('flueY').value = '';
+            } else {
+                const x = parseFloat(document.getElementById('boxX').value);
+                const y = parseFloat(document.getElementById('boxY').value);
+                const width = parseFloat(document.getElementById('boxWidth').value);
+                const height = parseFloat(document.getElementById('boxHeight').value);
+                const clearance = parseFloat(document.getElementById('boxClearance').value);
+
+                if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height) || isNaN(clearance)) {
+                    alert('Please enter valid equipment dimensions');
+                    return;
+                }
+
+                state.equipment.push({ type, x, y, width, height, clearance });
+
+                // Clear form
+                document.getElementById('boxX').value = '';
+                document.getElementById('boxY').value = '';
+                document.getElementById('boxWidth').value = '';
+                document.getElementById('boxHeight').value = '';
+            }
+
+            equipmentType.value = '';
+            equipmentForm.classList.add('hidden');
+
+            updateEquipmentList();
+        });
+
+        // Update equipment list
+        function updateEquipmentList() {
+            equipmentList.innerHTML = state.equipment.map((item, index) => {
+                if (item.type === 'flue') {
+                    return `
+                        <div class="equipment-item">
+                            <div class="equipment-item-header">
+                                <span class="equipment-type">🔥 Flue</span>
+                                <button class="btn-remove" onclick="removeEquipment(${index})">Remove</button>
+                            </div>
+                            <div class="equipment-details">
+                                Position: (${item.x}mm, ${item.y}mm)<br>
+                                Zones: 100mm / 150mm / 200mm / 300mm
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const icon = item.type === 'boiler' ? '🔥' : item.type === 'radiator' ? '📻' : '💧';
+                    const name = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+                    return `
+                        <div class="equipment-item">
+                            <div class="equipment-item-header">
+                                <span class="equipment-type">${icon} ${name}</span>
+                                <button class="btn-remove" onclick="removeEquipment(${index})">Remove</button>
+                            </div>
+                            <div class="equipment-details">
+                                Position: (${item.x}mm, ${item.y}mm)<br>
+                                Size: ${item.width}mm × ${item.height}mm<br>
+                                Clearance: ${item.clearance}mm
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            if (state.equipment.length > 0) {
+                showVisualizationBtn.classList.remove('hidden');
+            } else {
+                showVisualizationBtn.classList.add('hidden');
+            }
+        }
+
+        // Remove equipment
+        function removeEquipment(index) {
+            state.equipment.splice(index, 1);
+            updateEquipmentList();
+        }
+
+        // Show visualization
+        showVisualizationBtn.addEventListener('click', () => {
+            visualizationSection.classList.remove('hidden');
+            drawVisualization();
+        });
+
+        // Draw visualization
+        function drawVisualization() {
+            const canvas = visualizationCanvas;
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw equipment
+            state.equipment.forEach(item => {
+                if (item.type === 'flue') {
+                    // Draw flue with halos
+                    const centerX = item.x * state.pixelsPerMM;
+                    const centerY = item.y * state.pixelsPerMM;
+
+                    // 300mm green zone
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 150 * state.pixelsPerMM, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 200mm yellow zone
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 100 * state.pixelsPerMM, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 150mm orange zone
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 75 * state.pixelsPerMM, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 100mm red center
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 50 * state.pixelsPerMM, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Flue outline
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    // Draw equipment box (white)
+                    const x = item.x * state.pixelsPerMM;
+                    const y = item.y * state.pixelsPerMM;
+                    const width = item.width * state.pixelsPerMM;
+                    const height = item.height * state.pixelsPerMM;
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x, y, width, height);
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, width, height);
+
+                    // Draw clearance zone
+                    if (item.clearance) {
+                        const clearancePx = item.clearance * state.pixelsPerMM;
+                        ctx.fillStyle = 'rgba(102, 126, 234, 0.2)';
+                        ctx.fillRect(
+                            x - clearancePx,
+                            y - clearancePx,
+                            width + 2 * clearancePx,
+                            height + 2 * clearancePx
+                        );
+                        ctx.strokeStyle = '#667eea';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeRect(
+                            x - clearancePx,
+                            y - clearancePx,
+                            width + 2 * clearancePx,
+                            height + 2 * clearancePx
+                        );
+                        ctx.setLineDash([]);
+                    }
+
+                    // Label
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(item.type.toUpperCase(), x + width / 2, y + height / 2);
+                }
+            });
+        }
+
+        // Back to equipment
+        backToEquipmentBtn.addEventListener('click', () => {
+            visualizationSection.classList.add('hidden');
+        });
+
+        // Download visualization
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'clearance-visualization.png';
+            link.href = visualizationCanvas.toDataURL();
+            link.click();
+        });
+
+        // Make removeEquipment globally accessible
+        window.removeEquipment = removeEquipment;
+    </script>
+</body>
+</html>
