@@ -530,7 +530,9 @@
             dragStartX: 0,
             dragStartY: 0,
             longPressTimer: null,
-            longPressThreshold: 500 // ms
+            longPressThreshold: 500, // ms
+            // Captured wall image
+            wallImage: null
         };
 
         // API endpoint for card detection
@@ -667,6 +669,17 @@
             // Calculate pixels per mm
             state.pixelsPerMM = result.width / cardWidthMM;
 
+            // Capture the wall image for visualization background
+            const canvas = document.createElement('canvas');
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(cameraFeed, 0, 0);
+
+            // Store as Image object for later use
+            state.wallImage = new Image();
+            state.wallImage.src = canvas.toDataURL();
+
             // Stop camera
             if (state.cameraStream) {
                 state.cameraStream.getTracks().forEach(track => track.stop());
@@ -680,7 +693,8 @@
             calibrationResult.innerHTML = `
                 <div class="alert alert-success">
                     <strong>✓ Calibration Successful!</strong><br>
-                    Scale: ${state.pixelsPerMM.toFixed(2)} pixels per mm
+                    Scale: ${state.pixelsPerMM.toFixed(2)} pixels per mm<br>
+                    Wall image captured ✓
                 </div>
             `;
             calibrationResult.classList.remove('hidden');
@@ -816,6 +830,31 @@
             // Clear canvas
             ctx.fillStyle = '#f0f0f0';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw wall image as background if available
+            if (state.wallImage && state.wallImage.complete) {
+                // Scale image to fit canvas while maintaining aspect ratio
+                const imgAspect = state.wallImage.width / state.wallImage.height;
+                const canvasAspect = canvas.width / canvas.height;
+
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (imgAspect > canvasAspect) {
+                    // Image is wider - fit to height
+                    drawHeight = canvas.height;
+                    drawWidth = drawHeight * imgAspect;
+                    offsetX = (canvas.width - drawWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    // Image is taller - fit to width
+                    drawWidth = canvas.width;
+                    drawHeight = drawWidth / imgAspect;
+                    offsetX = 0;
+                    offsetY = (canvas.height - drawHeight) / 2;
+                }
+
+                ctx.drawImage(state.wallImage, offsetX, offsetY, drawWidth, drawHeight);
+            }
 
             // Draw equipment
             state.equipment.forEach((item, index) => {
