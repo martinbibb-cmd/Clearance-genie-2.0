@@ -535,8 +535,70 @@
             wallImage: null
         };
 
-        // API endpoint for card detection
-        const API_ENDPOINT = 'https://clearance-genie-ai.martinbibb.workers.dev/';
+        // Simple pixel-based card detector (looks for a blue rectangle)
+        function findBlueCardCorners(ctx, boxX, boxY, boxW, boxH) {
+            const imageData = ctx.getImageData(boxX, boxY, boxW, boxH);
+            const data = imageData.data;
+
+            let minX = boxW, minY = boxH, maxX = -1, maxY = -1;
+            let blueCount = 0;
+
+            for (let y = 0; y < boxH; y++) {
+                for (let x = 0; x < boxW; x++) {
+                    const i = (y * boxW + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    const maxChannel = Math.max(r, g, b);
+                    const minChannel = Math.min(r, g, b);
+                    const saturation = maxChannel - minChannel;
+
+                    const isBlue =
+                        b > 80 &&
+                        b > r + 20 &&
+                        b > g + 10 &&
+                        saturation > 20;
+
+                    if (isBlue) {
+                        blueCount++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            if (blueCount < 100 || maxX === -1 || maxY === -1) {
+                return { cardDetected: false };
+            }
+
+            const cardWidth = maxX - minX + 1;
+            const cardHeight = maxY - minY + 1;
+            if (cardWidth <= 0 || cardHeight <= 0) {
+                return { cardDetected: false };
+            }
+
+            const aspect = cardHeight / cardWidth;
+            if (aspect < 1.2 || aspect > 2.0) {
+                return { cardDetected: false };
+            }
+
+            const corners = [
+                { x: boxX + minX, y: boxY + minY },
+                { x: boxX + maxX, y: boxY + minY },
+                { x: boxX + maxX, y: boxY + maxY },
+                { x: boxX + minX, y: boxY + maxY },
+            ];
+
+            return {
+                cardDetected: true,
+                corners,
+                width: cardWidth,
+                height: cardHeight,
+            };
+        }
 
         // Elements
         const startCameraBtn = document.getElementById('startCameraBtn');
@@ -583,9 +645,15 @@
         // Start card detection
         function startCardDetection() {
             const ctx = calibrationCanvas.getContext('2d');
-            const boxSize = 0.4; // 40% of canvas
-            const boxX = (1 - boxSize) / 2;
-            const boxY = (1 - boxSize) / 2;
+            const boxWidth = 0.4; // 40% of canvas width
+            const boxHeight = 0.6; // 60% of canvas height
+            const boxX = (1 - boxWidth) / 2;
+            const boxY = (1 - boxHeight) / 2;
+
+            const analysisCanvas = document.createElement('canvas');
+            analysisCanvas.width = cameraFeed.videoWidth;
+            analysisCanvas.height = cameraFeed.videoHeight;
+            const analysisCtx = analysisCanvas.getContext('2d');
 
             // Draw red box
             function drawBox(color = 'red') {
@@ -595,8 +663,8 @@
                 ctx.strokeRect(
                     boxX * calibrationCanvas.width,
                     boxY * calibrationCanvas.height,
-                    boxSize * calibrationCanvas.width,
-                    boxSize * calibrationCanvas.height
+                    boxWidth * calibrationCanvas.width,
+                    boxHeight * calibrationCanvas.height
                 );
             }
 
@@ -604,58 +672,31 @@
 
             // Detect card every 500ms
             state.detectionInterval = setInterval(async () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = cameraFeed.videoWidth;
-                canvas.height = cameraFeed.videoHeight;
-                const context = canvas.getContext('2d');
-                context.drawImage(cameraFeed, 0, 0);
+                analysisCtx.drawImage(cameraFeed, 0, 0, analysisCanvas.width, analysisCanvas.height);
 
-                // Crop to red box
-                const cropX = boxX * canvas.width;
-                const cropY = boxY * canvas.height;
-                const cropWidth = boxSize * canvas.width;
-                const cropHeight = boxSize * canvas.height;
+                const cropX = Math.round(boxX * analysisCanvas.width);
+                const cropY = Math.round(boxY * analysisCanvas.height);
+                const cropWidth = Math.round(boxWidth * analysisCanvas.width);
+                const cropHeight = Math.round(boxHeight * analysisCanvas.height);
 
-                const croppedCanvas = document.createElement('canvas');
-                croppedCanvas.width = cropWidth;
-                croppedCanvas.height = cropHeight;
-                const croppedContext = croppedCanvas.getContext('2d');
-                croppedContext.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                const result = findBlueCardCorners(analysisCtx, cropX, cropY, cropWidth, cropHeight);
 
-                const imageData = croppedCanvas.toDataURL('image/jpeg', 0.8);
+                if (result.cardDetected) {
+                    state.detectionCount++;
+                    detectionStatus.textContent = `Card detected! (${state.detectionCount}/${state.requiredDetections})`;
+                    detectionStatus.className = 'detection-status detected';
+                    drawBox('green');
 
-                try {
-                    const response = await fetch(API_ENDPOINT, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            image: imageData,
-                            detectCard: true,
-                            aiModel: 'openai'
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.cardDetected) {
-                        state.detectionCount++;
-                        detectionStatus.textContent = `Card detected! (${state.detectionCount}/${state.requiredDetections})`;
-                        detectionStatus.className = 'detection-status detected';
-                        drawBox('green');
-
-                        if (state.detectionCount >= state.requiredDetections) {
-                            // Calibration complete!
-                            clearInterval(state.detectionInterval);
-                            completeCalibration(result);
-                        }
-                    } else {
-                        state.detectionCount = 0;
-                        detectionStatus.textContent = 'Position blue card with black X in the red box';
-                        detectionStatus.className = 'detection-status searching';
-                        drawBox('red');
+                    if (state.detectionCount >= state.requiredDetections) {
+                        // Calibration complete!
+                        clearInterval(state.detectionInterval);
+                        completeCalibration(result);
                     }
-                } catch (error) {
-                    console.error('Detection error:', error);
+                } else {
+                    state.detectionCount = 0;
+                    detectionStatus.textContent = 'Position blue card with black X in the red box';
+                    detectionStatus.className = 'detection-status searching';
+                    drawBox('red');
                 }
             }, 500);
         }
