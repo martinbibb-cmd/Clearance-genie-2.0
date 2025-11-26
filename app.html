@@ -100,7 +100,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: auto;
             pointer-events: none;
         }
 
@@ -377,6 +377,7 @@
 
             <div id="cameraControls">
                 <button class="btn" id="startCameraBtn">Start Camera 📷</button>
+                <button class="btn btn-secondary" id="btn-capture-wall" disabled>Capture Wall Photo</button>
             </div>
 
             <div class="camera-container hidden" id="cameraContainer">
@@ -535,6 +536,20 @@
             wallImage: null
         };
 
+        window.appState = window.appState || {};
+
+        function getCalibrationBox(canvas) {
+            const isPortrait = window.appState?.isPortrait ?? (canvas.height >= canvas.width);
+
+            const boxWidth = isPortrait ? canvas.width * 0.4 : canvas.width * 0.6;
+            const boxHeight = isPortrait ? canvas.height * 0.6 : canvas.height * 0.4;
+
+            const boxX = (canvas.width - boxWidth) / 2;
+            const boxY = (canvas.height - boxHeight) / 2;
+
+            return { boxX, boxY, boxWidth, boxHeight };
+        }
+
         // Simple pixel-based card detector (looks for a blue rectangle)
         function findBlueCardCorners(ctx, boxX, boxY, boxW, boxH) {
             const imageData = ctx.getImageData(boxX, boxY, boxW, boxH);
@@ -550,6 +565,7 @@
                     const g = data[i + 1];
                     const b = data[i + 2];
 
+                    // Simple "blue-ish" heuristic – can be tuned:
                     const maxChannel = Math.max(r, g, b);
                     const minChannel = Math.min(r, g, b);
                     const saturation = maxChannel - minChannel;
@@ -570,21 +586,30 @@
                 }
             }
 
-            if (blueCount < 100 || maxX === -1 || maxY === -1) {
+            // Not enough blue pixels → probably no card
+            if (blueCount < 100) {
                 return { cardDetected: false };
             }
 
-            const cardWidth = maxX - minX + 1;
-            const cardHeight = maxY - minY + 1;
+            const cardWidth = maxX - minX;
+            const cardHeight = maxY - minY;
             if (cardWidth <= 0 || cardHeight <= 0) {
                 return { cardDetected: false };
             }
 
-            const aspect = cardHeight / cardWidth;
+            // Reject cards clipped by the crop edges (likely incomplete)
+            const margin = 3;
+            if (minX <= margin || minY <= margin || maxX >= boxW - margin || maxY >= boxH - margin) {
+                return { cardDetected: false };
+            }
+
+            // Credit card physical aspect: 85.6 x 54 mm ≈ 1.58 (long/short)
+            const aspect = cardHeight > cardWidth ? cardHeight / cardWidth : cardWidth / cardHeight;
             if (aspect < 1.2 || aspect > 2.0) {
                 return { cardDetected: false };
             }
 
+            // Map bounding box back to full-canvas coordinates:
             const corners = [
                 { x: boxX + minX, y: boxY + minY },
                 { x: boxX + maxX, y: boxY + minY },
@@ -598,6 +623,28 @@
                 width: cardWidth,
                 height: cardHeight,
             };
+        }
+
+        function dist(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function computePixelsPerMmFromCard(corners) {
+            const wPx = dist(corners[0], corners[1]);
+            const hPx = dist(corners[1], corners[2]);
+
+            const longPx = Math.max(wPx, hPx);
+            const shortPx = Math.min(wPx, hPx);
+
+            const CARD_LONG_MM = 85.6;
+            const CARD_SHORT_MM = 54.0;
+
+            const scaleLong = longPx / CARD_LONG_MM;
+            const scaleShort = shortPx / CARD_SHORT_MM;
+
+            return (scaleLong + scaleShort) / 2;
         }
 
         // Elements
@@ -620,6 +667,11 @@
         const visualizationCanvas = document.getElementById('visualizationCanvas');
         const backToEquipmentBtn = document.getElementById('backToEquipmentBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const captureWallBtn = document.getElementById('btn-capture-wall');
+
+        if (captureWallBtn) {
+            captureWallBtn.disabled = true;
+        }
 
         // Start camera
         startCameraBtn.addEventListener('click', async () => {
@@ -635,6 +687,8 @@
                 cameraFeed.addEventListener('loadedmetadata', () => {
                     calibrationCanvas.width = cameraFeed.videoWidth;
                     calibrationCanvas.height = cameraFeed.videoHeight;
+                    window.appState = window.appState || {};
+                    window.appState.isPortrait = cameraFeed.videoHeight >= cameraFeed.videoWidth;
                     startCardDetection();
                 });
             } catch (error) {
@@ -644,82 +698,108 @@
 
         // Start card detection
         function startCardDetection() {
-            const ctx = calibrationCanvas.getContext('2d');
-            const boxWidth = 0.4; // 40% of canvas width
-            const boxHeight = 0.6; // 60% of canvas height
-            const boxX = (1 - boxWidth) / 2;
-            const boxY = (1 - boxHeight) / 2;
-
-            const analysisCanvas = document.createElement('canvas');
-            analysisCanvas.width = cameraFeed.videoWidth;
-            analysisCanvas.height = cameraFeed.videoHeight;
-            const analysisCtx = analysisCanvas.getContext('2d');
-
-            // Draw red box
-            function drawBox(color = 'red') {
-                ctx.clearRect(0, 0, calibrationCanvas.width, calibrationCanvas.height);
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 4;
-                ctx.strokeRect(
-                    boxX * calibrationCanvas.width,
-                    boxY * calibrationCanvas.height,
-                    boxWidth * calibrationCanvas.width,
-                    boxHeight * calibrationCanvas.height
-                );
+            if (state.detectionInterval) {
+                clearInterval(state.detectionInterval);
             }
 
-            drawBox('red');
+            window.appState = window.appState || {};
+            window.appState.cardDetectionsInARow = 0;
+            window.appState.cardIsCalibrated = false;
+            window.appState.calibrationBoxIsGreen = false;
 
-            // Detect card every 500ms
-            state.detectionInterval = setInterval(async () => {
-                analysisCtx.drawImage(cameraFeed, 0, 0, analysisCanvas.width, analysisCanvas.height);
+            if (captureWallBtn) {
+                captureWallBtn.disabled = true;
+            }
 
-                const cropX = Math.round(boxX * analysisCanvas.width);
-                const cropY = Math.round(boxY * analysisCanvas.height);
-                const cropWidth = Math.round(boxWidth * analysisCanvas.width);
-                const cropHeight = Math.round(boxHeight * analysisCanvas.height);
+            const ctx = calibrationCanvas.getContext('2d');
 
-                const result = findBlueCardCorners(analysisCtx, cropX, cropY, cropWidth, cropHeight);
+            const drawCalibrationOverlay = () => {
+                const { boxX, boxY, boxWidth, boxHeight } = getCalibrationBox(calibrationCanvas);
+                ctx.strokeStyle = window.appState.calibrationBoxIsGreen ? 'green' : 'red';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(
+                    Math.round(boxX),
+                    Math.round(boxY),
+                    Math.round(boxWidth),
+                    Math.round(boxHeight)
+                );
+            };
+
+            const checkForCalibrationCard = () => {
+                if (!cameraFeed.videoWidth || !cameraFeed.videoHeight) {
+                    return;
+                }
+
+                ctx.drawImage(cameraFeed, 0, 0, calibrationCanvas.width, calibrationCanvas.height);
+
+                const { boxX, boxY, boxWidth, boxHeight } = getCalibrationBox(calibrationCanvas);
+                const cropX = Math.round(boxX);
+                const cropY = Math.round(boxY);
+                const cropWidth = Math.round(boxWidth);
+                const cropHeight = Math.round(boxHeight);
+                const result = findBlueCardCorners(ctx, cropX, cropY, cropWidth, cropHeight);
 
                 if (result.cardDetected) {
-                    state.detectionCount++;
-                    detectionStatus.textContent = `Card detected! (${state.detectionCount}/${state.requiredDetections})`;
+                    window.appState.cardDetectionsInARow = (window.appState.cardDetectionsInARow || 0) + 1;
+                    window.appState.calibrationBoxIsGreen = true;
+                    detectionStatus.textContent = `Card detected! (${window.appState.cardDetectionsInARow}/${state.requiredDetections})`;
                     detectionStatus.className = 'detection-status detected';
-                    drawBox('green');
 
-                    if (state.detectionCount >= state.requiredDetections) {
-                        // Calibration complete!
-                        clearInterval(state.detectionInterval);
-                        completeCalibration(result);
+                    if (window.appState.cardDetectionsInARow >= state.requiredDetections) {
+                        const pixelsPerMm = computePixelsPerMmFromCard(result.corners);
+                        window.appState.pixelsPerMm = pixelsPerMm;
+                        window.appState.cardIsCalibrated = true;
+                        state.pixelsPerMM = pixelsPerMm;
+
+                        if (captureWallBtn) {
+                            captureWallBtn.disabled = false;
+                        }
+
+                        detectionStatus.textContent = 'Card locked! Capture the wall photo.';
+                    } else if (captureWallBtn) {
+                        captureWallBtn.disabled = true;
                     }
                 } else {
-                    state.detectionCount = 0;
+                    window.appState.cardDetectionsInARow = 0;
+                    window.appState.calibrationBoxIsGreen = false;
+                    window.appState.cardIsCalibrated = false;
                     detectionStatus.textContent = 'Position blue card with black X in the red box';
                     detectionStatus.className = 'detection-status searching';
-                    drawBox('red');
+                    if (captureWallBtn) {
+                        captureWallBtn.disabled = true;
+                    }
                 }
-            }, 500);
+
+                drawCalibrationOverlay();
+            };
+
+            drawCalibrationOverlay();
+            state.detectionInterval = setInterval(checkForCalibrationCard, 500);
         }
 
         // Complete calibration
-        function completeCalibration(result) {
-            // Credit card dimensions
-            const cardWidthMM = 85.6;
-            const cardHeightMM = 53.98;
-
-            // Calculate pixels per mm
-            state.pixelsPerMM = result.width / cardWidthMM;
+        function completeCalibration() {
+            if (!window.appState.cardIsCalibrated || !window.appState.pixelsPerMm) {
+                return;
+            }
 
             // Capture the wall image for visualization background
-            const canvas = document.createElement('canvas');
-            canvas.width = cameraFeed.videoWidth;
-            canvas.height = cameraFeed.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(cameraFeed, 0, 0);
+            const ctx = calibrationCanvas.getContext('2d');
+            ctx.drawImage(cameraFeed, 0, 0, calibrationCanvas.width, calibrationCanvas.height);
 
-            // Store as Image object for later use
+            const dataUrl = calibrationCanvas.toDataURL('image/png');
+
             state.wallImage = new Image();
-            state.wallImage.src = canvas.toDataURL();
+            state.wallImage.src = dataUrl;
+
+            window.appState.wallImageDataUrl = dataUrl;
+            state.pixelsPerMM = window.appState.pixelsPerMm;
+            state.calibrated = true;
+
+            if (state.detectionInterval) {
+                clearInterval(state.detectionInterval);
+                state.detectionInterval = null;
+            }
 
             // Stop camera
             if (state.cameraStream) {
@@ -742,7 +822,24 @@
 
             // Enable equipment section
             equipmentSection.classList.remove('hidden');
-            state.calibrated = true;
+
+            if (captureWallBtn) {
+                captureWallBtn.disabled = true;
+            }
+
+            if (typeof setStep === 'function') {
+                setStep('marking');
+            }
+        }
+
+        if (captureWallBtn) {
+            captureWallBtn.addEventListener('click', () => {
+                if (!window.appState.cardIsCalibrated || !window.appState.pixelsPerMm) {
+                    return;
+                }
+
+                completeCalibration();
+            });
         }
 
         // Equipment type selection
