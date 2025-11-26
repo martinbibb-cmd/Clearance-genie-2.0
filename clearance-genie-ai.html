@@ -398,12 +398,25 @@
             <button class="btn" id="continueToPhoto" disabled onclick="goToStep(2)">Continue to Photo Upload</button>
         </div>
 
-        <!-- Step 2: Photo Upload -->
+        <!-- Step 2: Two-Stage Calibration Instructions -->
         <div class="card hidden" id="step2">
-            <h2>Step 2: Upload Photo & Select AI Model</h2>
+            <h2>Step 2: Two-Stage Calibration</h2>
             <div class="instructions">
-                <strong>For Flue Terminal:</strong> The AI will detect the flue terminal (100mm diameter) for calibration.<br>
-                <strong>For other equipment:</strong> Include a credit card in your photo for automatic calibration.
+                <strong>📐 Two-Stage Calibration Process:</strong><br><br>
+                This method ensures accurate measurements:<br><br>
+                <strong>Stage 1: Close Detection</strong><br>
+                Get close to the blue card so it fills most of the frame. This gives the most accurate calibration.<br><br>
+                <strong>Stage 2: Wall Capture</strong><br>
+                Pull back while keeping the card visible to capture the wall area you need to measure.
+            </div>
+            <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong style="color: #667eea;">💡 Why Two Stages?</strong><br>
+                <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.6;">
+                    <li>Calibration only needs the scale reference (blue card)</li>
+                    <li>Once locked, you can pull back to see the wall</li>
+                    <li>The card just needs to stay on the same wall plane</li>
+                    <li>This is how professionals do physical-scale measurement</li>
+                </ul>
             </div>
             <div style="margin: 15px 0;">
                 <label for="aiModelSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">
@@ -416,19 +429,107 @@
                 </select>
                 <div id="modelFeedback" style="margin-top: 8px; font-size: 13px; color: #667eea;"></div>
             </div>
-            <div class="upload-area" onclick="document.getElementById('cameraInput').click()">
-                <div class="icon">📸</div>
-                <div><strong>Take Photo with Camera</strong></div>
-                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Include a credit card for automatic AI calibration (85mm × 54mm standard size)</div>
+            <button class="btn" onclick="goToStage1Calibration()">Begin Stage 1: Close Calibration</button>
+            <button class="btn btn-secondary" onclick="goToStep(1)">Back to Equipment Selection</button>
+        </div>
+
+        <!-- Step 2a: Stage 1 - Close Calibration -->
+        <div class="card hidden" id="step2a">
+            <h2>Stage 1: Close Calibration 📏</h2>
+            <div class="instructions">
+                <strong>🎯 Get Close to the Blue Card:</strong><br><br>
+                Hold your blue card (with black X) flat against the wall and position your camera so the card fills most of the frame. This gives the most accurate calibration.
             </div>
-            <input type="file" id="cameraInput" accept="image/*" capture="environment">
-            <div class="upload-area" onclick="document.getElementById('uploadInput').click()">
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                <strong>⚡ Tips for Best Results:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                    <li>Hold card flat against the wall (not tilted)</li>
+                    <li>Fill 40-60% of frame with the blue card</li>
+                    <li>Ensure good lighting on the card</li>
+                    <li>Keep camera parallel to wall</li>
+                </ul>
+            </div>
+            <div class="upload-area" onclick="document.getElementById('stage1CameraInput').click()">
+                <div class="icon">📸</div>
+                <div><strong>Take Close-Up Photo</strong></div>
+                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Position camera close to blue card</div>
+            </div>
+            <input type="file" id="stage1CameraInput" accept="image/*" capture="environment">
+            <div class="upload-area" onclick="document.getElementById('stage1UploadInput').click()">
                 <div class="icon">📁</div>
                 <div><strong>Upload Existing Photo</strong></div>
                 <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Select from device storage</div>
             </div>
-            <input type="file" id="uploadInput" accept="image/*">
-            <button class="btn btn-secondary" onclick="goToStep(1)">Back to Equipment Selection</button>
+            <input type="file" id="stage1UploadInput" accept="image/*">
+            <button class="btn btn-secondary" onclick="goToStep(2)">Back to Instructions</button>
+        </div>
+
+        <!-- Step 2b: Stage 1 Processing -->
+        <div class="card hidden" id="step2b">
+            <h2>Stage 1: Processing Calibration</h2>
+            <div class="loading">
+                <div class="spinner"></div>
+                <div id="stage1ProcessingMessage">Detecting blue card and establishing calibration...</div>
+            </div>
+        </div>
+
+        <!-- Step 2c: Stage 1 Success -->
+        <div class="card hidden" id="step2c">
+            <h2>Stage 1: Calibration Locked ✅</h2>
+            <div style="background: #d4edda; border: 3px solid #28a745; padding: 25px; border-radius: 12px; margin: 20px 0; text-align: center;">
+                <div style="font-size: 60px; margin-bottom: 15px;">🎯</div>
+                <div style="font-size: 24px; font-weight: 600; color: #155724; margin-bottom: 10px;">
+                    Calibration Locked!
+                </div>
+                <div id="calibrationLockedInfo" style="font-size: 16px; color: #155724; line-height: 1.6;">
+                    <!-- Will be filled with calibration details -->
+                </div>
+            </div>
+            <div class="instructions">
+                <strong>✓ Stage 1 Complete!</strong><br><br>
+                Your calibration is now locked. The camera knows exactly how many pixels = 1mm.<br><br>
+                <strong>Next: Pull back for wall capture</strong><br>
+                You can now pull back to capture more of the wall, as long as you keep the blue card visible in the frame.
+            </div>
+            <div class="canvas-container">
+                <canvas id="stage1Canvas"></canvas>
+            </div>
+            <button class="btn btn-success" onclick="goToStage2Capture()">Continue to Stage 2: Wall Capture</button>
+            <button class="btn btn-secondary" onclick="retryStage1()">🔄 Retry Stage 1</button>
+        </div>
+
+        <!-- Step 2d: Stage 2 - Wall Capture -->
+        <div class="card hidden" id="step2d">
+            <h2>Stage 2: Wall Capture 📸</h2>
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+                <strong>✓ Calibration Locked:</strong> <span id="lockedCalibrationDisplay"><!-- Will show locked value --></span>
+            </div>
+            <div class="instructions">
+                <strong>📸 Pull Back to Capture Wall Area:</strong><br><br>
+                Now that calibration is locked, pull your camera back to capture the wall area you need to measure.<br><br>
+                <strong>Important:</strong> Keep the blue card visible in the frame on the same wall plane.
+            </div>
+            <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong>💡 For Best Results:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                    <li>Keep the blue card visible (can be small in frame)</li>
+                    <li>Capture the wall area with windows, vents, or other objects</li>
+                    <li>Keep camera roughly parallel to wall</li>
+                    <li>The card must stay on the same wall plane</li>
+                </ul>
+            </div>
+            <div class="upload-area" onclick="document.getElementById('stage2CameraInput').click()">
+                <div class="icon">📸</div>
+                <div><strong>Take Wide Photo</strong></div>
+                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Pull back to capture wall area (keep card visible)</div>
+            </div>
+            <input type="file" id="stage2CameraInput" accept="image/*" capture="environment">
+            <div class="upload-area" onclick="document.getElementById('stage2UploadInput').click()">
+                <div class="icon">📁</div>
+                <div><strong>Upload Existing Photo</strong></div>
+                <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Select from device storage</div>
+            </div>
+            <button class="btn btn-secondary" onclick="goToStep('2c')">Back to Stage 1 Results</button>
         </div>
 
         <!-- Step 2.5: Perspective Correction -->
@@ -551,8 +652,13 @@
             photoHeight: 0,
             scale: {
                 pixelsPerMM: 0,
-                calibrationComplete: false
+                calibrationComplete: false,
+                calibrationLocked: false,  // NEW: Track if calibration is locked from Stage 1
+                lockedPixelsPerMM: 0,      // NEW: Store locked calibration value
+                calibrationMethod: null,
+                calibrationStage: 1        // NEW: Track current calibration stage (1 or 2)
             },
+            stage1Photo: null,  // NEW: Store Stage 1 close-up photo
             detectedObjects: [],
             equipmentPosition: null,
             currentStep: 1,
@@ -663,15 +769,66 @@
                 document.getElementById(`step${i}`)?.classList.add('hidden');
             }
             document.getElementById('step2_5')?.classList.add('hidden');
+            document.getElementById('step2a')?.classList.add('hidden');
+            document.getElementById('step2b')?.classList.add('hidden');
+            document.getElementById('step2c')?.classList.add('hidden');
+            document.getElementById('step2d')?.classList.add('hidden');
 
             // Show target step
             document.getElementById(`step${stepNumber}`).classList.remove('hidden');
             state.currentStep = stepNumber;
         }
 
-        // Step 2: Photo Upload Handlers
-        document.getElementById('cameraInput').addEventListener('change', handlePhotoUpload);
-        document.getElementById('uploadInput').addEventListener('change', handlePhotoUpload);
+        // Two-Stage Calibration Navigation Functions
+        function goToStage1Calibration() {
+            // Hide all steps
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step${i}`)?.classList.add('hidden');
+            }
+            document.getElementById('step2a').classList.remove('hidden');
+            state.scale.calibrationStage = 1;
+        }
+
+        function goToStage2Capture() {
+            // Hide all steps
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step${i}`)?.classList.add('hidden');
+            }
+            document.getElementById('step2a')?.classList.add('hidden');
+            document.getElementById('step2b')?.classList.add('hidden');
+            document.getElementById('step2c')?.classList.add('hidden');
+
+            document.getElementById('step2d').classList.remove('hidden');
+            state.scale.calibrationStage = 2;
+
+            // Update locked calibration display
+            const display = document.getElementById('lockedCalibrationDisplay');
+            if (display) {
+                display.textContent = `${state.scale.lockedPixelsPerMM.toFixed(3)} pixels/mm from Stage 1 close-up`;
+            }
+        }
+
+        function retryStage1() {
+            // Reset calibration
+            state.scale.calibrationLocked = false;
+            state.scale.lockedPixelsPerMM = 0;
+            state.stage1Photo = null;
+
+            // Go back to Stage 1 photo capture
+            goToStage1Calibration();
+        }
+
+        // Step 2: Photo Upload Handlers (Old single-stage - kept for compatibility)
+        document.getElementById('cameraInput')?.addEventListener('change', handlePhotoUpload);
+        document.getElementById('uploadInput')?.addEventListener('change', handlePhotoUpload);
+
+        // NEW: Stage 1 Photo Upload Handlers
+        document.getElementById('stage1CameraInput').addEventListener('change', handleStage1PhotoUpload);
+        document.getElementById('stage1UploadInput').addEventListener('change', handleStage1PhotoUpload);
+
+        // NEW: Stage 2 Photo Upload Handlers
+        document.getElementById('stage2CameraInput').addEventListener('change', handleStage2PhotoUpload);
+        document.getElementById('stage2UploadInput').addEventListener('change', handleStage2PhotoUpload);
 
         function handlePhotoUpload(e) {
             const file = e.target.files[0];
@@ -700,6 +857,174 @@
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        // NEW: Handle Stage 1 Photo Upload
+        function handleStage1PhotoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    state.stage1Photo = img;
+                    state.photo = img;
+                    state.originalPhoto = img;
+                    state.photoWidth = img.width;
+                    state.photoHeight = img.height;
+
+                    console.log('🎯 === STAGE 1: CLOSE CALIBRATION ===');
+                    console.log('Photo dimensions:', state.photoWidth, 'x', state.photoHeight);
+
+                    // Go to Stage 1 processing
+                    document.getElementById('step2a').classList.add('hidden');
+                    document.getElementById('step2b').classList.remove('hidden');
+
+                    // Process Stage 1 calibration
+                    processStage1Calibration();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // NEW: Handle Stage 2 Photo Upload
+        function handleStage2PhotoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    state.photo = img;
+                    state.originalPhoto = img;
+                    state.photoWidth = img.width;
+                    state.photoHeight = img.height;
+
+                    console.log('📸 === STAGE 2: WALL CAPTURE ===');
+                    console.log('Photo dimensions:', state.photoWidth, 'x', state.photoHeight);
+                    console.log('Using locked calibration:', state.scale.lockedPixelsPerMM.toFixed(3), 'pixels/mm');
+
+                    // Use locked calibration from Stage 1
+                    state.scale.pixelsPerMM = state.scale.lockedPixelsPerMM;
+                    state.scale.calibrationComplete = true;
+                    state.scale.calibrationMethod = 'two_stage_blue_card';
+
+                    // Check if OpenCV is loaded for perspective correction
+                    if (!cvReady) {
+                        console.warn('⚠️  OpenCV not ready yet, skipping perspective correction');
+                        goToStep(3);
+                        processPhoto();
+                        return;
+                    }
+
+                    // Move to perspective correction step
+                    goToPerspectiveCorrection();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // NEW: Process Stage 1 Calibration
+        async function processStage1Calibration() {
+            try {
+                document.getElementById('stage1ProcessingMessage').textContent = 'Detecting blue card for calibration...';
+
+                // Detect blue card
+                await detectBlueCard();
+
+                if (state.scale.calibrationComplete && state.scale.pixelsPerMM > 0) {
+                    // Lock the calibration
+                    state.scale.calibrationLocked = true;
+                    state.scale.lockedPixelsPerMM = state.scale.pixelsPerMM;
+                    state.scale.calibrationMethod = 'blue_card_stage1';
+
+                    console.log('✓ Stage 1 calibration locked:', state.scale.lockedPixelsPerMM.toFixed(3), 'pixels/mm');
+
+                    // Show success screen
+                    showStage1Success();
+                } else {
+                    throw new Error('Blue card not detected. Please ensure the card fills 40-60% of the frame.');
+                }
+            } catch (error) {
+                console.error('Stage 1 calibration error:', error);
+                alert('⚠️ Stage 1 Calibration Failed\n\n' + error.message + '\n\nPlease try again with:\n• Blue card filling 40-60% of frame\n• Good lighting\n• Card flat against wall');
+                retryStage1();
+            }
+        }
+
+        // NEW: Show Stage 1 Success Screen
+        function showStage1Success() {
+            // Hide processing screen
+            document.getElementById('step2b').classList.add('hidden');
+
+            // Show success screen
+            document.getElementById('step2c').classList.remove('hidden');
+
+            // Update calibration info
+            const infoDiv = document.getElementById('calibrationLockedInfo');
+            infoDiv.innerHTML = `
+                <strong>Calibration Scale:</strong> ${state.scale.lockedPixelsPerMM.toFixed(3)} pixels per mm<br>
+                <br>
+                Based on blue card detection (85mm × 54mm standard credit card size)<br>
+                <br>
+                This calibration is now locked and will be used for Stage 2 measurements.
+            `;
+
+            // Draw the Stage 1 photo with blue card highlighted
+            const canvas = document.getElementById('stage1Canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = state.photoWidth;
+            canvas.height = state.photoHeight;
+            ctx.drawImage(state.stage1Photo, 0, 0);
+
+            // Highlight the detected blue card area
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = state.photoWidth;
+            tempCanvas.height = state.photoHeight;
+            tempCtx.drawImage(state.stage1Photo, 0, 0);
+
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            const data = imageData.data;
+
+            // Find blue pixels and draw bounding box
+            let bluePixels = [];
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                if (b > r + 30 && b > g + 30 && b > 100) {
+                    const x = (i / 4) % tempCanvas.width;
+                    const y = Math.floor((i / 4) / tempCanvas.width);
+                    bluePixels.push({ x, y });
+                }
+            }
+
+            if (bluePixels.length > 100) {
+                const xs = bluePixels.map(p => p.x);
+                const ys = bluePixels.map(p => p.y);
+                const minX = Math.min(...xs);
+                const maxX = Math.max(...xs);
+                const minY = Math.min(...ys);
+                const maxY = Math.max(...ys);
+
+                // Draw green box around detected card
+                ctx.strokeStyle = '#28a745';
+                ctx.lineWidth = 5;
+                ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+
+                // Draw label
+                ctx.fillStyle = 'rgba(40, 167, 69, 0.9)';
+                ctx.fillRect(minX, minY - 35, 220, 30);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText('✓ Blue Card Detected', minX + 10, minY - 12);
+            }
         }
 
         function goToPerspectiveCorrection() {
@@ -1224,7 +1549,13 @@
             if (calibrationDisplay && state.scale.calibrationComplete) {
                 const method = state.scale.calibrationMethod || 'unknown';
                 const ppmm = state.scale.pixelsPerMM.toFixed(3);
-                if (method === 'flue_terminal') {
+                if (method === 'two_stage_blue_card') {
+                    calibrationDisplay.innerHTML = `🎯 <strong>Two-Stage Blue Card (85mm)</strong> - ${ppmm} px/mm - Locked from Stage 1 close-up`;
+                    calibrationDisplay.parentElement.style.background = '#d4edda';
+                } else if (method === 'blue_card_stage1') {
+                    calibrationDisplay.innerHTML = `🎯 <strong>Blue Card Stage 1 (85mm)</strong> - ${ppmm} px/mm`;
+                    calibrationDisplay.parentElement.style.background = '#d4edda';
+                } else if (method === 'flue_terminal') {
                     calibrationDisplay.innerHTML = `🎯 <strong>Flue Terminal (100mm)</strong> - ${ppmm} px/mm`;
                     calibrationDisplay.parentElement.style.background = '#d4edda';
                 } else if (method === 'credit_card') {
