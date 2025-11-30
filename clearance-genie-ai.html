@@ -8,6 +8,9 @@
     <!-- OpenCV.js for perspective correction -->
     <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onOpenCvReady()"></script>
 
+    <!-- Model Store for boiler, radiator, and cylinder data -->
+    <script src="js/modelStore.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -345,6 +348,19 @@
             z-index: 1000;
         }
 
+        /* Model Selection Styles */
+        #modelSelect optgroup {
+            font-weight: bold;
+            font-style: normal;
+            background: #f8f9fa;
+            padding: 8px;
+        }
+
+        #modelSelect option {
+            font-weight: normal;
+            padding: 8px 12px;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 24px;
@@ -395,7 +411,24 @@
                     <div class="description">Service access to doors, shelves, valves</div>
                 </div>
             </div>
-            <button class="btn" id="continueToPhoto" disabled onclick="goToStep(2)">Continue to Photo Upload</button>
+            <button class="btn" id="continueToPhoto" disabled onclick="goToModelSelection()">Continue to Model Selection</button>
+        </div>
+
+        <!-- Step 1b: Model Selection (for boiler, radiator, cylinder) -->
+        <div class="card hidden" id="step1b">
+            <h2>Step 1b: Select Specific Model</h2>
+            <div class="instructions">
+                <strong>Choose your equipment model:</strong> Select the specific model to use accurate dimensions and clearances.
+            </div>
+            <div id="modelSelectionContainer">
+                <!-- Will be populated dynamically -->
+            </div>
+            <div id="selectedModelInfo" style="display: none; background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong>Selected Model:</strong>
+                <div id="selectedModelDetails" style="margin-top: 10px;"></div>
+            </div>
+            <button class="btn" id="continueToCalibration" disabled onclick="goToStep(2)">Continue to Calibration</button>
+            <button class="btn btn-secondary" onclick="goToStep(1)">Back to Equipment Selection</button>
         </div>
 
         <!-- Step 2: Two-Stage Calibration Instructions -->
@@ -601,18 +634,21 @@
             <div class="instructions">
                 <strong>Drag and drop</strong> the equipment icon to its position in the photo. Clearance zones will update in real-time.
             </div>
+            <div id="selectedEquipmentSummary" style="background: #e8f4f8; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                <!-- Will be populated with selected model info -->
+            </div>
             <div class="legend">
                 <div class="legend-item">
-                    <div class="legend-color" style="background: rgba(76, 175, 80, 0.3);"></div>
-                    <span>Safe - Service Clearance OK</span>
+                    <div class="legend-color" style="background: rgba(39, 174, 96, 0.3); border-color: rgba(39, 174, 96, 0.8);"></div>
+                    <span>Service Clearance Zone</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: rgba(255, 193, 7, 0.3);"></div>
-                    <span>Warning - Close to Object</span>
+                    <div class="legend-color" style="background: rgba(76, 175, 80, 0.7); border-color: #2e7d32;"></div>
+                    <span>Equipment (Compliant)</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: rgba(244, 67, 54, 0.3);"></div>
-                    <span>Violation - Too Close</span>
+                    <div class="legend-color" style="background: rgba(244, 67, 54, 0.7); border-color: #c62828;"></div>
+                    <span>Equipment (Violation)</span>
                 </div>
             </div>
             <div class="canvas-container" id="placementCanvasContainer">
@@ -666,7 +702,8 @@
                 enabled: false,
                 corners: [], // Array of 4 points {x, y}
                 correctedImage: null
-            }
+            },
+            selectedModel: null  // Store selected model from ModelStore
         };
 
         // Equipment Configurations
@@ -768,6 +805,7 @@
             for (let i = 1; i <= 6; i++) {
                 document.getElementById(`step${i}`)?.classList.add('hidden');
             }
+            document.getElementById('step1b')?.classList.add('hidden');
             document.getElementById('step2_5')?.classList.add('hidden');
             document.getElementById('step2a')?.classList.add('hidden');
             document.getElementById('step2b')?.classList.add('hidden');
@@ -779,12 +817,171 @@
             state.currentStep = stepNumber;
         }
 
+        // Navigate to model selection step
+        async function goToModelSelection() {
+            // Flue doesn't need model selection - it has fixed dimensions
+            if (state.equipmentType === 'flue') {
+                goToStep(2);
+                return;
+            }
+
+            // Load models from ModelStore
+            try {
+                await ModelStore.loadAllModels();
+            } catch (error) {
+                console.warn('Failed to load models, using default dimensions:', error);
+                goToStep(2);
+                return;
+            }
+
+            // Get models for the selected equipment type
+            let models = [];
+            if (state.equipmentType === 'boiler') {
+                models = ModelStore.getBoilerModels();
+            } else if (state.equipmentType === 'radiator') {
+                models = ModelStore.getRadiatorModels();
+            } else if (state.equipmentType === 'cylinder') {
+                models = ModelStore.getCylinderModels();
+            }
+
+            if (models.length === 0) {
+                console.warn('No models found, using default dimensions');
+                goToStep(2);
+                return;
+            }
+
+            // Show step1b
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step${i}`)?.classList.add('hidden');
+            }
+            document.getElementById('step1b').classList.remove('hidden');
+
+            // Populate model selection UI
+            populateModelSelection(models);
+        }
+
+        // Populate model selection dropdown
+        function populateModelSelection(models) {
+            const container = document.getElementById('modelSelectionContainer');
+            const config = EQUIPMENT_CONFIG[state.equipmentType];
+
+            let html = `
+                <div style="margin: 15px 0;">
+                    <label for="modelSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                        ${config.icon} Select ${config.name} Model:
+                    </label>
+                    <select id="modelSelect" onchange="onModelSelected()" style="width: 100%; padding: 12px; border-radius: 6px; border: 2px solid #667eea; font-size: 15px;">
+                        <option value="">-- Select a model --</option>
+            `;
+
+            // Group models by brand for better organization
+            const modelsByBrand = {};
+            models.forEach(model => {
+                const brand = model.brand || 'Other';
+                if (!modelsByBrand[brand]) {
+                    modelsByBrand[brand] = [];
+                }
+                modelsByBrand[brand].push(model);
+            });
+
+            Object.keys(modelsByBrand).sort().forEach(brand => {
+                html += `<optgroup label="${brand}">`;
+                modelsByBrand[brand].forEach(model => {
+                    const displayName = ModelStore.formatModelName(model, state.equipmentType);
+                    const dims = model.dimensions;
+                    const dimText = dims ? ` (${dims.width}×${dims.height}mm)` : '';
+                    html += `<option value="${model.id}">${displayName}${dimText}</option>`;
+                });
+                html += `</optgroup>`;
+            });
+
+            html += `
+                    </select>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Handle model selection
+        function onModelSelected() {
+            const select = document.getElementById('modelSelect');
+            const modelId = select.value;
+
+            if (!modelId) {
+                document.getElementById('selectedModelInfo').style.display = 'none';
+                document.getElementById('continueToCalibration').disabled = true;
+                state.selectedModel = null;
+                return;
+            }
+
+            // Get the selected model
+            const modelInfo = ModelStore.getModelById(modelId);
+            if (!modelInfo) {
+                console.error('Model not found:', modelId);
+                return;
+            }
+
+            state.selectedModel = modelInfo.model;
+
+            // Update the EQUIPMENT_CONFIG with actual model dimensions
+            const config = EQUIPMENT_CONFIG[state.equipmentType];
+            if (state.selectedModel.dimensions) {
+                config.dimensions = {
+                    width: state.selectedModel.dimensions.width,
+                    height: state.selectedModel.dimensions.height,
+                    depth: state.selectedModel.dimensions.depth || 0
+                };
+                config.name = `${state.selectedModel.brand || ''} ${state.selectedModel.range || state.selectedModel.model || ''}`.trim();
+            }
+
+            // Update service clearances if available
+            if (state.selectedModel.serviceClearances) {
+                const sc = state.selectedModel.serviceClearances;
+                // Map service clearances to obstacle clearances
+                if (sc.front) config.serviceClearance = sc;
+            }
+
+            // Show selected model info
+            const infoDiv = document.getElementById('selectedModelInfo');
+            const detailsDiv = document.getElementById('selectedModelDetails');
+
+            const dims = state.selectedModel.dimensions;
+            const clearances = state.selectedModel.serviceClearances;
+
+            let detailsHtml = `
+                <div><strong>Brand:</strong> ${state.selectedModel.brand || 'Unknown'}</div>
+                <div><strong>Model:</strong> ${state.selectedModel.range || state.selectedModel.model || state.selectedModel.id}</div>
+            `;
+
+            if (dims) {
+                detailsHtml += `<div><strong>Dimensions:</strong> ${dims.width}mm (W) × ${dims.height}mm (H)`;
+                if (dims.depth) {
+                    detailsHtml += ` × ${dims.depth}mm (D)`;
+                }
+                detailsHtml += `</div>`;
+            }
+
+            if (clearances) {
+                detailsHtml += `<div style="margin-top: 8px;"><strong>Service Clearances:</strong></div>`;
+                if (clearances.front) detailsHtml += `<div>• Front: ${clearances.front}mm</div>`;
+                if (clearances.sides) detailsHtml += `<div>• Sides: ${clearances.sides}mm</div>`;
+                if (clearances.above) detailsHtml += `<div>• Above: ${clearances.above}mm</div>`;
+                if (clearances.below) detailsHtml += `<div>• Below: ${clearances.below}mm</div>`;
+            }
+
+            detailsDiv.innerHTML = detailsHtml;
+            infoDiv.style.display = 'block';
+            document.getElementById('continueToCalibration').disabled = false;
+        }
+
         // Two-Stage Calibration Navigation Functions
         function goToStage1Calibration() {
             // Hide all steps
             for (let i = 1; i <= 6; i++) {
                 document.getElementById(`step${i}`)?.classList.add('hidden');
             }
+            document.getElementById('step1b')?.classList.add('hidden');
             document.getElementById('step2a').classList.remove('hidden');
             state.scale.calibrationStage = 1;
         }
@@ -794,6 +991,7 @@
             for (let i = 1; i <= 6; i++) {
                 document.getElementById(`step${i}`)?.classList.add('hidden');
             }
+            document.getElementById('step1b')?.classList.add('hidden');
             document.getElementById('step2a')?.classList.add('hidden');
             document.getElementById('step2b')?.classList.add('hidden');
             document.getElementById('step2c')?.classList.add('hidden');
@@ -1639,6 +1837,7 @@
         function setupPlacementCanvas() {
             const canvas = document.getElementById('placementCanvas');
             const ctx = canvas.getContext('2d');
+            const config = EQUIPMENT_CONFIG[state.equipmentType];
 
             canvas.width = state.photoWidth;
             canvas.height = state.photoHeight;
@@ -1649,6 +1848,19 @@
                     x: state.photoWidth / 2,
                     y: state.photoHeight / 2
                 };
+            }
+
+            // Update equipment summary display
+            const summaryDiv = document.getElementById('selectedEquipmentSummary');
+            if (summaryDiv) {
+                let summaryHtml = `<strong>${config.icon} ${config.name}</strong>`;
+                summaryHtml += ` (${config.dimensions.width}mm × ${config.dimensions.height}mm)`;
+                
+                if (state.selectedModel && state.selectedModel.serviceClearances) {
+                    const sc = state.selectedModel.serviceClearances;
+                    summaryHtml += `<br><small>Service Clearances: Front ${sc.front}mm, Sides ${sc.sides}mm, Above ${sc.above}mm, Below ${sc.below}mm</small>`;
+                }
+                summaryDiv.innerHTML = summaryHtml;
             }
 
             drawPlacementScene();
@@ -1669,6 +1881,9 @@
             console.log('=== PLACEMENT & CLEARANCE CALCULATION ===');
             console.log('Calibration method:', state.scale.calibrationMethod);
             console.log('Pixels per mm:', state.scale.pixelsPerMM.toFixed(3));
+            if (state.selectedModel) {
+                console.log('Selected model:', state.selectedModel.brand, state.selectedModel.range || state.selectedModel.model);
+            }
 
             // Calculate equipment dimensions in pixels
             const equipWidthPx = config.dimensions.width * state.scale.pixelsPerMM;
@@ -1686,28 +1901,56 @@
                 height: equipHeightPx
             };
 
-            // Draw clearance zones around the equipment itself
-            // Find the maximum clearance required for this equipment type
-            const maxClearanceMM = Math.max(...Object.values(config.clearances));
-            const maxClearancePx = maxClearanceMM * state.scale.pixelsPerMM;
+            // Get service clearances from selected model or use defaults
+            let serviceClearances = { front: 0, sides: 0, above: 0, below: 0 };
+            if (state.selectedModel && state.selectedModel.serviceClearances) {
+                serviceClearances = state.selectedModel.serviceClearances;
+                console.log('Using model service clearances:', serviceClearances);
+            } else {
+                // Use maximum from obstacle clearances as fallback
+                const maxClearanceMM = Math.max(...Object.values(config.clearances));
+                serviceClearances = { front: maxClearanceMM, sides: maxClearanceMM, above: maxClearanceMM, below: maxClearanceMM };
+            }
 
-            // Draw equipment clearance zone (service access area)
-            ctx.fillStyle = 'rgba(255, 193, 7, 0.2)';  // Yellow/amber for service area
+            // Draw asymmetric service clearance zones if model has specific clearances
+            const frontClearancePx = (serviceClearances.front || 0) * state.scale.pixelsPerMM;
+            const sideClearancePx = (serviceClearances.sides || 0) * state.scale.pixelsPerMM;
+            const aboveClearancePx = (serviceClearances.above || 0) * state.scale.pixelsPerMM;
+            const belowClearancePx = (serviceClearances.below || 0) * state.scale.pixelsPerMM;
+
+            // Draw equipment clearance zone (service access area) - asymmetric
+            ctx.fillStyle = 'rgba(39, 174, 96, 0.2)';  // Green for service area
             ctx.fillRect(
-                equipRect.x - maxClearancePx,
-                equipRect.y - maxClearancePx,
-                equipRect.width + (2 * maxClearancePx),
-                equipRect.height + (2 * maxClearancePx)
+                equipRect.x - sideClearancePx,
+                equipRect.y - aboveClearancePx,
+                equipRect.width + (2 * sideClearancePx),
+                equipRect.height + aboveClearancePx + belowClearancePx
             );
 
+            // Draw clearance zone border
+            ctx.strokeStyle = 'rgba(39, 174, 96, 0.8)';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                equipRect.x - sideClearancePx,
+                equipRect.y - aboveClearancePx,
+                equipRect.width + (2 * sideClearancePx),
+                equipRect.height + aboveClearancePx + belowClearancePx
+            );
+            ctx.setLineDash([]);
+
             // Draw label for service clearance
-            ctx.fillStyle = 'rgba(255, 193, 7, 0.8)';
-            ctx.fillRect(equipRect.x - maxClearancePx, equipRect.y - maxClearancePx - 30, 200, 25);
-            ctx.fillStyle = '#000';
+            const clearanceLabel = serviceClearances.front ? 
+                `Service: ${serviceClearances.sides}mm sides, ${serviceClearances.above}mm above, ${serviceClearances.below}mm below` :
+                `Service Zone: ${Object.values(serviceClearances)[0] || 0}mm`;
+            
+            ctx.fillStyle = 'rgba(39, 174, 96, 0.9)';
+            ctx.fillRect(equipRect.x - sideClearancePx, equipRect.y - aboveClearancePx - 30, Math.max(300, equipRect.width + (2 * sideClearancePx)), 25);
+            ctx.fillStyle = '#fff';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillText(`Service Zone: ${maxClearanceMM}mm`, equipRect.x - maxClearancePx + 5, equipRect.y - maxClearancePx - 25);
+            ctx.fillText(clearanceLabel, equipRect.x - sideClearancePx + 5, equipRect.y - aboveClearancePx - 25);
 
             // Check for violations with detected objects
             const violations = [];
