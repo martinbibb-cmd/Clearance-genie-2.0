@@ -127,7 +127,7 @@
             font-weight: 600;
             cursor: pointer;
             width: 100%;
-            margin-top: 30px;
+            margin-top: 20px;
             transition: all 0.3s;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
@@ -135,6 +135,14 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
         }
 
         .features {
@@ -160,6 +168,43 @@
             color: #555;
             font-size: 14px;
         }
+
+        .size-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .size-option {
+            background: #f8f9fa;
+            padding: 15px 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .size-option .icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .size-option .label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .size-option .size {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        @media (max-width: 600px) {
+            .size-options {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -169,7 +214,7 @@
             <p class="subtitle">Smart Heating Installation Compliance Checker</p>
 
             <div class="hero">
-                <div class="hero-icon">📏</div>
+                <div class="hero-icon">📐</div>
             </div>
 
             <h2>How It Works</h2>
@@ -177,53 +222,61 @@
             <div class="step">
                 <div class="step-title">
                     <span class="step-number">1</span>
-                    Prepare Your Calibration Card
+                    Print Your ArUco Marker
                 </div>
                 <div class="step-description">
-                    Take a blue credit-card-sized plastic card and draw a thick black "X" from corner to corner on one side using a permanent marker. This will be your calibration reference.
+                    Print an ArUco calibration marker in your preferred size. The marker provides accurate, reliable calibration for precise measurements.
                 </div>
-            </div>
-
-            <div class="calibration-box">
-                <h3>📋 Calibration Card Instructions:</h3>
-                <ul>
-                    <li>Use a blue, credit-card-sized plastic card (85mm × 54mm)</li>
-                    <li>Draw a thick black "X" from corner to corner (5-8mm thick lines)</li>
-                    <li>Keep the edges clean - don't round the card or add stickers</li>
-                    <li>This gives the camera a clear, distinctive target to detect</li>
-                </ul>
             </div>
 
             <div class="calibration-box" style="border-color: #28a745; background: #d4edda;">
-                <h3 style="color: #155724;">🎯 Why Two-Stage Calibration?</h3>
+                <h3 style="color: #155724;">🖨️ Available Marker Sizes:</h3>
+                <div class="size-options">
+                    <div class="size-option">
+                        <div class="icon">💳</div>
+                        <div class="label">Credit Card</div>
+                        <div class="size">85mm × 85mm</div>
+                    </div>
+                    <div class="size-option">
+                        <div class="icon">📄</div>
+                        <div class="label">A5</div>
+                        <div class="size">148mm × 148mm</div>
+                    </div>
+                    <div class="size-option">
+                        <div class="icon">📃</div>
+                        <div class="label">A4</div>
+                        <div class="size">210mm × 210mm</div>
+                    </div>
+                </div>
                 <ul>
-                    <li><strong>More Accurate:</strong> Close-up detection gets precise pixel-to-mm ratio</li>
-                    <li><strong>More Flexible:</strong> Pull back to capture the entire wall area you need</li>
-                    <li><strong>Professional Method:</strong> Used in photogrammetry and forensic measurements</li>
-                    <li><strong>Scale Stays Locked:</strong> Once calibrated, measurements remain accurate</li>
+                    <li><strong>Print at 100% scale</strong> on matte paper (avoid glossy)</li>
+                    <li><strong>Laminate if possible</strong> for durability and repeated use</li>
+                    <li><strong>Keep the white border</strong> around the marker for better detection</li>
                 </ul>
             </div>
+
+            <button class="btn" onclick="location.href='aruco-markers.html'">
+                🖨️ Print ArUco Markers
+            </button>
 
             <div class="step">
                 <div class="step-title">
                     <span class="step-number">2</span>
-                    Two-Stage Calibration
+                    Calibrate with Camera
                 </div>
                 <div class="step-description">
-                    <strong>Stage 1: Close Detection</strong><br>
-                    Hold your blue card close to the camera so it fills most of the frame. This establishes the most accurate calibration.<br><br>
-                    <strong>Stage 2: Wall Capture</strong><br>
-                    Once calibration is locked, pull back to capture the wall area while keeping the card visible. The system uses the locked calibration for precise measurements.
+                    <strong>Position the marker:</strong> Hold the ArUco marker flat against the wall, on the same plane as the equipment you're measuring.<br><br>
+                    <strong>Automatic detection:</strong> The camera will detect the marker and show a green outline when locked. Wait for 5 consecutive detections for accurate calibration.
                 </div>
             </div>
 
             <div class="step">
                 <div class="step-title">
                     <span class="step-number">3</span>
-                    Add Your Equipment
+                    Capture Wall Photo
                 </div>
                 <div class="step-description">
-                    Manually enter the location and dimensions of your boilers, radiators, cylinders, and flues. The app uses simple forms - database integration coming later!
+                    Once calibration is locked, pull back to capture the entire wall area. Mark the flue/equipment position and any nearby obstacles.
                 </div>
             </div>
 
@@ -235,8 +288,9 @@
                 <div class="step-description">
                     See instant visual feedback with color-coded clearance zones:
                     <ul style="margin-top: 10px; margin-left: 42px;">
-                        <li><strong>Flue:</strong> 100mm center with 150mm, 200mm, 300mm halos in different colors</li>
-                        <li><strong>Equipment:</strong> White boxes with clearance zones added</li>
+                        <li><strong style="color: #e74c3c;">Red:</strong> Non-compliant (&lt;75mm) - Fail</li>
+                        <li><strong style="color: #f39c12;">Amber:</strong> Influenced (75-150mm) - Requires consideration</li>
+                        <li><strong style="color: #27ae60;">Green:</strong> Compliant (&gt;300mm) - Pass</li>
                     </ul>
                 </div>
             </div>
@@ -244,16 +298,16 @@
             <h2>Features</h2>
             <div class="features">
                 <div class="feature">
-                    <div class="feature-icon">🎯</div>
-                    <div class="feature-text">Accurate calibration with visual card detection</div>
+                    <div class="feature-icon">📐</div>
+                    <div class="feature-text">ArUco marker detection for precise calibration</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🎨</div>
                     <div class="feature-text">Color-coded clearance zones for easy checking</div>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">⚡</div>
-                    <div class="feature-text">Simple manual entry - fast and reliable</div>
+                    <div class="feature-icon">📷</div>
+                    <div class="feature-text">Live camera detection with green outline confirmation</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">📱</div>
@@ -261,25 +315,62 @@
                 </div>
             </div>
 
-            <button class="btn" onclick="location.href='app.html'">
-                Get Started (Blue Card Calibration) 🚀
+            <div class="calibration-box" style="border-color: #667eea; background: #e8f4f8;">
+                <h3 style="color: #667eea;">📐 Why ArUco Markers?</h3>
+                <ul>
+                    <li><strong>Robust Detection:</strong> Works reliably at various distances and angles</li>
+                    <li><strong>Sub-pixel Accuracy:</strong> Precise corner detection for accurate measurements</li>
+                    <li><strong>Industry Standard:</strong> Used in robotics, drones, and professional photogrammetry</li>
+                    <li><strong>Automatic Calibration:</strong> No manual marking required - just point and detect</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-success" onclick="location.href='clearance-genie-aruco.html'">
+                Start Clearance Check 🚀
             </button>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
-                <h2>🆕 ArUco Marker Calibration</h2>
-                <div class="calibration-box" style="border-color: #667eea; background: #e8f4f8;">
-                    <h3 style="color: #667eea;">📐 Professional ArUco-Based Calibration</h3>
+                <h2>📖 User Instructions</h2>
+                
+                <div class="calibration-box">
+                    <h3>Before You Start:</h3>
                     <ul>
-                        <li><strong>More Robust:</strong> ArUco markers work reliably at distance and angle</li>
-                        <li><strong>Sub-pixel Accuracy:</strong> Precise corner detection for accurate measurements</li>
-                        <li><strong>Automatic Detection:</strong> Live camera detection with green outline confirmation</li>
-                        <li><strong>Curved Clearance Zones:</strong> Proper 300mm, 200mm, 150mm, 75mm arcs</li>
-                        <li><strong>Pass/Fail Color Coding:</strong> Red (unsafe), Amber (influenced), Green (compliant)</li>
+                        <li>Print your ArUco marker at 100% scale on matte paper</li>
+                        <li>Ensure good lighting in the area you're measuring</li>
+                        <li>Have a clear view of the wall and equipment</li>
                     </ul>
                 </div>
-                <button class="btn" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);" onclick="location.href='clearance-genie-aruco.html'">
-                    Try ArUco Calibration (Recommended) 📐
-                </button>
+
+                <div class="calibration-box">
+                    <h3>During Calibration:</h3>
+                    <ul>
+                        <li>Hold the marker flat against the wall surface</li>
+                        <li>Position it on the same plane as the flue/equipment</li>
+                        <li>Keep the marker visible until detection locks (green outline)</li>
+                        <li>Wait for 5 consecutive detections for best accuracy</li>
+                    </ul>
+                </div>
+
+                <div class="calibration-box">
+                    <h3>Taking Measurements:</h3>
+                    <ul>
+                        <li>After calibration, pull back to capture the full wall</li>
+                        <li>Tap to mark the flue/equipment center first</li>
+                        <li>Then tap to mark corners of windows, doors, and other obstacles</li>
+                        <li>Review the color-coded clearance zones</li>
+                        <li>Download the annotated photo for your records</li>
+                    </ul>
+                </div>
+
+                <div class="calibration-box" style="border-color: #e74c3c; background: #f8d7da;">
+                    <h3 style="color: #721c24;">⚠️ Important Notes:</h3>
+                    <ul>
+                        <li>This tool aids compliance checking but does not replace Gas Safe engineer judgment</li>
+                        <li>Always verify with tape measure for critical measurements</li>
+                        <li>Check manufacturer instructions for specific equipment clearances</li>
+                        <li>Document all checks for Building Control requirements</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
