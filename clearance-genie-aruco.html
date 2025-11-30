@@ -554,7 +554,7 @@
                 <!-- Dynamically filled -->
             </div>
 
-            <button class="btn btn-success" onclick="analyzeCleanances()">
+            <button class="btn btn-success" onclick="analyzeClearances()">
                 ✓ Analyze Clearances
             </button>
             <button class="btn btn-secondary" onclick="clearMarks()">
@@ -1298,7 +1298,7 @@
         // STEP 6: ANALYZE CLEARANCES
         // ============================================================
 
-        function analyzeCleanances() {
+        function analyzeClearances() {
             if (!state.fluePosition) {
                 alert('Please mark the flue/equipment position first.');
                 return;
