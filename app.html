@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Clearance Genie - App</title>
     
-    <!-- Three.js for 3D rendering -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
-    
     <style>
         * {
             margin: 0;
@@ -1428,6 +1425,9 @@
         window.removeEquipment = removeEquipment;
     </script>
 
+    <!-- Three.js loader (local helper that fetches the CDN build) -->
+    <script src="js/vendor/three.min.js"></script>
+
     <!-- Model Store and Live 3D Modules -->
     <script src="js/modelStore.js"></script>
     <script src="js/live3d.js"></script>
@@ -1447,6 +1447,24 @@
                 markerScreenRect: null
             }
         };
+
+        // Ensure Three.js is available before initializing the overlay
+        async function ensureThreeReady() {
+            if (window.THREE) return true;
+
+            if (window.__threeReadyPromise) {
+                try {
+                    await window.__threeReadyPromise;
+                    return !!window.THREE;
+                } catch (error) {
+                    console.error('[App] Failed to load Three.js:', error);
+                    return false;
+                }
+            }
+
+            console.error('[App] Three.js is not available');
+            return false;
+        }
 
         // Initialize Live 3D when models are loaded
         async function initializeLive3D() {
@@ -1560,6 +1578,12 @@
             const section = document.getElementById('live3dSection');
             const video = document.getElementById('live3dVideo');
             const container = document.getElementById('live3dContainer');
+
+            const threeReady = await ensureThreeReady();
+            if (!threeReady) {
+                alert('Three.js failed to load. Please check your connection and try again.');
+                return;
+            }
 
             try {
                 // Start camera
