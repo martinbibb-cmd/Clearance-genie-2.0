@@ -1,0 +1,408 @@
+{
+  "schemaVersion": 1,
+  "units": "mm",
+  "models": [
+    {
+      "id": "wb_greenstar_ri_12",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar Ri",
+      "type": "regular",
+      "fuel": ["NG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 600,
+        "depth": 270
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 70
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_ri_15",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar Ri",
+      "type": "regular",
+      "fuel": ["NG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 600,
+        "depth": 270
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 70
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_ri_18",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar Ri",
+      "type": "regular",
+      "fuel": ["NG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 600,
+        "depth": 270
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 70
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_ri_24",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar Ri",
+      "type": "regular",
+      "fuel": ["NG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 440,
+        "height": 710,
+        "depth": 310
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 220,
+          "centreFromRear": 80
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_ri_30",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar Ri",
+      "type": "regular",
+      "fuel": ["NG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 440,
+        "height": 710,
+        "depth": 310
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 220,
+          "centreFromRear": 80
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_4000",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar 4000",
+      "type": "combi_or_system",
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 400,
+        "height": 724,
+        "depth": 310
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 200,
+        "below": 200
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100", "80/125"],
+          "centreFromLeft": 200,
+          "centreFromRear": 80
+        }
+      }
+    },
+    {
+      "id": "wb_greenstar_8000",
+      "brand": "Worcester Bosch",
+      "range": "Greenstar 8000 Life/Style",
+      "type": "combi_system_regular",
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 440,
+        "height": 780,
+        "depth": 365
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 5,
+        "above": 170,
+        "aboveAlt": 210,
+        "below": 200,
+        "overallDepth": 965,
+        "minToFloor": 400
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100", "80/125"],
+          "centreFromLeft": 220,
+          "centreFromRear": 87
+        }
+      }
+    },
+    {
+      "id": "vaillant_ecotec_plus_combi_system",
+      "brand": "Vaillant",
+      "range": "ecoTEC plus",
+      "group": "Vaillant Group",
+      "type": ["combi", "system"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 440,
+        "height": 720,
+        "depth": 406
+      },
+      "serviceClearances": {
+        "front": 500,
+        "sides": 5,
+        "above": 165,
+        "below": 180
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100", "80/125"],
+          "centreFromLeft": 220,
+          "centreFromRear": 80
+        }
+      },
+      "notes": [
+        "Covers ecoTEC plus 825/832/835/838 domestic wall-hung boilers.",
+        "Dimensions from Vaillant ecoTEC plus technical sheet; clearances: sides 5mm, top 165mm, below 180mm, front 500mm."
+      ]
+    },
+    {
+      "id": "vaillant_ecofit_pure_combi",
+      "brand": "Vaillant",
+      "range": "ecoFIT pure",
+      "group": "Vaillant Group",
+      "type": ["combi"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 700,
+        "depth": 295
+      },
+      "serviceClearances": {
+        "front": 500,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 75
+        }
+      },
+      "notes": [
+        "Covers ecoFIT pure 825/830/835 combi. Dimensions 700 x 390 x 295mm.",
+        "Minimum side and top clearances taken from ecoFIT pure manuals; front/below set to typical Vaillant 500mm/150mm service space."
+      ]
+    },
+    {
+      "id": "vaillant_ecofit_pure_system",
+      "brand": "Vaillant",
+      "range": "ecoFIT pure",
+      "group": "Vaillant Group",
+      "type": ["system"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 700,
+        "depth": 295
+      },
+      "serviceClearances": {
+        "front": 500,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 75
+        }
+      },
+      "notes": [
+        "Covers ecoFIT pure 612-630 system boilers with 700 x 390 x 295mm casing.",
+        "Clearances aligned with ecoFIT pure system installation manual: 5mm side, 150mm top, typical 500mm front, 150mm below for service."
+      ]
+    },
+    {
+      "id": "vaillant_ecofit_pure_open_vent",
+      "brand": "Vaillant",
+      "range": "ecoFIT pure",
+      "group": "Vaillant Group",
+      "type": ["regular"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 375,
+        "height": 600,
+        "depth": 295
+      },
+      "serviceClearances": {
+        "front": 500,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 187,
+          "centreFromRear": 75
+        }
+      },
+      "notes": [
+        "Covers ecoFIT pure 412/415/418/425/430/435 open-vent boilers (600 x 375 x 295mm).",
+        "Minimum clearances per ecoFIT pure open-vent tech sheet: sides 5mm, top 150mm (20mm with rear flue); front/below set to 500/150mm for servicing box."
+      ]
+    },
+    {
+      "id": "glowworm_energy7_combi",
+      "brand": "Glow-worm",
+      "range": "Energy7",
+      "group": "Vaillant Group",
+      "type": ["combi"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 700,
+        "depth": 280
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 70
+        }
+      },
+      "notes": [
+        "Covers Glow-worm Energy/Energy7 combi 25C/30C/35C: 700 x 390 x 280mm casing.",
+        "Clearances per Glow-worm Energy brochure: Top 150mm (20mm with rear flue), sides 5mm, bottom 150mm, front 600mm."
+      ]
+    },
+    {
+      "id": "glowworm_energy7_system",
+      "brand": "Glow-worm",
+      "range": "Energy7",
+      "group": "Vaillant Group",
+      "type": ["system"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 390,
+        "height": 700,
+        "depth": 280
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 195,
+          "centreFromRear": 70
+        }
+      },
+      "notes": [
+        "Covers Glow-worm Energy7 system 12-30kW units using the 700 x 390 x 280mm casing.",
+        "Clearances aligned with Energy combi/system literature for consistency."
+      ]
+    },
+    {
+      "id": "glowworm_energy7_regular",
+      "brand": "Glow-worm",
+      "range": "Energy7",
+      "group": "Vaillant Group",
+      "type": ["regular"],
+      "fuel": ["NG", "LPG"],
+      "mount": "wall",
+      "dimensions": {
+        "width": 375,
+        "height": 600,
+        "depth": 280
+      },
+      "serviceClearances": {
+        "front": 600,
+        "sides": 5,
+        "above": 150,
+        "below": 150
+      },
+      "geometry": {
+        "flue": {
+          "diameterOptions": ["60/100"],
+          "centreFromLeft": 187,
+          "centreFromRear": 70
+        }
+      },
+      "notes": [
+        "Covers Glow-worm Energy7 regular (R) boilers: ~600 x 375 x 280mm casing.",
+        "Clearances follow Glow-worm Energy family: top 150mm, sides 5mm, bottom 150mm, front 600mm."
+      ]
+    }
+  ]
+}
