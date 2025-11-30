@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Clearance Genie - App</title>
+    
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -349,6 +353,101 @@
         .detection-status.searching {
             background: rgba(241, 196, 15, 0.9);
         }
+
+        /* 3D Overlay Section Styles */
+        #live3dSection .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #live3dSection #live3dVideo {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #live3dSection #live3dContainer {
+            position: relative;
+        }
+
+        .model-selector {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .model-selector .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .model-selector .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .model-info {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .model-info .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .model-info .info-label {
+            color: #6c757d;
+        }
+
+        .model-info .info-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .live3d-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .live3d-controls .btn {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .calibration-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .calibration-badge.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .calibration-badge.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -389,6 +488,80 @@
             </div>
 
             <div id="calibrationResult" class="hidden"></div>
+        </div>
+
+        <!-- Live 3D Overlay Section -->
+        <div class="card hidden" id="live3dSection">
+            <div class="section-header">
+                <h2>📐 Live 3D Overlay</h2>
+                <span class="calibration-badge invalid" id="calibrationBadge">Not Calibrated</span>
+            </div>
+
+            <div class="instructions">
+                <strong>🎯 Position Equipment in 3D:</strong>
+                <ul>
+                    <li>Select an equipment type and model below</li>
+                    <li>A 3D box will appear over the camera view</li>
+                    <li>Drag the box to position it on the wall</li>
+                    <li>The green wireframe shows required service clearances</li>
+                </ul>
+            </div>
+
+            <div class="model-selector">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="live3dObjectType">Equipment Type:</label>
+                        <select id="live3dObjectType">
+                            <option value="">-- Select Type --</option>
+                            <option value="boiler">Boiler</option>
+                            <option value="radiator">Radiator</option>
+                            <option value="cylinder">Cylinder</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="live3dModel">Model:</label>
+                        <select id="live3dModel" disabled>
+                            <option value="">-- Select Type First --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="modelInfoPanel" class="model-info hidden">
+                    <h4 style="margin-bottom: 10px;">📋 Model Dimensions</h4>
+                    <div class="info-row">
+                        <span class="info-label">Width:</span>
+                        <span class="info-value" id="modelWidth">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Height:</span>
+                        <span class="info-value" id="modelHeight">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Depth:</span>
+                        <span class="info-value" id="modelDepth">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Front Clearance:</span>
+                        <span class="info-value" id="modelFrontClearance">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Side Clearance:</span>
+                        <span class="info-value" id="modelSideClearance">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-container" id="live3dContainer">
+                <video id="live3dVideo" autoplay playsinline></video>
+                <!-- Three.js canvas will be inserted here by live3d.js -->
+            </div>
+
+            <div class="live3d-controls">
+                <button class="btn btn-secondary" id="resetPositionBtn">Reset Position ↺</button>
+                <button class="btn btn-success" id="capture3dBtn">Capture Screenshot 📸</button>
+            </div>
+
+            <button class="btn btn-secondary" id="exitLive3dBtn" style="margin-top: 10px;">← Back to Calibration</button>
         </div>
 
         <!-- Step 2: Add Equipment -->
@@ -1253,6 +1426,274 @@
 
         // Make removeEquipment globally accessible
         window.removeEquipment = removeEquipment;
+    </script>
+
+    <!-- Model Store and Live 3D Modules -->
+    <script src="js/modelStore.js"></script>
+    <script src="js/live3d.js"></script>
+
+    <script>
+        // ========== LIVE 3D OVERLAY INTEGRATION ==========
+
+        // Live 3D state
+        const live3dState = {
+            isActive: false,
+            cameraStream: null,
+            selectedType: null,
+            selectedModel: null,
+            calibrationState: {
+                isValid: false,
+                mmPerPixel: 0,
+                markerScreenRect: null
+            }
+        };
+
+        // Initialize Live 3D when models are loaded
+        async function initializeLive3D() {
+            try {
+                await ModelStore.loadAllModels();
+                console.log('[App] Model store loaded');
+                setupLive3DEventListeners();
+            } catch (error) {
+                console.error('[App] Failed to load models:', error);
+            }
+        }
+
+        // Setup event listeners for Live 3D controls
+        function setupLive3DEventListeners() {
+            const objectTypeSelect = document.getElementById('live3dObjectType');
+            const modelSelect = document.getElementById('live3dModel');
+            const resetBtn = document.getElementById('resetPositionBtn');
+            const captureBtn = document.getElementById('capture3dBtn');
+            const exitBtn = document.getElementById('exitLive3dBtn');
+
+            // Object type change
+            objectTypeSelect.addEventListener('change', (e) => {
+                const type = e.target.value;
+                live3dState.selectedType = type;
+                live3dState.selectedModel = null;
+
+                if (type) {
+                    populateModelDropdown(type);
+                    modelSelect.disabled = false;
+                } else {
+                    modelSelect.innerHTML = '<option value="">-- Select Type First --</option>';
+                    modelSelect.disabled = true;
+                    hideModelInfo();
+                }
+            });
+
+            // Model change
+            modelSelect.addEventListener('change', (e) => {
+                const modelId = e.target.value;
+                if (modelId) {
+                    const result = ModelStore.getModelById(modelId);
+                    if (result) {
+                        live3dState.selectedModel = result;
+                        showModelInfo(result.model);
+                        
+                        // Update Live3D if active
+                        if (Live3D.isReady()) {
+                            Live3D.setSelectedModel({
+                                type: result.type,
+                                modelData: result.model
+                            });
+                        }
+                    }
+                } else {
+                    live3dState.selectedModel = null;
+                    hideModelInfo();
+                }
+            });
+
+            // Reset position
+            resetBtn.addEventListener('click', () => {
+                if (Live3D.isReady()) {
+                    Live3D.resetPosition();
+                }
+            });
+
+            // Capture screenshot
+            captureBtn.addEventListener('click', captureLive3DScreenshot);
+
+            // Exit Live 3D
+            exitBtn.addEventListener('click', exitLive3DMode);
+        }
+
+        // Populate model dropdown based on type
+        function populateModelDropdown(type) {
+            const modelSelect = document.getElementById('live3dModel');
+            const models = ModelStore.getModelsByType(type);
+
+            modelSelect.innerHTML = '<option value="">-- Select Model --</option>';
+
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = ModelStore.formatModelName(model, type);
+                modelSelect.appendChild(option);
+            });
+        }
+
+        // Show model info panel
+        function showModelInfo(model) {
+            const panel = document.getElementById('modelInfoPanel');
+            const dims = model.dimensions || {};
+            const clearances = model.serviceClearances || {};
+
+            document.getElementById('modelWidth').textContent = dims.width ? `${dims.width} mm` : '--';
+            document.getElementById('modelHeight').textContent = dims.height ? `${dims.height} mm` : '--';
+            document.getElementById('modelDepth').textContent = dims.depth ? `${dims.depth} mm` : '--';
+            document.getElementById('modelFrontClearance').textContent = clearances.front ? `${clearances.front} mm` : '--';
+            document.getElementById('modelSideClearance').textContent = clearances.sides ? `${clearances.sides} mm` : '--';
+
+            panel.classList.remove('hidden');
+        }
+
+        // Hide model info panel
+        function hideModelInfo() {
+            document.getElementById('modelInfoPanel').classList.add('hidden');
+        }
+
+        // Start Live 3D mode
+        async function startLive3DMode() {
+            const section = document.getElementById('live3dSection');
+            const video = document.getElementById('live3dVideo');
+            const container = document.getElementById('live3dContainer');
+
+            try {
+                // Start camera
+                live3dState.cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: 640, height: 480 }
+                });
+                video.srcObject = live3dState.cameraStream;
+
+                // Wait for video to load
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = resolve;
+                });
+
+                // Initialize Live3D overlay
+                const success = Live3D.initLive3DOverlay(
+                    video,
+                    container,
+                    () => live3dState.calibrationState,
+                    () => live3dState.selectedModel
+                );
+
+                if (success) {
+                    section.classList.remove('hidden');
+                    live3dState.isActive = true;
+                    updateCalibrationBadge();
+                    console.log('[App] Live 3D mode started');
+                }
+            } catch (error) {
+                console.error('[App] Failed to start Live 3D:', error);
+                alert('Failed to access camera: ' + error.message);
+            }
+        }
+
+        // Exit Live 3D mode
+        function exitLive3DMode() {
+            const section = document.getElementById('live3dSection');
+
+            // Stop camera
+            if (live3dState.cameraStream) {
+                live3dState.cameraStream.getTracks().forEach(track => track.stop());
+                live3dState.cameraStream = null;
+            }
+
+            // Dispose Live3D
+            if (Live3D.isReady()) {
+                Live3D.dispose();
+            }
+
+            section.classList.add('hidden');
+            live3dState.isActive = false;
+
+            // Show calibration section
+            document.getElementById('calibrationSection').classList.remove('hidden');
+        }
+
+        // Update calibration badge
+        function updateCalibrationBadge() {
+            const badge = document.getElementById('calibrationBadge');
+            if (live3dState.calibrationState.isValid) {
+                badge.textContent = `Calibrated (${live3dState.calibrationState.mmPerPixel.toFixed(2)} mm/px)`;
+                badge.className = 'calibration-badge valid';
+            } else {
+                badge.textContent = 'Not Calibrated';
+                badge.className = 'calibration-badge invalid';
+            }
+        }
+
+        // Update Live 3D calibration from main calibration
+        function updateLive3DCalibration(pixelsPerMM) {
+            if (pixelsPerMM && pixelsPerMM > 0) {
+                live3dState.calibrationState.isValid = true;
+                live3dState.calibrationState.mmPerPixel = 1 / pixelsPerMM;
+                updateCalibrationBadge();
+                console.log('[App] Live 3D calibration updated:', live3dState.calibrationState.mmPerPixel, 'mm/px');
+            }
+        }
+
+        // Capture screenshot of Live 3D view
+        function captureLive3DScreenshot() {
+            const video = document.getElementById('live3dVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+
+            // Draw video frame
+            ctx.drawImage(video, 0, 0);
+
+            // Get Three.js canvas and composite it
+            const container = document.getElementById('live3dContainer');
+            const threeCanvas = container.querySelector('canvas');
+            if (threeCanvas) {
+                ctx.drawImage(threeCanvas, 0, 0, canvas.width, canvas.height);
+            }
+
+            // Download
+            const link = document.createElement('a');
+            link.download = `clearance-3d-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Add button to launch Live 3D from calibration section
+        function addLive3DLaunchButton() {
+            const cameraControls = document.getElementById('cameraControls');
+            if (cameraControls && !document.getElementById('startLive3dBtn')) {
+                const btn = document.createElement('button');
+                btn.id = 'startLive3dBtn';
+                btn.className = 'btn btn-success';
+                btn.textContent = 'Launch Live 3D Overlay 🎯';
+                btn.addEventListener('click', () => {
+                    document.getElementById('calibrationSection').classList.add('hidden');
+                    startLive3DMode();
+                });
+                cameraControls.appendChild(btn);
+            }
+        }
+
+        // Modify completeCalibration to update Live 3D
+        const originalCompleteCalibration = completeCalibration;
+        completeCalibration = function() {
+            originalCompleteCalibration.call(this);
+            
+            // Update Live 3D with calibration data
+            if (state.pixelsPerMM) {
+                updateLive3DCalibration(state.pixelsPerMM);
+            }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLive3D();
+            addLive3DLaunchButton();
+        });
     </script>
 </body>
 </html>
