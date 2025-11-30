@@ -562,6 +562,7 @@
                 <div><strong>Upload Existing Photo</strong></div>
                 <div style="font-size: 14px; margin-top: 10px; color: #7f8c8d;">Select from device storage</div>
             </div>
+            <input type="file" id="stage2UploadInput" accept="image/*">
             <button class="btn btn-secondary" onclick="goToStep('2c')">Back to Stage 1 Results</button>
         </div>
 
@@ -1021,12 +1022,12 @@
         document.getElementById('uploadInput')?.addEventListener('change', handlePhotoUpload);
 
         // NEW: Stage 1 Photo Upload Handlers
-        document.getElementById('stage1CameraInput').addEventListener('change', handleStage1PhotoUpload);
-        document.getElementById('stage1UploadInput').addEventListener('change', handleStage1PhotoUpload);
+        document.getElementById('stage1CameraInput')?.addEventListener('change', handleStage1PhotoUpload);
+        document.getElementById('stage1UploadInput')?.addEventListener('change', handleStage1PhotoUpload);
 
         // NEW: Stage 2 Photo Upload Handlers
-        document.getElementById('stage2CameraInput').addEventListener('change', handleStage2PhotoUpload);
-        document.getElementById('stage2UploadInput').addEventListener('change', handleStage2PhotoUpload);
+        document.getElementById('stage2CameraInput')?.addEventListener('change', handleStage2PhotoUpload);
+        document.getElementById('stage2UploadInput')?.addEventListener('change', handleStage2PhotoUpload);
 
         function handlePhotoUpload(e) {
             const file = e.target.files[0];
