@@ -13,7 +13,7 @@ This repository contains the Clearance Genie app with professional ArUco marker-
 **The most reliable calibration system using ArUco fiducial markers!**
 
 - **ArUco Marker Detection**: Uses OpenCV.js for robust, sub-pixel accurate marker detection
-- **Multiple Marker Sizes**: Choose from credit card (85mm), A5 (148mm), or A4 (210mm)
+- **Multiple Marker Sizes**: Choose from credit card (53mm), A5 (148mm), or A4 (210mm)
 - **Live Camera Detection**: Real-time marker detection with green outline confirmation
 - **Calibration Lock**: Locks calibration after 5 consecutive detections for reliability
 - **Curved Clearance Arcs**: Proper 300mm, 200mm, 150mm, 75mm curved zones (not boxes)
@@ -26,7 +26,7 @@ This repository contains the Clearance Genie app with professional ArUco marker-
 
 **Print calibration markers in your preferred size!**
 
-- **Credit Card Size (85mm)**: Portable, fits in wallet
+- **Credit Card Size (53mm)**: Portable, fits in wallet
 - **A5 Size (148mm)**: Good for medium distances
 - **A4 Size (210mm)**: Best for large rooms
 
@@ -55,7 +55,7 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 
 | Size | Dimensions | Best For |
 |------|------------|----------|
-| Credit Card | 85mm × 85mm | Portability, close-up work |
+| Credit Card | 53mm × 53mm | Portability, close-up work |
 | A5 | 148mm × 148mm | General use, medium distances |
 | A4 | 210mm × 210mm | Large rooms, best detection |
 
@@ -104,7 +104,7 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 ### 6-Step Process
 
 1. **Select Equipment** - Flue, Boiler, Radiator, or Cylinder
-2. **Print Marker** - Choose credit card (85mm), A5 (148mm), or A4 (210mm)
+2. **Print Marker** - Choose credit card (53mm), A5 (148mm), or A4 (210mm)
 3. **Calibrate** - Hold marker against wall, wait for green lock
 4. **Capture Photo** - Pull back to capture wall area
 5. **Mark Objects** - Tap flue center, then obstacle corners
@@ -197,7 +197,7 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 Clearance Genie uses ArUco marker calibration for professional, accurate heating installation clearance checking.
 
 **Key Features:**
-- Print markers in 3 sizes (85mm, 148mm, 210mm)
+- Print markers in 3 sizes (53mm, 148mm, 210mm)
 - Automatic calibration with camera detection
 - Color-coded clearance zones
 - Works on mobile and desktop
