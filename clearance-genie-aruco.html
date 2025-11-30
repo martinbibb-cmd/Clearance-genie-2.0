@@ -440,7 +440,7 @@
                         Which marker size are you using?
                     </label>
                     <select id="markerSizeSelect" style="width: 100%; padding: 12px; border-radius: 6px; border: 2px solid #667eea; font-size: 15px;">
-                        <option value="85">💳 Credit Card Size (85mm × 85mm)</option>
+                        <option value="53">💳 Credit Card Size (53mm × 53mm)</option>
                         <option value="148">📄 A5 Size (148mm × 148mm)</option>
                         <option value="210">📃 A4 Size (210mm × 210mm)</option>
                     </select>
@@ -644,7 +644,7 @@
         // Get selected marker size from dropdown
         function getSelectedMarkerSize() {
             const select = document.getElementById('markerSizeSelect');
-            return select ? parseInt(select.value, 10) : 85; // Default to credit card size
+            return select ? parseInt(select.value, 10) : 53; // Default to credit card size
         }
 
         // Application State
@@ -656,7 +656,7 @@
             calibration: {
                 locked: false,
                 pixelsPerMM: 0,
-                markerSize: 85, // Default: 85mm (credit card) - matches first option in markerSizeSelect dropdown
+                markerSize: 53, // Default: 53mm (credit card) - matches first option in markerSizeSelect dropdown
                 markerCorners: null,
                 rvec: null,
                 tvec: null,
@@ -1528,7 +1528,7 @@
         // ============================================================
 
         console.log('🔥 Clearance Genie - ArUco Calibration System initialized');
-        console.log('📐 Marker sizes available: 85mm (credit card), 148mm (A5), 210mm (A4)');
+        console.log('📐 Marker sizes available: 53mm (credit card), 148mm (A5), 210mm (A4)');
     </script>
 </body>
 </html>
