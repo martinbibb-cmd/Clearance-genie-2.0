@@ -1,14 +1,28 @@
 # 🚀 Clearance Genie 2.0 - Complete Rebuild
 
-## Three Versions Available
+## Four Versions Available
 
-This repository contains three versions of the Clearance Genie app, each with different approaches:
+This repository contains four versions of the Clearance Genie app, each with different approaches:
 
 -----
 
 ## 📦 What's Included
 
-### ⭐ **NEW: clearance-genie-ai.html** - AI-POWERED VERSION
+### ⭐⭐ **NEW: clearance-genie-aruco.html** - ARUCO MARKER CALIBRATION (RECOMMENDED)
+
+**The most reliable calibration system using ArUco fiducial markers!**
+
+- **ArUco Marker Detection**: Uses OpenCV.js for robust, sub-pixel accurate marker detection
+- **150mm Square Marker**: Large, easy-to-detect calibration reference
+- **Live Camera Detection**: Real-time marker detection with green outline confirmation
+- **Calibration Lock**: Locks calibration after 5 consecutive detections for reliability
+- **Curved Clearance Arcs**: Proper 300mm, 200mm, 150mm, 75mm curved zones (not boxes)
+- **Pass/Fail Color Coding**: Red (non-compliant), Amber (influenced), Green (compliant)
+- **Distance & Orientation**: Displays estimated distance and camera orientation
+- **Metadata Capture**: GPS, timestamp, and calibration validity saved with results
+- **Equipment Types**: Flue, Boiler, Radiator, Cylinder
+
+### ⭐ **clearance-genie-ai.html** - AI-POWERED VERSION
 
 **The most advanced version with automatic object and credit card detection!**
 
@@ -45,6 +59,46 @@ Complete API specification and integration guide for the AI Worker
 ### 4. **README-COMPLETE.md**
 
 User guide for manual version (index.html)
+
+-----
+
+## 📐 ArUco Marker Calibration (Recommended)
+
+### Why ArUco?
+
+ArUco is a mature open-source fiducial marker system used in robotics, drones, SLAM, and AR applications. It provides:
+
+- **Extremely robust detection** at distance and angle
+- **Sub-pixel corner accuracy** for precise measurements
+- **Stability under poor lighting** conditions
+- **Orientation and perspective correction** support
+
+### ArUco Marker Specification
+
+| Property | Value |
+|----------|-------|
+| Size | 150mm × 150mm (±1mm tolerance) |
+| Dictionary | DICT_6X6_50 |
+| Border | 10-15mm white margin |
+| Finish | Matte (avoid reflections) |
+| Material | Laminated card or waterproof plastic |
+
+### Calibration Workflow
+
+1. **Place Marker**: Position the 150mm ArUco marker on the same wall plane as the flue/equipment
+2. **Start Calibration**: App begins live camera detection
+3. **Lock Calibration**: After 5 consecutive detections, calibration locks with green confirmation
+4. **Capture Wall Photo**: Pull back to capture the full wall area
+5. **Mark Objects**: Tap to mark flue center and obstacle positions
+6. **Analyze Results**: View curved clearance arcs with pass/fail color coding
+
+### Detection Details
+
+The app uses OpenCV.js with adaptive thresholding and contour analysis to:
+- Detect square quadrilaterals with the correct aspect ratio
+- Verify ArUco-like black/white pattern inside the marker
+- Calculate pixel-to-mm scale from the known 150mm marker size
+- Estimate camera distance and orientation
 
 -----
 
