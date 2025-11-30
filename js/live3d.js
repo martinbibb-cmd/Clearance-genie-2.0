@@ -273,7 +273,7 @@ const Live3D = (function() {
         
         // Add wireframe edge
         const edges = new THREE.EdgesGeometry(equipmentGeometry);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
         equipmentMesh.add(wireframe);
 
@@ -294,7 +294,6 @@ const Live3D = (function() {
             const haloEdges = new THREE.EdgesGeometry(haloGeometry);
             const haloMaterial = new THREE.LineBasicMaterial({
                 color: CLEARANCE_COLOR,
-                linewidth: 2,
                 transparent: true,
                 opacity: 0.8
             });

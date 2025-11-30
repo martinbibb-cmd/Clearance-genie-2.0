@@ -34,9 +34,18 @@ const ModelStore = (function() {
         }
 
         loadPromise = Promise.all([
-            fetch('data/boiler_clearances.json').then(r => r.json()).catch(() => ({ models: [] })),
-            fetch('data/radiators.json').then(r => r.json()).catch(() => ({ radiators: {} })),
-            fetch('data/cylinders.json').then(r => r.json()).catch(() => ({ cylinders: [] }))
+            fetch('data/boiler_clearances.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load boiler_clearances.json:', err.message);
+                return { models: [] };
+            }),
+            fetch('data/radiators.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load radiators.json:', err.message);
+                return { radiators: {} };
+            }),
+            fetch('data/cylinders.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load cylinders.json:', err.message);
+                return { cylinders: [] };
+            })
         ]).then(([boilerData, radiatorData, cylinderData]) => {
             boilerModels = boilerData.models || [];
             

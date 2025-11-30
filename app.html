@@ -1648,11 +1648,21 @@
             // Draw video frame
             ctx.drawImage(video, 0, 0);
 
-            // Get Three.js canvas and composite it
+            // Get Three.js canvas and composite it with proper scaling
             const container = document.getElementById('live3dContainer');
             const threeCanvas = container.querySelector('canvas');
-            if (threeCanvas) {
-                ctx.drawImage(threeCanvas, 0, 0, canvas.width, canvas.height);
+            if (threeCanvas && threeCanvas.width > 0 && threeCanvas.height > 0) {
+                // Calculate scale to maintain aspect ratio
+                const scaleX = canvas.width / threeCanvas.width;
+                const scaleY = canvas.height / threeCanvas.height;
+                const scale = Math.min(scaleX, scaleY);
+                
+                const destWidth = threeCanvas.width * scale;
+                const destHeight = threeCanvas.height * scale;
+                const destX = (canvas.width - destWidth) / 2;
+                const destY = (canvas.height - destHeight) / 2;
+                
+                ctx.drawImage(threeCanvas, destX, destY, destWidth, destHeight);
             }
 
             // Download
