@@ -704,10 +704,12 @@
                 corners: [], // Array of 4 points {x, y}
                 correctedImage: null
             },
-            selectedModel: null  // Store selected model from ModelStore
+            selectedModel: null,  // Store selected model from ModelStore
+            modelDimensions: null,  // Store model dimensions separately to avoid mutating EQUIPMENT_CONFIG
+            modelName: null  // Store model name separately
         };
 
-        // Equipment Configurations
+        // Equipment Configurations (default values - should not be mutated)
         const EQUIPMENT_CONFIG = {
             flue: {
                 name: 'Flue Terminal',
@@ -925,22 +927,14 @@
 
             state.selectedModel = modelInfo.model;
 
-            // Update the EQUIPMENT_CONFIG with actual model dimensions
-            const config = EQUIPMENT_CONFIG[state.equipmentType];
+            // Store model dimensions and name in state (avoid mutating EQUIPMENT_CONFIG)
             if (state.selectedModel.dimensions) {
-                config.dimensions = {
+                state.modelDimensions = {
                     width: state.selectedModel.dimensions.width,
                     height: state.selectedModel.dimensions.height,
                     depth: state.selectedModel.dimensions.depth || 0
                 };
-                config.name = `${state.selectedModel.brand || ''} ${state.selectedModel.range || state.selectedModel.model || ''}`.trim();
-            }
-
-            // Update service clearances if available
-            if (state.selectedModel.serviceClearances) {
-                const sc = state.selectedModel.serviceClearances;
-                // Map service clearances to obstacle clearances
-                if (sc.front) config.serviceClearance = sc;
+                state.modelName = `${state.selectedModel.brand || ''} ${state.selectedModel.range || state.selectedModel.model || ''}`.trim();
             }
 
             // Show selected model info
@@ -1854,8 +1848,11 @@
             // Update equipment summary display
             const summaryDiv = document.getElementById('selectedEquipmentSummary');
             if (summaryDiv) {
-                let summaryHtml = `<strong>${config.icon} ${config.name}</strong>`;
-                summaryHtml += ` (${config.dimensions.width}mm × ${config.dimensions.height}mm)`;
+                // Use state.modelName and state.modelDimensions if available
+                const displayName = state.modelName || config.name;
+                const dims = state.modelDimensions || config.dimensions;
+                let summaryHtml = `<strong>${config.icon} ${displayName}</strong>`;
+                summaryHtml += ` (${dims.width}mm × ${dims.height}mm)`;
                 
                 if (state.selectedModel && state.selectedModel.serviceClearances) {
                     const sc = state.selectedModel.serviceClearances;
@@ -1872,6 +1869,10 @@
             const canvas = document.getElementById('placementCanvas');
             const ctx = canvas.getContext('2d');
             const config = EQUIPMENT_CONFIG[state.equipmentType];
+            
+            // Use model dimensions from state if available, otherwise fall back to config defaults
+            const dimensions = state.modelDimensions || config.dimensions;
+            const displayName = state.modelName || config.name;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1887,11 +1888,11 @@
             }
 
             // Calculate equipment dimensions in pixels
-            const equipWidthPx = config.dimensions.width * state.scale.pixelsPerMM;
-            const equipHeightPx = config.dimensions.height * state.scale.pixelsPerMM;
+            const equipWidthPx = dimensions.width * state.scale.pixelsPerMM;
+            const equipHeightPx = dimensions.height * state.scale.pixelsPerMM;
 
             console.log('Equipment dimensions:');
-            console.log(`  Physical: ${config.dimensions.width}mm × ${config.dimensions.height}mm`);
+            console.log(`  Physical: ${dimensions.width}mm × ${dimensions.height}mm`);
             console.log(`  On screen: ${equipWidthPx.toFixed(1)}px × ${equipHeightPx.toFixed(1)}px`);
 
             // Equipment rectangle (centered on position)
@@ -1941,8 +1942,10 @@
             ctx.setLineDash([]);
 
             // Draw label for service clearance
-            const clearanceLabel = serviceClearances.front ? 
-                `Service: ${serviceClearances.sides}mm sides, ${serviceClearances.above}mm above, ${serviceClearances.below}mm below` :
+            // Check if any specific clearances exist to show detailed label
+            const hasSpecificClearances = serviceClearances.sides || serviceClearances.above || serviceClearances.below || serviceClearances.front;
+            const clearanceLabel = hasSpecificClearances ? 
+                `Service: ${serviceClearances.sides || 0}mm sides, ${serviceClearances.above || 0}mm above, ${serviceClearances.below || 0}mm below` :
                 `Service Zone: ${Object.values(serviceClearances)[0] || 0}mm`;
             
             ctx.fillStyle = 'rgba(39, 174, 96, 0.9)';
@@ -2040,7 +2043,7 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(
-                `${config.name} (${config.dimensions.width}×${config.dimensions.height}mm)`,
+                `${displayName} (${dimensions.width}×${dimensions.height}mm)`,
                 state.equipmentPosition.x,
                 equipRect.y + equipRect.height + 8
             );
