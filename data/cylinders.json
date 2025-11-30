@@ -1,0 +1,955 @@
+{
+  "schemaVersion": 1,
+  "units": "mm",
+  "currency": "GBP",
+  "cylinders": [
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "Envirofoam Stainless Steel",
+      "volume": 162,
+      "dimensions": {
+        "height": 1200,
+        "diameter": 520
+      },
+      "price": 238.56,
+      "code": "CCYL1089"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Combination Copper",
+      "model": "Combination",
+      "volume": 140,
+      "dimensions": {
+        "height": 1075,
+        "diameter": 520
+      },
+      "price": 380.68,
+      "code": "CCYL1090"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Combination Copper",
+      "model": "Combination",
+      "volume": 162,
+      "dimensions": {
+        "height": 1200,
+        "diameter": 520
+      },
+      "price": 380.68,
+      "code": "CCYL1091"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Combination Copper",
+      "model": "Combination",
+      "volume": 210,
+      "dimensions": {
+        "height": 1850,
+        "diameter": 520
+      },
+      "price": 578.04,
+      "code": "CCYL1092"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 180,
+      "dimensions": {
+        "height": 1306,
+        "diameter": 550
+      },
+      "price": 873.28,
+      "code": "CCYL1093"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 210,
+      "dimensions": {
+        "height": 1494,
+        "diameter": 550
+      },
+      "price": 859.21,
+      "code": "CCYL1094"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 250,
+      "dimensions": {
+        "height": 1744,
+        "diameter": 550
+      },
+      "price": 982.56,
+      "code": "CCYL1095"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 300,
+      "dimensions": {
+        "height": 1990,
+        "diameter": 550
+      },
+      "price": 982.56,
+      "code": "CCYL1096"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 90,
+      "dimensions": {
+        "height": 764,
+        "diameter": 550
+      },
+      "price": 763.79,
+      "code": "CCYL1097"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 120,
+      "dimensions": {
+        "height": 931,
+        "diameter": 550
+      },
+      "price": 763.79,
+      "code": "CCYL1098"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented",
+      "model": "StainlessLite Plus",
+      "volume": 150,
+      "dimensions": {
+        "height": 1118,
+        "diameter": 550
+      },
+      "price": 763.79,
+      "code": "CCYL1099"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented Slimline",
+      "model": "StainlessLite Plus Slimline",
+      "volume": 90,
+      "dimensions": {
+        "height": 976,
+        "diameter": 475
+      },
+      "price": 763.79,
+      "code": "CCYL1108"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented Slimline",
+      "model": "StainlessLite Plus Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1284,
+        "diameter": 475
+      },
+      "price": 763.79,
+      "code": "CCYL1109"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented Slimline",
+      "model": "StainlessLite Plus Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1520,
+        "diameter": 475
+      },
+      "price": 763.79,
+      "code": "CCYL1110"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented Slimline",
+      "model": "StainlessLite Plus Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1790,
+        "diameter": 475
+      },
+      "price": 873.28,
+      "code": "CCYL1111"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Unvented Slimline",
+      "model": "StainlessLite Plus Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 1963,
+        "diameter": 475
+      },
+      "price": 873.28,
+      "code": "CCYL1112"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Unvented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 180,
+      "dimensions": null,
+      "price": 873.28,
+      "code": "CCYL1100"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Unvented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 210,
+      "dimensions": null,
+      "price": 873.28,
+      "code": "CCYL1101"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Unvented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 250,
+      "dimensions": null,
+      "price": 982.56,
+      "code": "CCYL1102"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Unvented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 300,
+      "dimensions": null,
+      "price": 982.56,
+      "code": "CCYL1103"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Vented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 180,
+      "dimensions": null,
+      "price": 578.04,
+      "code": "CCYL1104"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Vented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 210,
+      "dimensions": null,
+      "price": 610.46,
+      "code": "CCYL1105"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Vented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 250,
+      "dimensions": null,
+      "price": 610.46,
+      "code": "CCYL1106"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Twin Coil Vented",
+      "model": "StainlessLite Plus Twin Coil",
+      "volume": 300,
+      "dimensions": null,
+      "price": 643.28,
+      "code": "CCYL1107"
+    },
+    {
+      "brand": "Telford",
+      "type": "Buffer",
+      "model": "Stainless Buffer Store with Immersion Heater",
+      "volume": 50,
+      "dimensions": null,
+      "price": 320.00,
+      "code": "CCYL0001"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Slim Heat Pump",
+      "volume": 180,
+      "dimensions": null,
+      "price": 830.00,
+      "code": "CCYL0002"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Slim Heat Pump",
+      "volume": 210,
+      "dimensions": null,
+      "price": 900.00,
+      "code": "CCYL0003"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Heat Pump",
+      "volume": 180,
+      "dimensions": null,
+      "price": 780.00,
+      "code": "CCYL0004"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Heat Pump",
+      "volume": 210,
+      "dimensions": null,
+      "price": 810.00,
+      "code": "CCYL0005"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Heat Pump",
+      "volume": 250,
+      "dimensions": null,
+      "price": 850.00,
+      "code": "CCYL0006"
+    },
+    {
+      "brand": "Gledhill",
+      "type": "Heat Pump",
+      "model": "SL Plus Heat Pump",
+      "volume": 300,
+      "dimensions": null,
+      "price": 910.00,
+      "code": "CCYL0007"
+    },
+    {
+      "brand": "Vaillant",
+      "type": "Standard Unvented",
+      "model": "uniSTOR",
+      "volume": 150,
+      "dimensions": null,
+      "price": 660.00,
+      "code": "CCYL1311"
+    },
+    {
+      "brand": "Vaillant",
+      "type": "Standard Unvented",
+      "model": "uniSTOR",
+      "volume": 200,
+      "dimensions": null,
+      "price": 690.00,
+      "code": "CCYL1312"
+    },
+    {
+      "brand": "Vaillant",
+      "type": "Standard Unvented",
+      "model": "uniSTOR",
+      "volume": 250,
+      "dimensions": null,
+      "price": 850.00,
+      "code": "CCYL1313"
+    },
+    {
+      "brand": "Vaillant",
+      "type": "Standard Unvented",
+      "model": "uniSTOR",
+      "volume": 300,
+      "dimensions": null,
+      "price": 910.00,
+      "code": "CCYL1314"
+    },
+    {
+      "brand": "Vaillant",
+      "type": "Buffer",
+      "model": "aroTHERM Buffer",
+      "volume": 45,
+      "dimensions": null,
+      "price": 360.00,
+      "code": "CCYL1310"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 1992,
+        "diameter": 470
+      },
+      "price": 1681.00,
+      "code": "CCYL1326"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 986,
+        "diameter": 582
+      },
+      "price": 1427.26,
+      "code": "CCYL0008"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1166,
+        "diameter": 582
+      },
+      "price": 1447.64,
+      "code": "CCYL0009"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1346,
+        "diameter": 582
+      },
+      "price": 1498.62,
+      "code": "CCYL0010"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1526,
+        "diameter": 582
+      },
+      "price": 1529.21,
+      "code": "CCYL0011"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 986,
+        "diameter": 582
+      },
+      "price": 1427.26,
+      "code": "CCYL0012"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1166,
+        "diameter": 582
+      },
+      "price": 1420.00,
+      "code": "CCYL0013"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1346,
+        "diameter": 582
+      },
+      "price": 1498.62,
+      "code": "CCYL0014"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1526,
+        "diameter": 582
+      },
+      "price": 1529.21,
+      "code": "CCYL0015"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1250,
+        "diameter": 485
+      },
+      "price": 1437.46,
+      "code": "CCYL0016"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1440,
+        "diameter": 485
+      },
+      "price": 1457.84,
+      "code": "CCYL0017"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1690,
+        "diameter": 485
+      },
+      "price": 1508.82,
+      "code": "CCYL0018"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 2000,
+        "diameter": 485
+      },
+      "price": 1549.60,
+      "code": "CCYL0019"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1250,
+        "diameter": 485
+      },
+      "price": 1420.00,
+      "code": "CCYL0020"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1440,
+        "diameter": 485
+      },
+      "price": 1478.23,
+      "code": "CCYL0021"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1690,
+        "diameter": 485
+      },
+      "price": 1470.00,
+      "code": "CCYL0022"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 2000,
+        "diameter": 485
+      },
+      "price": 1419.72,
+      "code": "CCYL0023"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 1992,
+        "diameter": 470
+      },
+      "price": 1409.00,
+      "code": "CCYL1330"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1241,
+        "diameter": 470
+      },
+      "price": 1445.60,
+      "code": "CCYL1327"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1429,
+        "diameter": 470
+      },
+      "price": 1466.60,
+      "code": "CCYL1328"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1676,
+        "diameter": 470
+      },
+      "price": 1488.60,
+      "code": "CCYL1329"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1429,
+        "diameter": 470
+      },
+      "price": 1639.00,
+      "code": "CCYL1324"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1300,
+        "diameter": 580
+      },
+      "price": 1539.00,
+      "code": "CCYL1317"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1676,
+        "diameter": 470
+      },
+      "price": 1549.00,
+      "code": "CCYL1325"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1500,
+        "diameter": 580
+      },
+      "price": 1671.20,
+      "code": "CCYL1318"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 1050,
+        "diameter": 580
+      },
+      "price": 1499.00,
+      "code": "CCYL1315"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1241,
+        "diameter": 470
+      },
+      "price": 1509.00,
+      "code": "CCYL1323"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1200,
+        "diameter": 580
+      },
+      "price": 1519.00,
+      "code": "CCYL1316"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1300,
+        "diameter": 580
+      },
+      "price": 1477.60,
+      "code": "CCYL1321"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1500,
+        "diameter": 580
+      },
+      "price": 1499.80,
+      "code": "CCYL1322"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 1050,
+        "diameter": 580
+      },
+      "price": 1339.00,
+      "code": "CCYL1319"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1200,
+        "diameter": 580
+      },
+      "price": 1359.00,
+      "code": "CCYL1320"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1510,
+        "diameter": 478
+      },
+      "price": 1375.67,
+      "code": "CCYL1133"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 2073,
+        "diameter": 478
+      },
+      "price": 1419.72,
+      "code": "CCYL1135"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1613,
+        "diameter": 580
+      },
+      "price": 1408.30,
+      "code": "CCYL1127"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1760,
+        "diameter": 478
+      },
+      "price": 1397.09,
+      "code": "CCYL1134"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1332,
+        "diameter": 478
+      },
+      "price": 1353.24,
+      "code": "CCYL1128"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Open Vented",
+      "model": "Mixergy Slimline",
+      "volume": 120,
+      "dimensions": {
+        "height": 1332,
+        "diameter": 478
+      },
+      "price": 1353.24,
+      "code": "CCYL1132"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 1053,
+        "diameter": 580
+      },
+      "price": 1343.05,
+      "code": "CCYL1124"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 210,
+      "dimensions": {
+        "height": 2073,
+        "diameter": 478
+      },
+      "price": 1419.72,
+      "code": "CCYL1131"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1423,
+        "diameter": 580
+      },
+      "price": 1386.89,
+      "code": "CCYL1126"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Open Vented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1237,
+        "diameter": 580
+      },
+      "price": 1364.46,
+      "code": "CCYL1125"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 180,
+      "dimensions": {
+        "height": 1760,
+        "diameter": 478
+      },
+      "price": 1397.09,
+      "code": "CCYL1130"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 180,
+      "dimensions": {
+        "height": 1423,
+        "diameter": 580
+      },
+      "price": 1386.89,
+      "code": "CCYL1122"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Slimline Unvented",
+      "model": "Mixergy Slimline",
+      "volume": 150,
+      "dimensions": {
+        "height": 1510,
+        "diameter": 478
+      },
+      "price": 1375.67,
+      "code": "CCYL1129"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 210,
+      "dimensions": {
+        "height": 1613,
+        "diameter": 580
+      },
+      "price": 1408.30,
+      "code": "CCYL1123"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 150,
+      "dimensions": {
+        "height": 1237,
+        "diameter": 580
+      },
+      "price": 1364.46,
+      "code": "CCYL1121"
+    },
+    {
+      "brand": "Mixergy",
+      "type": "Unvented",
+      "model": "Mixergy",
+      "volume": 120,
+      "dimensions": {
+        "height": 1053,
+        "diameter": 580
+      },
+      "price": 1343.05,
+      "code": "CCYL1120"
+    }
+  ]
+}

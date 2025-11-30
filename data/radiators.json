@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "units": "mm",
+  "radiators": {
+    "heights": [300, 450, 600],
+    "widthRange": {
+      "min": 400,
+      "max": 3500,
+      "step": 100
+    },
+    "clearances": {
+      "sideLeft": 150,
+      "sideRight": 150,
+      "below": 150
+    },
+    "notes": [
+      "Radiators are available in heights of 300mm, 450mm, or 600mm.",
+      "Widths start at 400mm and go up to 3500mm in 100mm increments.",
+      "Minimum clearance of 150mm is required on each side (left and right) and below the radiator."
+    ]
+  },
+  "availableWidths": [
+    400, 500, 600, 700, 800, 900, 1000,
+    1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000,
+    2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000,
+    3100, 3200, 3300, 3400, 3500
+  ]
+}
