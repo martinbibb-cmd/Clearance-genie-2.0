@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clearance Genie - Print ArUco Markers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .instructions {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .instructions strong {
+            color: #667eea;
+        }
+
+        .instructions ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        .size-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .size-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .size-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .size-card .icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        .size-card .label {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .size-card .description {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .size-card .dimensions {
+            font-size: 12px;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        /* Marker preview */
+        .marker-preview {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .marker-preview canvas {
+            border: 2px solid #333;
+            max-width: 100%;
+        }
+
+        .marker-info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .container {
+                max-width: 100% !important;
+            }
+
+            .header, .card:not(#printArea), .btn, .no-print {
+                display: none !important;
+            }
+
+            #printArea {
+                display: block !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+            }
+
+            .print-marker {
+                page-break-inside: avoid;
+                margin: 0 auto;
+            }
+
+            .print-marker canvas {
+                border: 1px solid #000 !important;
+            }
+
+            .print-instructions {
+                display: block !important;
+                font-size: 10pt;
+                margin-top: 10px;
+                color: #333;
+            }
+        }
+
+        /* Hidden print area */
+        #printArea {
+            display: none;
+        }
+
+        #printArea.show-for-print {
+            display: block;
+        }
+
+        .print-marker {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .print-instructions {
+            display: none;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #555;
+            text-align: left;
+        }
+
+        .print-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        /* Tips box */
+        .tips-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .tips-box h3 {
+            color: #155724;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .tips-box ul {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #155724;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="welcome.html" class="back-link no-print">← Back to Welcome</a>
+        
+        <div class="header no-print">
+            <h1>📐 Print ArUco Markers</h1>
+            <div class="subtitle">Generate calibration markers for accurate measurements</div>
+        </div>
+
+        <!-- Size Selection -->
+        <div class="card no-print">
+            <h2>Select Marker Size</h2>
+            
+            <div class="instructions">
+                <strong>📋 Choose the right size for your needs:</strong>
+                <ul>
+                    <li><strong>Credit Card Size (85mm):</strong> Portable, fits in wallet, good for close-up calibration</li>
+                    <li><strong>A5 Size (148mm):</strong> Better visibility at medium distances</li>
+                    <li><strong>A4 Size (210mm):</strong> Best for large rooms and distant measurements</li>
+                </ul>
+            </div>
+
+            <div class="size-options">
+                <div class="size-card" onclick="selectSize('credit-card')">
+                    <div class="icon">💳</div>
+                    <div class="label">Credit Card</div>
+                    <div class="description">Pocket-sized marker for portability</div>
+                    <div class="dimensions">85mm × 85mm marker</div>
+                </div>
+
+                <div class="size-card" onclick="selectSize('a5')">
+                    <div class="icon">📄</div>
+                    <div class="label">A5 Size</div>
+                    <div class="description">Medium size for general use</div>
+                    <div class="dimensions">148mm × 148mm marker</div>
+                </div>
+
+                <div class="size-card" onclick="selectSize('a4')">
+                    <div class="icon">📃</div>
+                    <div class="label">A4 Size</div>
+                    <div class="description">Large marker for best detection</div>
+                    <div class="dimensions">210mm × 210mm marker</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marker Preview -->
+        <div class="card no-print" id="previewSection" style="display: none;">
+            <h2>Marker Preview</h2>
+            
+            <div class="marker-preview">
+                <canvas id="previewCanvas"></canvas>
+                <div class="marker-info" id="markerInfo"></div>
+            </div>
+
+            <div class="tips-box">
+                <h3>🖨️ Printing Tips:</h3>
+                <ul>
+                    <li><strong>Use matte paper</strong> - Avoid glossy paper which can cause reflections</li>
+                    <li><strong>Print at 100% scale</strong> - Don't resize or fit to page</li>
+                    <li><strong>Laminate if possible</strong> - Protects the marker for repeated use</li>
+                    <li><strong>Check print quality</strong> - Ensure black squares are solid, not faded</li>
+                    <li><strong>Keep white border</strong> - The white margin around the marker aids detection</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-success" onclick="printMarker()">🖨️ Print This Marker</button>
+            <button class="btn btn-secondary" onclick="downloadMarker()">📥 Download as PNG</button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card no-print">
+            <h2>📖 How to Use ArUco Markers</h2>
+            
+            <div class="instructions">
+                <strong>Step 1: Print Your Marker</strong>
+                <ul>
+                    <li>Select a size above and print on matte paper</li>
+                    <li>Ensure printing is at 100% scale (no resizing)</li>
+                    <li>Cut along the outer edge, leaving the white border</li>
+                </ul>
+            </div>
+
+            <div class="instructions">
+                <strong>Step 2: Position on Wall</strong>
+                <ul>
+                    <li>Hold the marker flat against the wall you want to measure</li>
+                    <li>Position it on the same plane as the equipment/flue</li>
+                    <li>Ensure good lighting without reflections</li>
+                </ul>
+            </div>
+
+            <div class="instructions">
+                <strong>Step 3: Calibrate with App</strong>
+                <ul>
+                    <li>Open Clearance Genie ArUco calibration</li>
+                    <li>Point camera at the marker until it's detected (green outline)</li>
+                    <li>Wait for calibration to lock (5 consecutive detections)</li>
+                    <li>Then capture your wall photo for measurement</li>
+                </ul>
+            </div>
+
+            <button class="btn" onclick="location.href='clearance-genie-aruco.html'">
+                Open Clearance Genie ArUco 🚀
+            </button>
+        </div>
+
+        <!-- Print Area (hidden, shown only when printing) -->
+        <div class="card" id="printArea">
+            <div class="print-marker">
+                <div class="print-title" id="printTitle">ArUco Marker - 150mm</div>
+                <canvas id="printCanvas"></canvas>
+                <div class="print-instructions" id="printInstructions">
+                    <strong>Clearance Genie Calibration Marker</strong><br>
+                    • Print at 100% scale on matte paper<br>
+                    • Do not resize - marker size is calibrated<br>
+                    • Keep the white border around the marker<br>
+                    • Laminate for durability<br>
+                    • Hold flat against wall during calibration
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ArUco marker pattern (simplified 6x6 marker from DICT_6X6_50, ID 0)
+        // This is a valid ArUco marker pattern
+        const ARUCO_PATTERN = [
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 0, 1],
+            [1, 0, 0, 1, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+
+        // Size configurations (in mm)
+        const SIZE_CONFIG = {
+            'credit-card': {
+                markerSize: 85,
+                name: 'Credit Card Size',
+                description: '85mm × 85mm marker - fits credit card dimensions'
+            },
+            'a5': {
+                markerSize: 148,
+                name: 'A5 Size',
+                description: '148mm × 148mm marker - fits A5 paper with border'
+            },
+            'a4': {
+                markerSize: 210,
+                name: 'A4 Size',
+                description: '210mm × 210mm marker - fits A4 paper with border'
+            }
+        };
+
+        let currentSize = null;
+
+        function selectSize(size) {
+            currentSize = size;
+            const config = SIZE_CONFIG[size];
+            
+            document.getElementById('previewSection').style.display = 'block';
+            
+            // Draw preview
+            drawMarker('previewCanvas', 300); // Preview at 300px
+            
+            // Update info
+            document.getElementById('markerInfo').innerHTML = `
+                <strong>${config.name}</strong><br>
+                ${config.description}<br>
+                <em>Preview shown at reduced size - actual print will be ${config.markerSize}mm × ${config.markerSize}mm</em>
+            `;
+
+            // Scroll to preview
+            document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function drawMarker(canvasId, pixelSize) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            const gridSize = ARUCO_PATTERN.length;
+            const cellSize = pixelSize / gridSize;
+            
+            canvas.width = pixelSize;
+            canvas.height = pixelSize;
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, pixelSize, pixelSize);
+            
+            // Draw pattern
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    if (ARUCO_PATTERN[row][col] === 1) {
+                        ctx.fillStyle = 'black';
+                    } else {
+                        ctx.fillStyle = 'white';
+                    }
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        function drawMarkerForPrint(canvasId) {
+            if (!currentSize) return;
+            
+            const config = SIZE_CONFIG[currentSize];
+            // Convert mm to pixels at 96 DPI (standard screen/print DPI)
+            // 1 inch = 25.4mm, 96 pixels = 1 inch
+            // pixels = mm * (96 / 25.4) = mm * 3.78
+            const pixelSize = Math.round(config.markerSize * 3.78);
+            
+            drawMarker(canvasId, pixelSize);
+            
+            // Update print title
+            document.getElementById('printTitle').textContent = 
+                `ArUco Marker - ${config.markerSize}mm × ${config.markerSize}mm`;
+        }
+
+        function printMarker() {
+            if (!currentSize) {
+                alert('Please select a marker size first');
+                return;
+            }
+
+            // Draw marker at print size
+            drawMarkerForPrint('printCanvas');
+            
+            // Show print area
+            document.getElementById('printArea').classList.add('show-for-print');
+            document.getElementById('printInstructions').style.display = 'block';
+            
+            // Trigger print dialog
+            setTimeout(() => {
+                window.print();
+                // Hide print area after printing
+                setTimeout(() => {
+                    document.getElementById('printArea').classList.remove('show-for-print');
+                }, 500);
+            }, 100);
+        }
+
+        function downloadMarker() {
+            if (!currentSize) {
+                alert('Please select a marker size first');
+                return;
+            }
+
+            const config = SIZE_CONFIG[currentSize];
+            
+            // Create high-resolution canvas for download
+            const downloadCanvas = document.createElement('canvas');
+            const highResDPI = 300; // 300 DPI for high quality print
+            const pixelSize = Math.round(config.markerSize * (highResDPI / 25.4));
+            
+            downloadCanvas.width = pixelSize;
+            downloadCanvas.height = pixelSize;
+            
+            const ctx = downloadCanvas.getContext('2d');
+            const gridSize = ARUCO_PATTERN.length;
+            const cellSize = pixelSize / gridSize;
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, pixelSize, pixelSize);
+            
+            // Draw pattern
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    if (ARUCO_PATTERN[row][col] === 1) {
+                        ctx.fillStyle = 'black';
+                    } else {
+                        ctx.fillStyle = 'white';
+                    }
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = `aruco-marker-${config.markerSize}mm.png`;
+            link.href = downloadCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        console.log('ArUco Marker Generator initialized');
+    </script>
+</body>
+</html>

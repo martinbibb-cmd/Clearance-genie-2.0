@@ -424,7 +424,7 @@
             <h2>Step 2: ArUco Marker Calibration</h2>
             <div class="instructions">
                 <strong>📐 Calibration with ArUco Marker:</strong><br><br>
-                Place your <strong>150mm ArUco marker</strong> on the wall:
+                Select your marker size and place it on the wall:
                 <ul>
                     <li>Hold the marker flat against the same plane as the flue/window</li>
                     <li>Position it next to the flue or window frame</li>
@@ -434,10 +434,16 @@
             </div>
             
             <div class="calibration-info">
-                <h3>📋 ArUco Marker Specification</h3>
-                <div class="row">
-                    <span class="label">Marker Size:</span>
-                    <span class="value">150mm × 150mm</span>
+                <h3>📋 Select Marker Size</h3>
+                <div style="margin: 15px 0;">
+                    <label for="markerSizeSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                        Which marker size are you using?
+                    </label>
+                    <select id="markerSizeSelect" style="width: 100%; padding: 12px; border-radius: 6px; border: 2px solid #667eea; font-size: 15px;">
+                        <option value="85">💳 Credit Card Size (85mm × 85mm)</option>
+                        <option value="148">📄 A5 Size (148mm × 148mm)</option>
+                        <option value="210">📃 A4 Size (210mm × 210mm)</option>
+                    </select>
                 </div>
                 <div class="row">
                     <span class="label">Dictionary:</span>
@@ -445,12 +451,19 @@
                 </div>
                 <div class="row">
                     <span class="label">Border Margin:</span>
-                    <span class="value">10-15mm white</span>
+                    <span class="value">Keep white border visible</span>
                 </div>
                 <div class="row">
                     <span class="label">Finish:</span>
                     <span class="value">Matte (no reflections)</span>
                 </div>
+            </div>
+
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+                <strong style="color: #155724;">💡 Need to print a marker?</strong>
+                <p style="margin-top: 5px; color: #155724;">
+                    <a href="aruco-markers.html" style="color: #155724; text-decoration: underline;">Click here to print ArUco markers</a> in credit card, A5, or A4 sizes.
+                </p>
             </div>
 
             <button class="btn btn-success" onclick="startCalibration()">Start Camera Calibration 📷</button>
@@ -628,6 +641,12 @@
             document.getElementById('loadingScreen')?.classList.add('hidden');
         }
 
+        // Get selected marker size from dropdown
+        function getSelectedMarkerSize() {
+            const select = document.getElementById('markerSizeSelect');
+            return select ? parseInt(select.value, 10) : 85; // Default to credit card size
+        }
+
         // Application State
         const state = {
             equipmentType: null,
@@ -637,7 +656,7 @@
             calibration: {
                 locked: false,
                 pixelsPerMM: 0,
-                markerSize: 150, // mm
+                markerSize: 85, // mm - will be updated from dropdown
                 markerCorners: null,
                 rvec: null,
                 tvec: null,
@@ -754,6 +773,10 @@
                 alert('OpenCV is still loading. Please wait a moment and try again.');
                 return;
             }
+
+            // Update marker size from dropdown selection
+            state.calibration.markerSize = getSelectedMarkerSize();
+            console.log(`📐 Using marker size: ${state.calibration.markerSize}mm`);
 
             goToStep(3);
 
@@ -1125,7 +1148,7 @@
             document.getElementById('lockedCalibrationInfo').textContent = 
                 `Scale: ${state.calibration.pixelsPerMM.toFixed(3)} px/mm | ` +
                 `Distance: ${Math.round(state.calibration.distance)}mm | ` +
-                `Marker: 150mm ArUco`;
+                `Marker: ${state.calibration.markerSize}mm ArUco`;
 
             try {
                 state.cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -1456,7 +1479,7 @@
                 <strong>Metadata:</strong><br>
                 Timestamp: ${state.metadata.timestamp || 'N/A'}<br>
                 GPS: ${state.metadata.gps ? `${state.metadata.gps.latitude.toFixed(5)}, ${state.metadata.gps.longitude.toFixed(5)}` : 'Not available'}<br>
-                Calibration: ${state.calibration.pixelsPerMM.toFixed(3)} px/mm (ArUco 150mm)
+                Calibration: ${state.calibration.pixelsPerMM.toFixed(3)} px/mm (ArUco ${state.calibration.markerSize}mm)
             </div>`;
 
             summary.innerHTML = html;
@@ -1505,7 +1528,7 @@
         // ============================================================
 
         console.log('🔥 Clearance Genie - ArUco Calibration System initialized');
-        console.log('📐 Marker specification: 150mm ArUco (DICT_6X6_50)');
+        console.log('📐 Marker sizes available: 85mm (credit card), 148mm (A5), 210mm (A4)');
     </script>
 </body>
 </html>
