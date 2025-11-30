@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "units": "mm",
+  "models": [
+    {
+      "id": "radiator_300x400",
+      "brand": "Standard",
+      "model": "300mm x 400mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 400,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x600",
+      "brand": "Standard",
+      "model": "300mm x 600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 600,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x800",
+      "brand": "Standard",
+      "model": "300mm x 800mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 800,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x1000",
+      "brand": "Standard",
+      "model": "300mm x 1000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1000,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x1200",
+      "brand": "Standard",
+      "model": "300mm x 1200mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1200,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x1600",
+      "brand": "Standard",
+      "model": "300mm x 1600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1600,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_300x2000",
+      "brand": "Standard",
+      "model": "300mm x 2000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 2000,
+        "height": 300,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x400",
+      "brand": "Standard",
+      "model": "450mm x 400mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 400,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x600",
+      "brand": "Standard",
+      "model": "450mm x 600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 600,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x800",
+      "brand": "Standard",
+      "model": "450mm x 800mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 800,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x1000",
+      "brand": "Standard",
+      "model": "450mm x 1000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1000,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x1200",
+      "brand": "Standard",
+      "model": "450mm x 1200mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1200,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x1600",
+      "brand": "Standard",
+      "model": "450mm x 1600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1600,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_450x2000",
+      "brand": "Standard",
+      "model": "450mm x 2000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 2000,
+        "height": 450,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x400",
+      "brand": "Standard",
+      "model": "600mm x 400mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 400,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x600",
+      "brand": "Standard",
+      "model": "600mm x 600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 600,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x800",
+      "brand": "Standard",
+      "model": "600mm x 800mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 800,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x1000",
+      "brand": "Standard",
+      "model": "600mm x 1000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1000,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x1200",
+      "brand": "Standard",
+      "model": "600mm x 1200mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1200,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x1600",
+      "brand": "Standard",
+      "model": "600mm x 1600mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 1600,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    },
+    {
+      "id": "radiator_600x2000",
+      "brand": "Standard",
+      "model": "600mm x 2000mm",
+      "type": "radiator",
+      "dimensions": {
+        "width": 2000,
+        "height": 600,
+        "depth": 60
+      },
+      "serviceClearances": {
+        "front": 0,
+        "sides": 150,
+        "above": 0,
+        "below": 150
+      }
+    }
+  ]
+}

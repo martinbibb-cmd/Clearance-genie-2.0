@@ -13,18 +13,6 @@ const ModelStore = (function() {
     let isLoaded = false;
     let loadPromise = null;
 
-    // Default service clearances for radiators (from radiators.json)
-    const DEFAULT_RADIATOR_CLEARANCES = {
-        sideLeft: 150,
-        sideRight: 150,
-        below: 150,
-        above: 0,
-        front: 0
-    };
-
-    // Default depth for radiators (typical panel radiator)
-    const DEFAULT_RADIATOR_DEPTH = 60;
-
     /**
      * Load all model data from JSON files
      */
@@ -34,90 +22,40 @@ const ModelStore = (function() {
         }
 
         loadPromise = Promise.all([
-            fetch('data/boiler_clearances.json').then(r => r.json()).catch(err => {
-                console.warn('[ModelStore] Failed to load boiler_clearances.json:', err.message);
+            fetch('data/rules/boiler_clearances.models.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load boiler_clearances.models.json:', err.message);
                 return { models: [] };
             }),
-            fetch('data/radiators.json').then(r => r.json()).catch(err => {
-                console.warn('[ModelStore] Failed to load radiators.json:', err.message);
-                return { radiators: {} };
+            fetch('data/rules/radiator_clearances.models.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load radiator_clearances.models.json:', err.message);
+                return { models: [] };
             }),
-            fetch('data/cylinders.json').then(r => r.json()).catch(err => {
-                console.warn('[ModelStore] Failed to load cylinders.json:', err.message);
-                return { cylinders: [] };
+            fetch('data/rules/cylinder_clearances.models.json').then(r => r.json()).catch(err => {
+                console.warn('[ModelStore] Failed to load cylinder_clearances.models.json:', err.message);
+                return { models: [] };
             })
         ]).then(([boilerData, radiatorData, cylinderData]) => {
-            boilerModels = boilerData.models || [];
-            
-            // Convert radiator config to model format
-            radiatorModels = generateRadiatorModels(radiatorData);
-            
-            // Convert cylinder data to model format with proper dimensions
-            cylinderModels = (cylinderData.cylinders || [])
-                .filter(c => c.dimensions && c.dimensions.height && c.dimensions.diameter)
-                .map(c => ({
-                    id: c.code || `cylinder_${c.volume}L`,
-                    brand: c.brand,
-                    model: c.model,
-                    type: c.type,
-                    volume: c.volume,
-                    dimensions: {
-                        width: c.dimensions.diameter,
-                        height: c.dimensions.height,
-                        depth: c.dimensions.diameter
-                    },
-                    serviceClearances: {
-                        front: 450,
-                        sides: 150,
-                        above: 100,
-                        below: 100
-                    }
-                }));
+            boilerModels = normalizeModels(boilerData.models || []);
+            radiatorModels = normalizeModels(radiatorData.models || []);
+            cylinderModels = normalizeModels(cylinderData.models || []);
 
             isLoaded = true;
-            console.log(`[ModelStore] Loaded ${boilerModels.length} boilers, ${radiatorModels.length} radiators, ${cylinderModels.length} cylinders`);
+            console.log(`[ModelStore] Loaded ${boilerModels.length} boilers, ${radiatorModels.length} radiators, ${cylinderModels.length} cylinders from rules data`);
         });
 
         return loadPromise;
     }
 
     /**
-     * Generate radiator models from the radiator configuration
+     * Ensure all model entries include required properties
      */
-    function generateRadiatorModels(radiatorData) {
-        const models = [];
-        const config = radiatorData.radiators || {};
-        const heights = config.heights || [300, 450, 600];
-        const widths = radiatorData.availableWidths || [400, 600, 800, 1000, 1200, 1400, 1600];
-        const clearances = config.clearances || DEFAULT_RADIATOR_CLEARANCES;
-
-        // Generate a subset of common sizes
-        const commonWidths = [400, 600, 800, 1000, 1200, 1600, 2000];
-        
-        heights.forEach(height => {
-            commonWidths.forEach(width => {
-                if (widths.includes(width)) {
-                    models.push({
-                        id: `radiator_${height}x${width}`,
-                        brand: 'Standard',
-                        model: `${height}mm x ${width}mm`,
-                        dimensions: {
-                            width: width,
-                            height: height,
-                            depth: DEFAULT_RADIATOR_DEPTH
-                        },
-                        serviceClearances: {
-                            front: 0,
-                            sides: clearances.sideLeft || 150,
-                            above: clearances.above || 0,
-                            below: clearances.below || 150
-                        }
-                    });
-                }
-            });
-        });
-
-        return models;
+    function normalizeModels(models) {
+        return models
+            .filter(model => model.dimensions && model.dimensions.width && model.dimensions.height)
+            .map(model => ({
+                ...model,
+                serviceClearances: model.serviceClearances || { front: 0, sides: 0, above: 0, below: 0 }
+            }));
     }
 
     /**

@@ -1,0 +1,1158 @@
+{
+  "schemaVersion": 1,
+  "units": "mm",
+  "models": [
+    {
+      "id": "CCYL1089",
+      "brand": "Gledhill",
+      "model": "Envirofoam Stainless Steel",
+      "type": "Unvented",
+      "volume": 162,
+      "dimensions": {
+        "width": 520,
+        "height": 1200,
+        "depth": 520
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1090",
+      "brand": "Gledhill",
+      "model": "Combination",
+      "type": "Combination Copper",
+      "volume": 140,
+      "dimensions": {
+        "width": 520,
+        "height": 1075,
+        "depth": 520
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1091",
+      "brand": "Gledhill",
+      "model": "Combination",
+      "type": "Combination Copper",
+      "volume": 162,
+      "dimensions": {
+        "width": 520,
+        "height": 1200,
+        "depth": 520
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1092",
+      "brand": "Gledhill",
+      "model": "Combination",
+      "type": "Combination Copper",
+      "volume": 210,
+      "dimensions": {
+        "width": 520,
+        "height": 1850,
+        "depth": 520
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1093",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 550,
+        "height": 1306,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1094",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 550,
+        "height": 1494,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1095",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 250,
+      "dimensions": {
+        "width": 550,
+        "height": 1744,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1096",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 300,
+      "dimensions": {
+        "width": 550,
+        "height": 1990,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1097",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 90,
+      "dimensions": {
+        "width": 550,
+        "height": 764,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1098",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 550,
+        "height": 931,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1099",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus",
+      "type": "Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 550,
+        "height": 1118,
+        "depth": 550
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1108",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus Slimline",
+      "type": "Unvented Slimline",
+      "volume": 90,
+      "dimensions": {
+        "width": 475,
+        "height": 976,
+        "depth": 475
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1109",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus Slimline",
+      "type": "Unvented Slimline",
+      "volume": 120,
+      "dimensions": {
+        "width": 475,
+        "height": 1284,
+        "depth": 475
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1110",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus Slimline",
+      "type": "Unvented Slimline",
+      "volume": 150,
+      "dimensions": {
+        "width": 475,
+        "height": 1520,
+        "depth": 475
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1111",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus Slimline",
+      "type": "Unvented Slimline",
+      "volume": 180,
+      "dimensions": {
+        "width": 475,
+        "height": 1790,
+        "depth": 475
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1112",
+      "brand": "Gledhill",
+      "model": "StainlessLite Plus Slimline",
+      "type": "Unvented Slimline",
+      "volume": 210,
+      "dimensions": {
+        "width": 475,
+        "height": 1963,
+        "depth": 475
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1326",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 470,
+        "height": 1992,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0008",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 582,
+        "height": 986,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0009",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 582,
+        "height": 1166,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0010",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 582,
+        "height": 1346,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0011",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 582,
+        "height": 1526,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0012",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 582,
+        "height": 986,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0013",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 582,
+        "height": 1166,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0014",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 582,
+        "height": 1346,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0015",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 582,
+        "height": 1526,
+        "depth": 582
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0016",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 485,
+        "height": 1250,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0017",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 485,
+        "height": 1440,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0018",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 485,
+        "height": 1690,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0019",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 485,
+        "height": 2000,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0020",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 485,
+        "height": 1250,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0021",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 485,
+        "height": 1440,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0022",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 485,
+        "height": 1690,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL0023",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 485,
+        "height": 2000,
+        "depth": 485
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1330",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 470,
+        "height": 1992,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1327",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 470,
+        "height": 1241,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1328",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 470,
+        "height": 1429,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1329",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 470,
+        "height": 1676,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1324",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 470,
+        "height": 1429,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1317",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 580,
+        "height": 1300,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1325",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 470,
+        "height": 1676,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1318",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 580,
+        "height": 1500,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1315",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 580,
+        "height": 1050,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1323",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 470,
+        "height": 1241,
+        "depth": 470
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1316",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 580,
+        "height": 1200,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1321",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 580,
+        "height": 1300,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1322",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 580,
+        "height": 1500,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1319",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 580,
+        "height": 1050,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1320",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 580,
+        "height": 1200,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1133",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 478,
+        "height": 1510,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1135",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 478,
+        "height": 2073,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1127",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 210,
+      "dimensions": {
+        "width": 580,
+        "height": 1613,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1134",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 478,
+        "height": 1760,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1128",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 478,
+        "height": 1332,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1132",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 478,
+        "height": 1332,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1124",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 120,
+      "dimensions": {
+        "width": 580,
+        "height": 1053,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1131",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 478,
+        "height": 2073,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1126",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 180,
+      "dimensions": {
+        "width": 580,
+        "height": 1423,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1125",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Open Vented",
+      "volume": 150,
+      "dimensions": {
+        "width": 580,
+        "height": 1237,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1130",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 478,
+        "height": 1760,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1122",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 180,
+      "dimensions": {
+        "width": 580,
+        "height": 1423,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1129",
+      "brand": "Mixergy",
+      "model": "Mixergy Slimline",
+      "type": "Slimline Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 478,
+        "height": 1510,
+        "depth": 478
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1123",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 210,
+      "dimensions": {
+        "width": 580,
+        "height": 1613,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1121",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 150,
+      "dimensions": {
+        "width": 580,
+        "height": 1237,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    },
+    {
+      "id": "CCYL1120",
+      "brand": "Mixergy",
+      "model": "Mixergy",
+      "type": "Unvented",
+      "volume": 120,
+      "dimensions": {
+        "width": 580,
+        "height": 1053,
+        "depth": 580
+      },
+      "serviceClearances": {
+        "front": 450,
+        "sides": 150,
+        "above": 100,
+        "below": 100
+      }
+    }
+  ]
+}
