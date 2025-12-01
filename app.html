@@ -1507,15 +1507,16 @@
                 if (modelId) {
                     const result = ModelStore.getModelById(modelId);
                     if (result) {
-                        live3dState.selectedModel = result;
+                        // Store with modelData property to match live3d.js expectations
+                        live3dState.selectedModel = {
+                            type: result.type,
+                            modelData: result.model
+                        };
                         showModelInfo(result.model);
                         
                         // Update Live3D if active
                         if (Live3D.isReady()) {
-                            Live3D.setSelectedModel({
-                                type: result.type,
-                                modelData: result.model
-                            });
+                            Live3D.setSelectedModel(live3dState.selectedModel);
                         }
                     }
                 } else {
