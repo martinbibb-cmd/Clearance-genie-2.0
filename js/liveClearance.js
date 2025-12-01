@@ -67,6 +67,11 @@
      * Start the camera stream
      */
     function startCamera() {
+        // Don't restart if already have a stream
+        if (cameraStream) {
+            return;
+        }
+        
         navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment' },
             audio: false
@@ -84,7 +89,23 @@
         })
         .catch(function(err) {
             console.error('[LiveClearance] Camera error:', err);
+            // Show user-friendly error message in the video wrapper
+            showCameraError(err);
         });
+    }
+    
+    /**
+     * Display camera error to user
+     */
+    function showCameraError(err) {
+        const wrapper = video ? video.parentElement : null;
+        if (wrapper) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;text-align:center;padding:20px;';
+            errorDiv.innerHTML = '<p style="font-size:18px;margin-bottom:10px;">📷 Camera not available</p>' +
+                '<p style="font-size:14px;opacity:0.8;">' + (err.name === 'NotFoundError' ? 'No camera device found' : err.message) + '</p>';
+            wrapper.appendChild(errorDiv);
+        }
     }
 
     /**
@@ -175,7 +196,29 @@
     function handleRecalibrate() {
         // TODO: Hook into ArUco detection / calibration logic
         console.log('[LiveClearance] Recalibrate marker triggered (stub)');
-        alert('Recalibrate marker: This will be connected to ArUco detection soon.');
+        // Show a toast-style notification instead of alert
+        showNotification('Recalibrate marker: This will be connected to ArUco detection soon.');
+    }
+    
+    /**
+     * Show a toast-style notification message
+     */
+    function showNotification(message) {
+        const wrapper = video ? video.parentElement : document.body;
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999;transition:opacity 0.3s;';
+        toast.textContent = message;
+        wrapper.appendChild(toast);
+        
+        // Auto-dismiss after 3 seconds
+        setTimeout(function() {
+            toast.style.opacity = '0';
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
     }
 
     /**
