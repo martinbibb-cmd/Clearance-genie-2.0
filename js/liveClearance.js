@@ -127,17 +127,17 @@
      */
     function drawClearanceRings(context, cx, cy) {
         // Radii in mm (example: 100mm (flue terminal), 300mm, 600mm)
-        var radiiMm = [100, 300, 600];
-        var colours = [
+        const radiiMm = [100, 300, 600];
+        const colours = [
             'rgba(80,80,80,0.9)',      // Flue terminal area (dark)
             'rgba(255,215,0,0.3)',     // 300mm zone (gold)
             'rgba(0,200,0,0.25)'       // 600mm zone (green)
         ];
 
         // Draw rings from largest to smallest so smaller ones are on top
-        for (var idx = radiiMm.length - 1; idx >= 0; idx--) {
-            var mm = radiiMm[idx];
-            var rPx = mm / mmPerPixel;
+        for (let idx = radiiMm.length - 1; idx >= 0; idx--) {
+            const mm = radiiMm[idx];
+            const rPx = mm / mmPerPixel;
             context.beginPath();
             context.arc(cx, cy, rPx, 0, Math.PI * 2);
             context.fillStyle = colours[idx] || 'rgba(0,200,0,0.2)';
@@ -156,9 +156,9 @@
      */
     function handleTap(evt) {
         if (!canvas) return;
-        var rect = canvas.getBoundingClientRect();
-        var x = evt.clientX - rect.left;
-        var y = evt.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect();
+        const x = evt.clientX - rect.left;
+        const y = evt.clientY - rect.top;
         flueCentre = { x: x, y: y };
     }
 
