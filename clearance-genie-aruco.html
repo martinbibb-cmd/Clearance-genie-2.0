@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Clearance Genie - ArUco Calibration</title>
+    <title>Clearance Genie - ArUco Calibration with 3D</title>
 
     <!-- OpenCV.js for ArUco detection and perspective correction -->
     <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onOpenCvReady()"></script>
+    
+    <!-- Three.js for 3D rendering -->
+    <script src="js/vendor/three.min.js"></script>
+    
+    <!-- Model Store for equipment dimensions -->
+    <script src="js/modelStore.js"></script>
 
     <style>
         * {
@@ -356,6 +362,99 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Model Selection Styles */
+        .model-selector {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .model-selector .form-group {
+            margin: 15px 0;
+        }
+
+        .model-selector label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .model-selector select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #667eea;
+            font-size: 15px;
+        }
+
+        .model-info {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .model-info .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .model-info .info-label {
+            color: #6c757d;
+        }
+
+        .model-info .info-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* 3D Overlay Container */
+        .threejs-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            z-index: 15;
+        }
+
+        .live3d-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .live3d-controls .btn {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .calibration-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .calibration-badge.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .calibration-badge.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         /* Dark mode support */
         @media (prefers-color-scheme: dark) {
             .card {
@@ -385,7 +484,7 @@
     <div class="container">
         <div class="header">
             <h1>🔥 Clearance Genie</h1>
-            <div class="subtitle">ArUco Marker Calibration System</div>
+            <div class="subtitle">ArUco Marker Calibration with 3D Object Placement</div>
         </div>
 
         <!-- Step 1: Equipment Type Selection -->
@@ -416,6 +515,40 @@
                     <div class="description">Service access to doors, shelves, valves</div>
                 </div>
             </div>
+            
+            <!-- Model Selection (for boiler, radiator, cylinder) -->
+            <div class="model-selector hidden" id="modelSelector">
+                <div class="form-group">
+                    <label for="modelSelect">📦 Select Specific Model (Optional):</label>
+                    <select id="modelSelect">
+                        <option value="">-- Use Default Dimensions --</option>
+                    </select>
+                </div>
+                <div id="modelInfoPanel" class="model-info hidden">
+                    <h4 style="margin-bottom: 10px;">📋 Model Dimensions</h4>
+                    <div class="info-row">
+                        <span class="info-label">Width:</span>
+                        <span class="info-value" id="modelWidth">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Height:</span>
+                        <span class="info-value" id="modelHeight">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Depth:</span>
+                        <span class="info-value" id="modelDepth">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Front Clearance:</span>
+                        <span class="info-value" id="modelFrontClearance">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Side Clearance:</span>
+                        <span class="info-value" id="modelSideClearance">--</span>
+                    </div>
+                </div>
+            </div>
+            
             <button class="btn" id="continueToCalibration" disabled onclick="goToStep(2)">Continue to Calibration</button>
         </div>
 
@@ -509,38 +642,46 @@
             </button>
         </div>
 
-        <!-- Step 4: Wall Photo Capture -->
+        <!-- Step 4: Wall Photo Capture with 3D Equipment Placement -->
         <div class="card hidden" id="step4">
-            <h2>Step 4: Capture Wall Photo</h2>
+            <h2>Step 4: Live 3D Equipment Placement</h2>
             
             <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
                 <strong style="color: #155724;">✓ Calibration Locked!</strong>
+                <span class="calibration-badge valid" id="calibrationBadge">Ready</span>
                 <p style="margin-top: 5px; color: #155724;" id="lockedCalibrationInfo">
                     <!-- Filled dynamically -->
                 </p>
             </div>
 
             <div class="instructions">
-                <strong>📸 Pull back to frame the whole wall:</strong>
+                <strong>📐 Position your equipment on the wall:</strong>
                 <ul>
-                    <li>Keep the ArUco marker visible in frame (if possible)</li>
-                    <li>Capture the flue, windows, doors, and other obstacles</li>
-                    <li>Hold the camera parallel to the wall</li>
-                    <li>Take the photo when ready</li>
+                    <li>A 3D box shows your selected equipment at real scale</li>
+                    <li>Drag the equipment to position it on the wall</li>
+                    <li>Green wireframe shows required clearance zones</li>
+                    <li>Capture photo when positioned correctly</li>
                 </ul>
             </div>
 
-            <div class="camera-container">
+            <div class="camera-container" id="live3dContainer">
                 <div class="calibration-status locked" id="calibrationStatusBadge2">
-                    ✓ Calibration Locked
+                    ✓ Calibration Locked - Drag equipment to position
                 </div>
                 <video id="cameraFeed2" autoplay playsinline></video>
                 <canvas id="overlayCanvas2"></canvas>
+                <canvas id="threejsCanvas" class="threejs-overlay"></canvas>
             </div>
 
-            <button class="btn btn-capture" onclick="captureWallPhoto()">
-                📸 Capture Wall Photo
-            </button>
+            <div class="live3d-controls">
+                <button class="btn btn-secondary" onclick="resetEquipmentPosition()">
+                    ↺ Reset Position
+                </button>
+                <button class="btn btn-capture" onclick="captureWallPhoto()">
+                    📸 Capture Photo
+                </button>
+            </div>
+            
             <button class="btn btn-secondary" onclick="recalibrate()">
                 🔄 Re-calibrate
             </button>
@@ -652,6 +793,9 @@
             equipmentType: null,
             currentStep: 1,
             
+            // Selected model from ModelStore
+            selectedModel: null,
+            
             // Calibration
             calibration: {
                 locked: false,
@@ -677,6 +821,22 @@
             // Marked objects
             fluePosition: null,
             obstacles: [],
+            
+            // 3D Rendering
+            threeJS: {
+                renderer: null,
+                scene: null,
+                camera: null,
+                equipmentMesh: null,
+                clearanceMesh: null,
+                isInitialized: false,
+                animationId: null
+            },
+            
+            // Equipment position (in mm from center)
+            equipmentPosition: { x: 0, y: 0 },
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 },
             
             // Metadata
             metadata: {
@@ -741,7 +901,7 @@
         // STEP 1: Equipment Selection
         // ============================================================
 
-        function selectEquipment(type) {
+        async function selectEquipment(type) {
             state.equipmentType = type;
 
             document.querySelectorAll('.equipment-card').forEach(card => {
@@ -750,7 +910,87 @@
             document.querySelector(`[data-type="${type}"]`).classList.add('selected');
 
             document.getElementById('continueToCalibration').disabled = false;
+            
+            // Show model selector for boiler, radiator, cylinder (not flue)
+            const modelSelector = document.getElementById('modelSelector');
+            if (type !== 'flue') {
+                modelSelector.classList.remove('hidden');
+                await populateModelDropdown(type);
+            } else {
+                modelSelector.classList.add('hidden');
+                hideModelInfo();
+                state.selectedModel = null;
+            }
         }
+        
+        // Populate model dropdown based on equipment type
+        async function populateModelDropdown(type) {
+            const modelSelect = document.getElementById('modelSelect');
+            modelSelect.innerHTML = '<option value="">-- Use Default Dimensions --</option>';
+            
+            // Load models if not already loaded
+            if (typeof ModelStore !== 'undefined') {
+                try {
+                    await ModelStore.loadAllModels();
+                    const models = ModelStore.getModelsByType(type);
+                    
+                    models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        const displayName = ModelStore.formatModelName(model, type);
+                        const dims = model.dimensions;
+                        const dimText = dims ? ` (${dims.width}×${dims.height}mm)` : '';
+                        option.textContent = displayName + dimText;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    console.log(`📦 Loaded ${models.length} ${type} models`);
+                } catch (error) {
+                    console.warn('Failed to load models:', error);
+                }
+            }
+        }
+        
+        // Handle model selection change
+        function onModelSelected() {
+            const modelSelect = document.getElementById('modelSelect');
+            const modelId = modelSelect.value;
+            
+            if (modelId && typeof ModelStore !== 'undefined') {
+                const result = ModelStore.getModelById(modelId);
+                if (result) {
+                    state.selectedModel = result.model;
+                    showModelInfo(result.model);
+                    console.log('📦 Selected model:', result.model.id);
+                }
+            } else {
+                state.selectedModel = null;
+                hideModelInfo();
+            }
+        }
+        
+        // Show model info panel
+        function showModelInfo(model) {
+            const panel = document.getElementById('modelInfoPanel');
+            const dims = model.dimensions || {};
+            const clearances = model.serviceClearances || {};
+
+            document.getElementById('modelWidth').textContent = dims.width ? `${dims.width} mm` : '--';
+            document.getElementById('modelHeight').textContent = dims.height ? `${dims.height} mm` : '--';
+            document.getElementById('modelDepth').textContent = dims.depth ? `${dims.depth} mm` : '--';
+            document.getElementById('modelFrontClearance').textContent = clearances.front ? `${clearances.front} mm` : '--';
+            document.getElementById('modelSideClearance').textContent = clearances.sides ? `${clearances.sides} mm` : '--';
+
+            panel.classList.remove('hidden');
+        }
+        
+        // Hide model info panel
+        function hideModelInfo() {
+            document.getElementById('modelInfoPanel').classList.add('hidden');
+        }
+        
+        // Add event listener for model selection
+        document.getElementById('modelSelect')?.addEventListener('change', onModelSelected);
 
         // ============================================================
         // NAVIGATION
@@ -1145,10 +1385,15 @@
 
         async function startWallCapture() {
             // Update locked calibration info
+            const config = EQUIPMENT_CONFIG[state.equipmentType];
+            let modelInfo = '';
+            if (state.selectedModel) {
+                modelInfo = ` | Model: ${state.selectedModel.id}`;
+            }
             document.getElementById('lockedCalibrationInfo').textContent = 
                 `Scale: ${state.calibration.pixelsPerMM.toFixed(3)} px/mm | ` +
                 `Distance: ${Math.round(state.calibration.distance)}mm | ` +
-                `Marker: ${state.calibration.markerSize}mm ArUco`;
+                `Marker: ${state.calibration.markerSize}mm ArUco${modelInfo}`;
 
             try {
                 state.cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -1161,6 +1406,13 @@
 
                 const video = document.getElementById('cameraFeed2');
                 video.srcObject = state.cameraStream;
+                
+                // Wait for video to load, then start 3D rendering
+                video.addEventListener('loadedmetadata', () => {
+                    setTimeout(() => {
+                        start3DRendering();
+                    }, 100);
+                });
 
             } catch (error) {
                 console.error('Camera error:', error);
@@ -1175,10 +1427,31 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
+            
+            // Composite 3D overlay onto the captured image
+            const threejsCanvas = document.getElementById('threejsCanvas');
+            if (threejsCanvas && state.threeJS.isInitialized) {
+                // Scale Three.js canvas to match video dimensions
+                const scaleX = video.videoWidth / threejsCanvas.width;
+                const scaleY = video.videoHeight / threejsCanvas.height;
+                ctx.save();
+                ctx.scale(scaleX, scaleY);
+                ctx.drawImage(threejsCanvas, 0, 0);
+                ctx.restore();
+            }
+            
+            // Store equipment position in the image coordinates
+            if (state.equipmentPosition) {
+                // Convert mm position to pixel position for marking
+                const centerX = canvas.width / 2 + (state.equipmentPosition.x * state.calibration.pixelsPerMM);
+                const centerY = canvas.height / 2 - (state.equipmentPosition.y * state.calibration.pixelsPerMM);
+                state.fluePosition = { x: centerX, y: centerY };
+            }
 
             state.wallImage = new Image();
             state.wallImage.onload = () => {
                 stopCalibration();
+                dispose3DRenderer();
                 goToStep(5);
                 setupMarkingCanvas();
             };
@@ -1189,6 +1462,7 @@
             state.calibration.locked = false;
             state.calibration.pixelsPerMM = 0;
             state.detectionCount = 0;
+            dispose3DRenderer();
             stopCalibration();
             goToStep(3);
             startCalibration();
@@ -1502,9 +1776,11 @@
 
         function startOver() {
             stopCalibration();
+            dispose3DRenderer();
             
             // Reset state
             state.equipmentType = null;
+            state.selectedModel = null;
             state.calibration.locked = false;
             state.calibration.pixelsPerMM = 0;
             state.detectionCount = 0;
@@ -1512,6 +1788,7 @@
             state.obstacles = [];
             state.wallImage = null;
             state.calibrationImage = null;
+            state.equipmentPosition = { x: 0, y: 0 };
 
             // Reset UI
             document.querySelectorAll('.equipment-card').forEach(card => {
@@ -1519,15 +1796,329 @@
             });
             document.getElementById('continueToCalibration').disabled = true;
             document.getElementById('captureBtn').disabled = true;
+            document.getElementById('modelSelector').classList.add('hidden');
+            hideModelInfo();
 
             goToStep(1);
+        }
+
+        // ============================================================
+        // 3D RENDERING WITH THREE.JS
+        // ============================================================
+        
+        // Initialize 3D renderer when entering Step 4
+        function init3DRenderer() {
+            if (typeof THREE === 'undefined') {
+                console.warn('Three.js not loaded, 3D overlay disabled');
+                return false;
+            }
+            
+            if (state.threeJS.isInitialized) {
+                return true;
+            }
+            
+            const container = document.getElementById('live3dContainer');
+            const video = document.getElementById('cameraFeed2');
+            const canvas = document.getElementById('threejsCanvas');
+            
+            if (!container || !video || !canvas) {
+                console.warn('3D container elements not found');
+                return false;
+            }
+            
+            // Create renderer
+            state.threeJS.renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                alpha: true,
+                antialias: true
+            });
+            state.threeJS.renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Create scene
+            state.threeJS.scene = new THREE.Scene();
+            
+            // Create orthographic camera
+            state.threeJS.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000);
+            state.threeJS.camera.position.z = 500;
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            state.threeJS.scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 0, 1);
+            state.threeJS.scene.add(directionalLight);
+            
+            // Setup event listeners for dragging
+            setupDragListeners();
+            
+            state.threeJS.isInitialized = true;
+            console.log('✓ 3D renderer initialized');
+            
+            return true;
+        }
+        
+        // Update 3D camera to match calibrated mm-based coordinate system
+        function update3DCamera() {
+            if (!state.threeJS.isInitialized || !state.calibration.locked) return;
+            
+            const video = document.getElementById('cameraFeed2');
+            if (!video.videoWidth || !video.videoHeight) return;
+            
+            const mmPerPixel = 1 / state.calibration.pixelsPerMM;
+            const screenWidthMM = video.clientWidth * mmPerPixel;
+            const screenHeightMM = video.clientHeight * mmPerPixel;
+            
+            state.threeJS.camera.left = -screenWidthMM / 2;
+            state.threeJS.camera.right = screenWidthMM / 2;
+            state.threeJS.camera.top = screenHeightMM / 2;
+            state.threeJS.camera.bottom = -screenHeightMM / 2;
+            state.threeJS.camera.updateProjectionMatrix();
+        }
+        
+        // Create or update equipment mesh
+        function updateEquipmentMesh() {
+            const config = EQUIPMENT_CONFIG[state.equipmentType];
+            if (!config) return;
+            
+            // Get dimensions from selected model or use defaults
+            let dims;
+            if (state.selectedModel && state.selectedModel.dimensions) {
+                dims = state.selectedModel.dimensions;
+            } else if (config.diameter) {
+                // Flue - circular
+                dims = { width: config.diameter, height: config.diameter, depth: 50 };
+            } else {
+                // Default dimensions for equipment without a model
+                dims = { width: 400, height: 600, depth: 300 };
+            }
+            
+            // Remove existing meshes
+            if (state.threeJS.equipmentMesh) {
+                state.threeJS.scene.remove(state.threeJS.equipmentMesh);
+                state.threeJS.equipmentMesh.geometry.dispose();
+                state.threeJS.equipmentMesh.material.dispose();
+            }
+            if (state.threeJS.clearanceMesh) {
+                state.threeJS.scene.remove(state.threeJS.clearanceMesh);
+                state.threeJS.clearanceMesh.geometry.dispose();
+                state.threeJS.clearanceMesh.material.dispose();
+            }
+            
+            // Colors
+            const EQUIPMENT_COLOR = 0x667eea;
+            const CLEARANCE_COLOR = 0x27ae60;
+            
+            // Create equipment box
+            const equipmentGeometry = new THREE.BoxGeometry(dims.width, dims.height, dims.depth || 100);
+            const equipmentMaterial = new THREE.MeshPhongMaterial({
+                color: EQUIPMENT_COLOR,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide
+            });
+            state.threeJS.equipmentMesh = new THREE.Mesh(equipmentGeometry, equipmentMaterial);
+            
+            // Add wireframe edge
+            const edges = new THREE.EdgesGeometry(equipmentGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+            const wireframe = new THREE.LineSegments(edges, lineMaterial);
+            state.threeJS.equipmentMesh.add(wireframe);
+            
+            state.threeJS.scene.add(state.threeJS.equipmentMesh);
+            
+            // Create clearance halo
+            let clearances = { front: 50, sides: 50, above: 150, below: 50 };
+            if (state.selectedModel && state.selectedModel.serviceClearances) {
+                clearances = state.selectedModel.serviceClearances;
+            } else if (config.clearanceZones && config.clearanceZones.length > 0) {
+                // Use first clearance zone distance
+                const minClearance = config.clearanceZones[0].distance;
+                clearances = { front: minClearance, sides: minClearance, above: minClearance, below: minClearance };
+            }
+            
+            const haloWidth = dims.width + (clearances.sides || 0) * 2;
+            const haloHeight = dims.height + (clearances.above || 0) + (clearances.below || 0);
+            const haloDepth = (dims.depth || 100) + (clearances.front || 0);
+            
+            const haloOffsetY = ((clearances.above || 0) - (clearances.below || 0)) / 2;
+            
+            const haloGeometry = new THREE.BoxGeometry(haloWidth, haloHeight, haloDepth);
+            const haloEdges = new THREE.EdgesGeometry(haloGeometry);
+            const haloMaterial = new THREE.LineBasicMaterial({
+                color: CLEARANCE_COLOR,
+                transparent: true,
+                opacity: 0.8
+            });
+            state.threeJS.clearanceMesh = new THREE.LineSegments(haloEdges, haloMaterial);
+            state.threeJS.clearanceMesh.position.y = haloOffsetY;
+            
+            state.threeJS.scene.add(state.threeJS.clearanceMesh);
+            
+            // Set initial position
+            updateMeshPositions();
+            
+            console.log(`📦 Created 3D mesh: ${dims.width}×${dims.height}×${dims.depth || 100}mm`);
+        }
+        
+        // Update mesh positions based on current equipment position
+        function updateMeshPositions() {
+            if (state.threeJS.equipmentMesh) {
+                state.threeJS.equipmentMesh.position.x = state.equipmentPosition.x;
+                state.threeJS.equipmentMesh.position.y = state.equipmentPosition.y;
+            }
+            if (state.threeJS.clearanceMesh) {
+                state.threeJS.clearanceMesh.position.x = state.equipmentPosition.x;
+                // Keep the y-offset for asymmetric clearances
+                const currentOffsetY = state.threeJS.clearanceMesh.position.y - state.equipmentPosition.y;
+                state.threeJS.clearanceMesh.position.y = state.equipmentPosition.y + currentOffsetY;
+            }
+        }
+        
+        // Reset equipment to center
+        function resetEquipmentPosition() {
+            state.equipmentPosition = { x: 0, y: 0 };
+            updateMeshPositions();
+        }
+        
+        // Setup drag listeners for equipment positioning
+        function setupDragListeners() {
+            const canvas = document.getElementById('threejsCanvas');
+            if (!canvas) return;
+            
+            canvas.style.cursor = 'grab';
+            
+            const getWorldCoords = (event) => {
+                if (!state.calibration.locked) return { x: 0, y: 0 };
+                
+                const rect = canvas.getBoundingClientRect();
+                const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+                const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+                
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+                
+                // Convert to normalized coordinates (-1 to 1)
+                const nx = (x / rect.width) * 2 - 1;
+                const ny = -((y / rect.height) * 2 - 1);
+                
+                // Convert to world coordinates (mm)
+                const mmPerPixel = 1 / state.calibration.pixelsPerMM;
+                const screenWidthMM = rect.width * mmPerPixel;
+                const screenHeightMM = rect.height * mmPerPixel;
+                
+                return {
+                    x: nx * screenWidthMM / 2,
+                    y: ny * screenHeightMM / 2
+                };
+            };
+            
+            canvas.addEventListener('pointerdown', (e) => {
+                if (!state.threeJS.equipmentMesh) return;
+                
+                const worldPos = getWorldCoords(e);
+                state.isDragging = true;
+                state.dragOffset.x = state.equipmentPosition.x - worldPos.x;
+                state.dragOffset.y = state.equipmentPosition.y - worldPos.y;
+                canvas.style.cursor = 'grabbing';
+            });
+            
+            canvas.addEventListener('pointermove', (e) => {
+                if (!state.isDragging) return;
+                
+                const worldPos = getWorldCoords(e);
+                state.equipmentPosition.x = worldPos.x + state.dragOffset.x;
+                state.equipmentPosition.y = worldPos.y + state.dragOffset.y;
+                updateMeshPositions();
+            });
+            
+            canvas.addEventListener('pointerup', () => {
+                state.isDragging = false;
+                const canvas = document.getElementById('threejsCanvas');
+                if (canvas) canvas.style.cursor = 'grab';
+            });
+            
+            canvas.addEventListener('pointerleave', () => {
+                state.isDragging = false;
+                const canvas = document.getElementById('threejsCanvas');
+                if (canvas) canvas.style.cursor = 'grab';
+            });
+        }
+        
+        // 3D animation loop
+        function animate3D() {
+            if (!state.threeJS.isInitialized) return;
+            
+            state.threeJS.animationId = requestAnimationFrame(animate3D);
+            
+            // Resize if needed
+            const video = document.getElementById('cameraFeed2');
+            const canvas = document.getElementById('threejsCanvas');
+            if (video && canvas && video.clientWidth > 0) {
+                const width = video.clientWidth;
+                const height = video.clientHeight;
+                
+                if (canvas.width !== width || canvas.height !== height) {
+                    state.threeJS.renderer.setSize(width, height);
+                    update3DCamera();
+                }
+            }
+            
+            // Render
+            state.threeJS.renderer.render(state.threeJS.scene, state.threeJS.camera);
+        }
+        
+        // Start 3D rendering
+        function start3DRendering() {
+            if (!init3DRenderer()) return;
+            
+            updateEquipmentMesh();
+            update3DCamera();
+            animate3D();
+            
+            console.log('✓ 3D rendering started');
+        }
+        
+        // Dispose 3D renderer
+        function dispose3DRenderer() {
+            if (!state.threeJS.isInitialized) return;
+            
+            if (state.threeJS.animationId) {
+                cancelAnimationFrame(state.threeJS.animationId);
+                state.threeJS.animationId = null;
+            }
+            
+            if (state.threeJS.equipmentMesh) {
+                state.threeJS.scene.remove(state.threeJS.equipmentMesh);
+                state.threeJS.equipmentMesh.geometry.dispose();
+                state.threeJS.equipmentMesh.material.dispose();
+                state.threeJS.equipmentMesh = null;
+            }
+            
+            if (state.threeJS.clearanceMesh) {
+                state.threeJS.scene.remove(state.threeJS.clearanceMesh);
+                state.threeJS.clearanceMesh.geometry.dispose();
+                state.threeJS.clearanceMesh.material.dispose();
+                state.threeJS.clearanceMesh = null;
+            }
+            
+            if (state.threeJS.renderer) {
+                state.threeJS.renderer.dispose();
+                state.threeJS.renderer = null;
+            }
+            
+            state.threeJS.scene = null;
+            state.threeJS.camera = null;
+            state.threeJS.isInitialized = false;
+            
+            console.log('✓ 3D renderer disposed');
         }
 
         // ============================================================
         // INITIALIZATION
         // ============================================================
 
-        console.log('🔥 Clearance Genie - ArUco Calibration System initialized');
+        console.log('🔥 Clearance Genie - ArUco Calibration with 3D Object Placement');
         console.log('📐 Marker sizes available: 53mm (credit card), 148mm (A5), 210mm (A4)');
     </script>
 </body>
