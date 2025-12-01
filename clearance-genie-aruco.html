@@ -13,6 +13,9 @@
     
     <!-- Model Store for equipment dimensions -->
     <script src="js/modelStore.js"></script>
+    
+    <!-- Live Clearance View Module -->
+    <script src="js/liveClearance.js"></script>
 
     <style>
         * {
@@ -455,6 +458,74 @@
             color: #721c24;
         }
 
+        /* Live Clearance View Styles */
+        .live-clearance-container {
+            padding: 10px 0;
+        }
+
+        .live-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .live-header h2 {
+            color: #667eea;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .live-header p {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .live-video-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #000;
+        }
+
+        #cg-video, #cg-overlay {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        #cg-video {
+            position: relative;
+            z-index: 1;
+        }
+
+        #cg-overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .live-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .live-controls button {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .live-hint {
+            text-align: center;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+
         /* Dark mode support */
         @media (prefers-color-scheme: dark) {
             .card {
@@ -711,14 +782,42 @@
             <button class="btn btn-success" onclick="analyzeClearances()">
                 ✓ Analyze Clearances
             </button>
+            <button class="btn" onclick="goToStep(6)">
+                📹 Use Live Clearance View
+            </button>
             <button class="btn btn-secondary" onclick="clearMarks()">
                 🗑️ Clear All Marks
             </button>
         </div>
 
-        <!-- Step 6: Results -->
+        <!-- Step 6: Live Clearance View -->
         <div class="card hidden" id="step6">
-            <h2>Step 6: Clearance Results</h2>
+            <div class="live-clearance-container">
+                <div class="live-header">
+                    <h2>Live Clearance View</h2>
+                    <p>Point your camera at the wall and marker. Tap to set the flue centre.</p>
+                </div>
+                <div class="live-video-wrapper">
+                    <video id="cg-video" autoplay playsinline muted></video>
+                    <canvas id="cg-overlay"></canvas>
+                </div>
+                <div class="live-controls">
+                    <button class="btn btn-secondary" id="cg-recalibrate">Recalibrate marker</button>
+                    <button class="btn btn-secondary" id="cg-clear-flue">Clear flue point</button>
+                </div>
+                <p class="live-hint">
+                    Tap on the flue terminal on the screen to set the centre. The coloured
+                    rings show required clearances (100mm / 300mm / 600mm).
+                </p>
+                <button class="btn btn-secondary" onclick="startOver()">
+                    🔄 Start New Check
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 7: Results -->
+        <div class="card hidden" id="step7">
+            <h2>Step 7: Clearance Results</h2>
 
             <div class="result-container">
                 <canvas id="resultCanvas"></canvas>
@@ -1013,11 +1112,21 @@
         // ============================================================
 
         function goToStep(stepNumber) {
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 7; i++) {
                 document.getElementById(`step${i}`)?.classList.add('hidden');
             }
             document.getElementById(`step${stepNumber}`).classList.remove('hidden');
             state.currentStep = stepNumber;
+            
+            // Initialize live clearance view when entering step 6
+            if (stepNumber === 6 && typeof initLiveClearance === 'function') {
+                initLiveClearance();
+            }
+            
+            // Dispose live clearance when leaving step 6
+            if (stepNumber !== 6 && typeof LiveClearance !== 'undefined' && LiveClearance.isReady()) {
+                LiveClearance.dispose();
+            }
         }
 
         // ============================================================
@@ -1617,7 +1726,7 @@
                 return;
             }
 
-            goToStep(6);
+            goToStep(7);
             drawClearanceResults();
         }
 
@@ -1793,6 +1902,11 @@
         function startOver() {
             stopCalibration();
             dispose3DRenderer();
+            
+            // Dispose live clearance if active
+            if (typeof LiveClearance !== 'undefined' && LiveClearance.isReady()) {
+                LiveClearance.dispose();
+            }
             
             // Reset state
             state.equipmentType = null;
