@@ -845,6 +845,18 @@
                 calibrationValid: false
             }
         };
+        
+        // 3D Rendering Constants
+        const RENDER_CONSTANTS = {
+            EQUIPMENT_COLOR: 0x667eea,
+            CLEARANCE_COLOR: 0x27ae60,
+            DEFAULT_DEPTH: 100, // mm - default depth when not specified by model
+            DEFAULT_DIMENSIONS: {
+                boiler: { width: 400, height: 600, depth: 300 },
+                radiator: { width: 1000, height: 600, depth: 100 },
+                cylinder: { width: 450, height: 1200, depth: 450 }
+            }
+        };
 
         // Equipment Configurations with clearance zones
         const EQUIPMENT_CONFIG = {
@@ -852,6 +864,7 @@
                 name: 'Flue Terminal',
                 icon: '🌬️',
                 diameter: 100, // mm
+                defaultDimensions: { width: 100, height: 100, depth: 50 },
                 clearanceZones: [
                     { distance: 75, color: 'rgba(231, 76, 60, 0.5)', label: 'Prohibited', status: 'fail' },
                     { distance: 150, color: 'rgba(241, 196, 15, 0.4)', label: '150mm', status: 'amber' },
@@ -871,6 +884,7 @@
             boiler: {
                 name: 'Boiler',
                 icon: '🔥',
+                defaultDimensions: { width: 400, height: 600, depth: 300 },
                 clearanceZones: [
                     { distance: 50, color: 'rgba(231, 76, 60, 0.5)', label: 'Min', status: 'fail' },
                     { distance: 150, color: 'rgba(241, 196, 15, 0.4)', label: 'Service', status: 'amber' },
@@ -880,6 +894,7 @@
             radiator: {
                 name: 'Radiator',
                 icon: '♨️',
+                defaultDimensions: { width: 1000, height: 600, depth: 100 },
                 clearanceZones: [
                     { distance: 50, color: 'rgba(231, 76, 60, 0.5)', label: 'Wall', status: 'fail' },
                     { distance: 100, color: 'rgba(241, 196, 15, 0.4)', label: 'Curtain', status: 'amber' },
@@ -889,6 +904,7 @@
             cylinder: {
                 name: 'Cylinder',
                 icon: '🛢️',
+                defaultDimensions: { width: 450, height: 1200, depth: 450 },
                 clearanceZones: [
                     { distance: 150, color: 'rgba(231, 76, 60, 0.5)', label: 'Service', status: 'fail' },
                     { distance: 300, color: 'rgba(241, 196, 15, 0.4)', label: 'Access', status: 'amber' },
@@ -1881,16 +1897,19 @@
             const config = EQUIPMENT_CONFIG[state.equipmentType];
             if (!config) return;
             
-            // Get dimensions from selected model or use defaults
+            // Get dimensions from selected model, config defaults, or render constants
             let dims;
             if (state.selectedModel && state.selectedModel.dimensions) {
                 dims = state.selectedModel.dimensions;
+            } else if (config.defaultDimensions) {
+                dims = config.defaultDimensions;
             } else if (config.diameter) {
                 // Flue - circular
-                dims = { width: config.diameter, height: config.diameter, depth: 50 };
+                dims = { width: config.diameter, height: config.diameter, depth: RENDER_CONSTANTS.DEFAULT_DEPTH / 2 };
             } else {
-                // Default dimensions for equipment without a model
-                dims = { width: 400, height: 600, depth: 300 };
+                // Fallback to render constants
+                dims = RENDER_CONSTANTS.DEFAULT_DIMENSIONS[state.equipmentType] || 
+                       { width: 400, height: 600, depth: RENDER_CONSTANTS.DEFAULT_DEPTH };
             }
             
             // Remove existing meshes
@@ -1905,14 +1924,14 @@
                 state.threeJS.clearanceMesh.material.dispose();
             }
             
-            // Colors
-            const EQUIPMENT_COLOR = 0x667eea;
-            const CLEARANCE_COLOR = 0x27ae60;
-            
             // Create equipment box
-            const equipmentGeometry = new THREE.BoxGeometry(dims.width, dims.height, dims.depth || 100);
+            const equipmentGeometry = new THREE.BoxGeometry(
+                dims.width, 
+                dims.height, 
+                dims.depth || RENDER_CONSTANTS.DEFAULT_DEPTH
+            );
             const equipmentMaterial = new THREE.MeshPhongMaterial({
-                color: EQUIPMENT_COLOR,
+                color: RENDER_CONSTANTS.EQUIPMENT_COLOR,
                 transparent: true,
                 opacity: 0.7,
                 side: THREE.DoubleSide
@@ -1939,14 +1958,14 @@
             
             const haloWidth = dims.width + (clearances.sides || 0) * 2;
             const haloHeight = dims.height + (clearances.above || 0) + (clearances.below || 0);
-            const haloDepth = (dims.depth || 100) + (clearances.front || 0);
+            const haloDepth = (dims.depth || RENDER_CONSTANTS.DEFAULT_DEPTH) + (clearances.front || 0);
             
             const haloOffsetY = ((clearances.above || 0) - (clearances.below || 0)) / 2;
             
             const haloGeometry = new THREE.BoxGeometry(haloWidth, haloHeight, haloDepth);
             const haloEdges = new THREE.EdgesGeometry(haloGeometry);
             const haloMaterial = new THREE.LineBasicMaterial({
-                color: CLEARANCE_COLOR,
+                color: RENDER_CONSTANTS.CLEARANCE_COLOR,
                 transparent: true,
                 opacity: 0.8
             });
@@ -1958,7 +1977,7 @@
             // Set initial position
             updateMeshPositions();
             
-            console.log(`📦 Created 3D mesh: ${dims.width}×${dims.height}×${dims.depth || 100}mm`);
+            console.log(`📦 Created 3D mesh: ${dims.width}×${dims.height}×${dims.depth || RENDER_CONSTANTS.DEFAULT_DEPTH}mm`);
         }
         
         // Update mesh positions based on current equipment position
