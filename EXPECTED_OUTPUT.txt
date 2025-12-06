@@ -1,0 +1,81 @@
+================================================================================
+ArUco Marker Scale Test - Expected Output
+================================================================================
+
+TERMINAL OUTPUT:
+--------------------------------------------------------------------------------
+Using default marker size: 45mm
+To use a different size, run: python3 aruco_scale_test.py <size_mm>
+Common sizes: 45, 53, 65, 148, 210
+
+Opening webcam...
+Webcam opened: 640x480
+Looking for ArUco marker ID 0 from dictionary DICT_6X6_250
+Physical marker size: 45mm
+
+Press 'q' to quit
+
+WEBCAM WINDOW - "ArUco Scale Test":
+--------------------------------------------------------------------------------
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║  Distance: 350.5mm (35.0cm)                       [Text Overlay]║
+║  If this box fits the marker perfectly, scale is correct.       ║
+║                                                                  ║
+║                                                                  ║
+║                    ┌─────────────┐                               ║
+║                    │             │                               ║
+║                    │   ArUco     │  ← Green bounding box        ║
+║                    │   Marker    │                               ║
+║                    │   ID: 0     │                               ║
+║                    └─────────────┘                               ║
+║══════════════════════════════════════════════════════════════════║ ← Yellow
+║  Screen width at marker depth: 1234.5mm          [Measurement]  ║    Line
+║══════════════════════════════════════════════════════════════════║
+║                                                                  ║
+║                                                                  ║
+║                                                                  ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+VISUAL ELEMENTS:
+--------------------------------------------------------------------------------
+1. GREEN BOUNDING BOX: Drawn around detected ArUco marker
+   - 3-pixel thick green line
+   - Follows marker corners precisely
+   - Validates scale if box fits marker perfectly
+
+2. DISTANCE TEXT (Top Left, Green):
+   - "Distance: 350.5mm (35.0cm)"
+   - Updates in real-time as marker moves
+   - Calculated using pose estimation
+
+3. SCALE VERIFICATION TEXT (Below distance, Cyan):
+   - "If this box fits the marker perfectly, scale is correct."
+   - Helps user validate marker print accuracy
+
+4. MEASUREMENT LINE (Center, Yellow):
+   - Horizontal line across entire screen width
+   - 2-pixel thick yellow line
+   - Shows real-world dimensions at marker depth
+
+5. SCREEN WIDTH TEXT (On measurement line, Yellow):
+   - "Screen width at marker depth: 1234.5mm"
+   - Calculates field of view at marker distance
+   - Helps understand camera perspective
+
+NO MARKER DETECTED:
+--------------------------------------------------------------------------------
+If no marker is visible, displays:
+"No ArUco marker detected. Show marker ID 0 to camera." (Red text)
+
+DIFFERENT MARKER SIZES:
+--------------------------------------------------------------------------------
+Command: python3 aruco_scale_test.py 65
+
+Terminal shows:
+"Using marker size: 65.0mm (from command line)"
+
+All calculations adjust automatically for the specified size.
+
+================================================================================
