@@ -168,9 +168,15 @@
 
         /* Print styles */
         @media print {
+            @page { 
+                size: A4; 
+                margin: 0; 
+            }
+            
             body {
                 background: white !important;
                 padding: 0 !important;
+                margin: 0;
             }
 
             .container {
@@ -201,6 +207,18 @@
                 display: block !important;
                 font-size: 10pt;
                 margin-top: 10px;
+                color: #333;
+            }
+            
+            .marker-container { 
+                width: 45mm; 
+                height: 45mm; 
+            }
+            
+            .marker-label {
+                font-size: 8pt;
+                text-align: center;
+                margin-top: 2mm;
                 color: #333;
             }
         }
@@ -316,8 +334,8 @@
                 <div class="size-card" onclick="selectSize('multiple')">
                     <div class="icon">📋</div>
                     <div class="label">Multiple per Sheet</div>
-                    <div class="description">6 markers on one A4 sheet</div>
-                    <div class="dimensions">6 × 65mm markers per A4</div>
+                    <div class="description">9 markers on one A4 sheet</div>
+                    <div class="dimensions">9 × 45mm markers per A4</div>
                 </div>
             </div>
         </div>
@@ -435,11 +453,11 @@
                 isMultiple: false
             },
             'multiple': {
-                markerSize: 65,
+                markerSize: 45,
                 name: 'Multiple Markers',
-                description: '6 × 65mm markers on A4 sheet (2 columns × 3 rows)',
+                description: '9 × 45mm markers on A4 sheet (3 columns × 3 rows)',
                 isMultiple: true,
-                gridCols: 2,
+                gridCols: 3,
                 gridRows: 3
             }
         };
@@ -517,6 +535,18 @@
             ctx.lineWidth = 1;
             ctx.strokeRect(x, y, pixelSize, pixelSize);
         }
+        
+        function drawMarkerWithLabel(ctx, x, y, pixelSize, markerSize) {
+            // Draw the marker
+            drawMarkerAt(ctx, x, y, pixelSize);
+            
+            // Add label below marker
+            ctx.fillStyle = '#333';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            const labelText = `Scale Ref: ${markerSize}mm`;
+            ctx.fillText(labelText, x + pixelSize / 2, y + pixelSize + 15);
+        }
 
         function drawMultipleMarkersPreview(canvasId) {
             const config = SIZE_CONFIG[currentSize];
@@ -591,7 +621,7 @@
                     for (let col = 0; col < config.gridCols; col++) {
                         const x = horizontalSpacing + col * (markerSizePx + horizontalSpacing);
                         const y = verticalSpacing + row * (markerSizePx + verticalSpacing);
-                        drawMarkerAt(ctx, x, y, markerSizePx);
+                        drawMarkerWithLabel(ctx, x, y, markerSizePx, config.markerSize);
                     }
                 }
                 
@@ -674,7 +704,14 @@
                     for (let col = 0; col < config.gridCols; col++) {
                         const x = horizontalSpacing + col * (markerSizePx + horizontalSpacing);
                         const y = verticalSpacing + row * (markerSizePx + verticalSpacing);
+                        // Draw marker
                         drawMarkerAt(ctx, x, y, markerSizePx);
+                        // Add label at higher DPI
+                        ctx.fillStyle = '#333';
+                        ctx.font = '32px Arial'; // Scaled for 300 DPI
+                        ctx.textAlign = 'center';
+                        const labelText = `Scale Ref: ${config.markerSize}mm`;
+                        ctx.fillText(labelText, x + markerSizePx / 2, y + markerSizePx + 50);
                     }
                 }
                 
