@@ -482,30 +482,13 @@
             const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext('2d');
             
-            const gridSize = ARUCO_PATTERN.length;
-            const cellSize = pixelSize / gridSize;
-            
             canvas.width = pixelSize;
             canvas.height = pixelSize;
             
-            // White background
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, pixelSize, pixelSize);
-            
-            // Draw pattern
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    if (ARUCO_PATTERN[row][col] === 1) {
-                        ctx.fillStyle = 'black';
-                    } else {
-                        ctx.fillStyle = 'white';
-                    }
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-                }
-            }
+            drawMarkerPattern(ctx, 0, 0, pixelSize);
         }
 
-        function drawMarkerAt(ctx, x, y, pixelSize) {
+        function drawMarkerPattern(ctx, x, y, pixelSize) {
             const gridSize = ARUCO_PATTERN.length;
             const cellSize = pixelSize / gridSize;
             
@@ -524,6 +507,10 @@
                     ctx.fillRect(x + col * cellSize, y + row * cellSize, cellSize, cellSize);
                 }
             }
+        }
+
+        function drawMarkerAt(ctx, x, y, pixelSize) {
+            drawMarkerPattern(ctx, x, y, pixelSize);
             
             // Draw border around marker
             ctx.strokeStyle = '#333';
@@ -687,26 +674,7 @@
                     for (let col = 0; col < config.gridCols; col++) {
                         const x = horizontalSpacing + col * (markerSizePx + horizontalSpacing);
                         const y = verticalSpacing + row * (markerSizePx + verticalSpacing);
-                        
-                        // Draw marker
-                        const gridSize = ARUCO_PATTERN.length;
-                        const cellSize = markerSizePx / gridSize;
-                        
-                        // White background for this marker
-                        ctx.fillStyle = 'white';
-                        ctx.fillRect(x, y, markerSizePx, markerSizePx);
-                        
-                        // Draw pattern
-                        for (let r = 0; r < gridSize; r++) {
-                            for (let c = 0; c < gridSize; c++) {
-                                if (ARUCO_PATTERN[r][c] === 1) {
-                                    ctx.fillStyle = 'black';
-                                } else {
-                                    ctx.fillStyle = 'white';
-                                }
-                                ctx.fillRect(x + c * cellSize, y + r * cellSize, cellSize, cellSize);
-                            }
-                        }
+                        drawMarkerAt(ctx, x, y, markerSizePx);
                     }
                 }
                 
@@ -723,24 +691,7 @@
                 downloadCanvas.height = pixelSize;
                 
                 const ctx = downloadCanvas.getContext('2d');
-                const gridSize = ARUCO_PATTERN.length;
-                const cellSize = pixelSize / gridSize;
-                
-                // White background
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, pixelSize, pixelSize);
-                
-                // Draw pattern
-                for (let row = 0; row < gridSize; row++) {
-                    for (let col = 0; col < gridSize; col++) {
-                        if (ARUCO_PATTERN[row][col] === 1) {
-                            ctx.fillStyle = 'black';
-                        } else {
-                            ctx.fillStyle = 'white';
-                        }
-                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-                    }
-                }
+                drawMarkerPattern(ctx, 0, 0, pixelSize);
                 
                 // Download
                 const link = document.createElement('a');
