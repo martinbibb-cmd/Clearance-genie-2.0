@@ -29,6 +29,7 @@ This repository contains the Clearance Genie app with professional ArUco marker-
 - **Credit Card Size (53mm)**: Portable, fits in wallet
 - **A5 Size (148mm)**: Good for medium distances
 - **A4 Size (210mm)**: Best for large rooms
+- **Multiple per Sheet**: Print 6 markers (65mm each) on one A4 sheet - ideal for teams
 
 ### 📖 **welcome.html** - USER INSTRUCTIONS
 
@@ -58,6 +59,7 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 | Credit Card | 53mm × 53mm | Portability, close-up work |
 | A5 | 148mm × 148mm | General use, medium distances |
 | A4 | 210mm × 210mm | Large rooms, best detection |
+| Multiple per Sheet | 6 × 65mm on A4 | Teams, multiple locations, cost-effective |
 
 ### ArUco Marker Specification
 

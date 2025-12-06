@@ -287,6 +287,7 @@
                     <li><strong>Credit Card Size (53mm):</strong> Portable, fits in wallet, good for close-up calibration</li>
                     <li><strong>A5 Size (148mm):</strong> Better visibility at medium distances</li>
                     <li><strong>A4 Size (210mm):</strong> Best for large rooms and distant measurements</li>
+                    <li><strong>Multiple per Sheet:</strong> Print multiple small markers on one A4 sheet - great for teams or multiple locations</li>
                 </ul>
             </div>
 
@@ -310,6 +311,13 @@
                     <div class="label">A4 Size</div>
                     <div class="description">Large marker for best detection</div>
                     <div class="dimensions">210mm × 210mm marker</div>
+                </div>
+
+                <div class="size-card" onclick="selectSize('multiple')">
+                    <div class="icon">📋</div>
+                    <div class="label">Multiple per Sheet</div>
+                    <div class="description">6 markers on one A4 sheet</div>
+                    <div class="dimensions">6 × 65mm markers per A4</div>
                 </div>
             </div>
         </div>
@@ -411,17 +419,28 @@
             'credit-card': {
                 markerSize: 53,
                 name: 'Credit Card Size',
-                description: '53mm × 53mm marker - fits credit card dimensions'
+                description: '53mm × 53mm marker - fits credit card dimensions',
+                isMultiple: false
             },
             'a5': {
                 markerSize: 148,
                 name: 'A5 Size',
-                description: '148mm × 148mm marker - fits A5 paper with border'
+                description: '148mm × 148mm marker - fits A5 paper with border',
+                isMultiple: false
             },
             'a4': {
                 markerSize: 210,
                 name: 'A4 Size',
-                description: '210mm × 210mm marker - fits A4 paper with border'
+                description: '210mm × 210mm marker - fits A4 paper with border',
+                isMultiple: false
+            },
+            'multiple': {
+                markerSize: 65,
+                name: 'Multiple Markers',
+                description: '6 × 65mm markers on A4 sheet (2 columns × 3 rows)',
+                isMultiple: true,
+                gridCols: 2,
+                gridRows: 3
             }
         };
 
@@ -434,14 +453,26 @@
             document.getElementById('previewSection').style.display = 'block';
             
             // Draw preview
-            drawMarker('previewCanvas', 300); // Preview at 300px
+            if (config.isMultiple) {
+                drawMultipleMarkersPreview('previewCanvas');
+            } else {
+                drawMarker('previewCanvas', 300); // Preview at 300px
+            }
             
             // Update info
-            document.getElementById('markerInfo').innerHTML = `
-                <strong>${config.name}</strong><br>
-                ${config.description}<br>
-                <em>Preview shown at reduced size - actual print will be ${config.markerSize}mm × ${config.markerSize}mm</em>
-            `;
+            if (config.isMultiple) {
+                document.getElementById('markerInfo').innerHTML = `
+                    <strong>${config.name}</strong><br>
+                    ${config.description}<br>
+                    <em>Preview shown at reduced size - actual print will fit ${config.gridCols} × ${config.gridRows} markers (${config.markerSize}mm each) on A4 sheet</em>
+                `;
+            } else {
+                document.getElementById('markerInfo').innerHTML = `
+                    <strong>${config.name}</strong><br>
+                    ${config.description}<br>
+                    <em>Preview shown at reduced size - actual print will be ${config.markerSize}mm × ${config.markerSize}mm</em>
+                `;
+            }
 
             // Scroll to preview
             document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
@@ -451,15 +482,19 @@
             const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext('2d');
             
-            const gridSize = ARUCO_PATTERN.length;
-            const cellSize = pixelSize / gridSize;
-            
             canvas.width = pixelSize;
             canvas.height = pixelSize;
             
-            // White background
+            drawMarkerPattern(ctx, 0, 0, pixelSize);
+        }
+
+        function drawMarkerPattern(ctx, x, y, pixelSize) {
+            const gridSize = ARUCO_PATTERN.length;
+            const cellSize = pixelSize / gridSize;
+            
+            // White background for this marker
             ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, pixelSize, pixelSize);
+            ctx.fillRect(x, y, pixelSize, pixelSize);
             
             // Draw pattern
             for (let row = 0; row < gridSize; row++) {
@@ -469,25 +504,113 @@
                     } else {
                         ctx.fillStyle = 'white';
                     }
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    ctx.fillRect(x + col * cellSize, y + row * cellSize, cellSize, cellSize);
                 }
             }
+        }
+
+        function drawMarkerAt(ctx, x, y, pixelSize) {
+            drawMarkerPattern(ctx, x, y, pixelSize);
+            
+            // Draw border around marker
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, pixelSize, pixelSize);
+        }
+
+        function drawMultipleMarkersPreview(canvasId) {
+            const config = SIZE_CONFIG[currentSize];
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // A4 dimensions: 210mm × 297mm
+            // Preview scale: show A4 proportionally at 400px width
+            const previewWidth = 400;
+            const a4Ratio = 297 / 210; // height/width
+            const previewHeight = previewWidth * a4Ratio;
+            
+            canvas.width = previewWidth;
+            canvas.height = previewHeight;
+            
+            // White background (represents A4 paper)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, previewWidth, previewHeight);
+            
+            // Calculate marker size in preview
+            const markerSizeInPreview = (config.markerSize / 210) * previewWidth;
+            
+            // Calculate spacing
+            const horizontalSpacing = (previewWidth - (config.gridCols * markerSizeInPreview)) / (config.gridCols + 1);
+            const verticalSpacing = (previewHeight - (config.gridRows * markerSizeInPreview)) / (config.gridRows + 1);
+            
+            // Draw grid of markers
+            for (let row = 0; row < config.gridRows; row++) {
+                for (let col = 0; col < config.gridCols; col++) {
+                    const x = horizontalSpacing + col * (markerSizeInPreview + horizontalSpacing);
+                    const y = verticalSpacing + row * (markerSizeInPreview + verticalSpacing);
+                    drawMarkerAt(ctx, x, y, markerSizeInPreview);
+                }
+            }
+            
+            // Draw A4 border
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(0, 0, previewWidth, previewHeight);
         }
 
         function drawMarkerForPrint(canvasId) {
             if (!currentSize) return;
             
             const config = SIZE_CONFIG[currentSize];
-            // Convert mm to pixels at 96 DPI (standard screen/print DPI)
-            // 1 inch = 25.4mm, 96 pixels = 1 inch
-            // pixels = mm * (96 / 25.4) = mm * 3.78
-            const pixelSize = Math.round(config.markerSize * 3.78);
             
-            drawMarker(canvasId, pixelSize);
-            
-            // Update print title
-            document.getElementById('printTitle').textContent = 
-                `ArUco Marker - ${config.markerSize}mm × ${config.markerSize}mm`;
+            if (config.isMultiple) {
+                // Draw multiple markers on A4 sheet
+                const canvas = document.getElementById(canvasId);
+                const ctx = canvas.getContext('2d');
+                
+                // A4 dimensions at 96 DPI: 210mm × 297mm
+                const a4WidthPx = Math.round(210 * 3.78);
+                const a4HeightPx = Math.round(297 * 3.78);
+                
+                canvas.width = a4WidthPx;
+                canvas.height = a4HeightPx;
+                
+                // White background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, a4WidthPx, a4HeightPx);
+                
+                // Calculate marker size in pixels
+                const markerSizePx = Math.round(config.markerSize * 3.78);
+                
+                // Calculate spacing
+                const horizontalSpacing = (a4WidthPx - (config.gridCols * markerSizePx)) / (config.gridCols + 1);
+                const verticalSpacing = (a4HeightPx - (config.gridRows * markerSizePx)) / (config.gridRows + 1);
+                
+                // Draw grid of markers
+                for (let row = 0; row < config.gridRows; row++) {
+                    for (let col = 0; col < config.gridCols; col++) {
+                        const x = horizontalSpacing + col * (markerSizePx + horizontalSpacing);
+                        const y = verticalSpacing + row * (markerSizePx + verticalSpacing);
+                        drawMarkerAt(ctx, x, y, markerSizePx);
+                    }
+                }
+                
+                // Update print title
+                document.getElementById('printTitle').textContent = 
+                    `ArUco Markers - ${config.gridCols} × ${config.gridRows} on A4 (${config.markerSize}mm each)`;
+            } else {
+                // Draw single marker
+                // Convert mm to pixels at 96 DPI (standard screen/print DPI)
+                // 1 inch = 25.4mm, 96 pixels = 1 inch
+                // pixels = mm * (96 / 25.4) = mm * 3.78
+                const pixelSize = Math.round(config.markerSize * 3.78);
+                
+                drawMarker(canvasId, pixelSize);
+                
+                // Update print title
+                document.getElementById('printTitle').textContent = 
+                    `ArUco Marker - ${config.markerSize}mm × ${config.markerSize}mm`;
+            }
         }
 
         function printMarker() {
@@ -524,36 +647,58 @@
             // Create high-resolution canvas for download
             const downloadCanvas = document.createElement('canvas');
             const highResDPI = 300; // 300 DPI for high quality print
-            const pixelSize = Math.round(config.markerSize * (highResDPI / 25.4));
             
-            downloadCanvas.width = pixelSize;
-            downloadCanvas.height = pixelSize;
-            
-            const ctx = downloadCanvas.getContext('2d');
-            const gridSize = ARUCO_PATTERN.length;
-            const cellSize = pixelSize / gridSize;
-            
-            // White background
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, pixelSize, pixelSize);
-            
-            // Draw pattern
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    if (ARUCO_PATTERN[row][col] === 1) {
-                        ctx.fillStyle = 'black';
-                    } else {
-                        ctx.fillStyle = 'white';
+            if (config.isMultiple) {
+                // A4 dimensions at 300 DPI
+                const a4WidthPx = Math.round(210 * (highResDPI / 25.4));
+                const a4HeightPx = Math.round(297 * (highResDPI / 25.4));
+                
+                downloadCanvas.width = a4WidthPx;
+                downloadCanvas.height = a4HeightPx;
+                
+                const ctx = downloadCanvas.getContext('2d');
+                
+                // White background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, a4WidthPx, a4HeightPx);
+                
+                // Calculate marker size in pixels
+                const markerSizePx = Math.round(config.markerSize * (highResDPI / 25.4));
+                
+                // Calculate spacing
+                const horizontalSpacing = (a4WidthPx - (config.gridCols * markerSizePx)) / (config.gridCols + 1);
+                const verticalSpacing = (a4HeightPx - (config.gridRows * markerSizePx)) / (config.gridRows + 1);
+                
+                // Draw grid of markers
+                for (let row = 0; row < config.gridRows; row++) {
+                    for (let col = 0; col < config.gridCols; col++) {
+                        const x = horizontalSpacing + col * (markerSizePx + horizontalSpacing);
+                        const y = verticalSpacing + row * (markerSizePx + verticalSpacing);
+                        drawMarkerAt(ctx, x, y, markerSizePx);
                     }
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
                 }
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = `aruco-markers-multiple-${config.markerSize}mm.png`;
+                link.href = downloadCanvas.toDataURL('image/png');
+                link.click();
+            } else {
+                // Single marker download
+                const pixelSize = Math.round(config.markerSize * (highResDPI / 25.4));
+                
+                downloadCanvas.width = pixelSize;
+                downloadCanvas.height = pixelSize;
+                
+                const ctx = downloadCanvas.getContext('2d');
+                drawMarkerPattern(ctx, 0, 0, pixelSize);
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = `aruco-marker-${config.markerSize}mm.png`;
+                link.href = downloadCanvas.toDataURL('image/png');
+                link.click();
             }
-            
-            // Download
-            const link = document.createElement('a');
-            link.download = `aruco-marker-${config.markerSize}mm.png`;
-            link.href = downloadCanvas.toDataURL('image/png');
-            link.click();
         }
 
         console.log('ArUco Marker Generator initialized');
