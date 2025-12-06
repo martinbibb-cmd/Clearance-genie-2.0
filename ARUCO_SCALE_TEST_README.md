@@ -6,7 +6,9 @@ This Python script helps you test the accuracy of your printed ArUco markers by 
 
 - Python 3.7 or higher
 - Webcam
-- Printed ArUco marker (DICT_6X6_250, ID: 0, 45mm size)
+- Printed ArUco marker (DICT_6X6_250, ID: 0)
+  - Default: 45mm size (configurable via command line)
+  - Compatible with other sizes: 53mm, 65mm, 148mm, 210mm
 
 ## Installation
 
@@ -24,11 +26,29 @@ pip install opencv-python opencv-contrib-python numpy
 
 ## Usage
 
-1. Print an ArUco marker from the `aruco-markers.html` file, ensuring it's exactly 45mm in size
-2. Run the script:
+1. Print an ArUco marker from the `aruco-markers.html` file
+   - Supported sizes: 45mm (default), 53mm, 65mm, 148mm, or 210mm
+   
+2. Run the script (default 45mm marker):
 
 ```bash
 python3 aruco_scale_test.py
+```
+
+Or specify a different marker size:
+
+```bash
+# For 53mm marker (credit card size)
+python3 aruco_scale_test.py 53
+
+# For 65mm marker (multiple per sheet)
+python3 aruco_scale_test.py 65
+
+# For 148mm marker (A5 size)
+python3 aruco_scale_test.py 148
+
+# For 210mm marker (A4 size)
+python3 aruco_scale_test.py 210
 ```
 
 3. Hold the printed marker in front of your webcam
@@ -52,7 +72,7 @@ python3 aruco_scale_test.py
 - If the box fits perfectly around your printed marker, the scale is correct
 
 ### Distance Calculation
-- Assumes the physical marker is exactly 45mm
+- Assumes the physical marker matches the specified size (default 45mm, or custom size via command line)
 - Uses pose estimation to calculate the distance from camera to marker
 - Displays distance in both millimeters and centimeters
 
@@ -70,9 +90,10 @@ python3 aruco_scale_test.py
 - Ensure the white border around the marker is visible
 
 **Distance seems inaccurate:**
-- This script uses a simplified camera model
-- For better accuracy, perform proper camera calibration
-- Make sure your marker is exactly 45mm in size
+- This script uses a simplified camera model (focal length approximation)
+- For better accuracy, perform proper camera calibration using OpenCV's calibration tools
+- Ensure your marker size matches what you specified when running the script (default: 45mm)
+- The focal length approximation may not match your camera's actual characteristics
 
 **Camera not opening:**
 - Check that your webcam is connected and not used by another application
@@ -82,10 +103,11 @@ python3 aruco_scale_test.py
 
 - **ArUco Dictionary:** DICT_6X6_250
 - **Target Marker ID:** 0
-- **Expected Marker Size:** 45mm
+- **Default Marker Size:** 45mm (configurable via command line)
+- **Supported Sizes:** 45mm, 53mm, 65mm, 148mm, 210mm (or any custom size)
 - **Pose Estimation Method:** SOLVEPNP_IPPE_SQUARE
-- **Camera Model:** Simplified pinhole camera (for demo purposes)
+- **Camera Model:** Simplified pinhole camera with focal length approximation
 
 ## Note
 
-For production use, perform proper camera calibration using OpenCV's calibration tools for more accurate distance measurements.
+For production use, perform proper camera calibration using OpenCV's calibration tools for more accurate distance measurements. The current implementation uses a simplified camera model where the focal length is approximated as the frame width, which may lead to distance measurement inaccuracies depending on your camera's actual field of view.

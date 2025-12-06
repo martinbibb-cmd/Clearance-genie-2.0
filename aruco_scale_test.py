@@ -2,6 +2,12 @@
 """
 ArUco Marker Scale Test Script
 This script detects ArUco markers and helps verify the scale of printed markers.
+
+Usage:
+    python3 aruco_scale_test.py [marker_size_mm]
+    
+    marker_size_mm: Optional physical marker size in millimeters (default: 45)
+                    Common sizes: 45, 53, 65, 148, 210
 """
 
 import cv2
@@ -9,8 +15,8 @@ import cv2.aruco as aruco
 import numpy as np
 import sys
 
-# Configuration
-MARKER_SIZE_MM = 45  # Physical marker size in millimeters
+# Default Configuration
+DEFAULT_MARKER_SIZE_MM = 45  # Physical marker size in millimeters
 MARKER_ID = 0  # The ID of the marker to detect
 ARUCO_DICT = aruco.DICT_6X6_250
 
@@ -82,6 +88,20 @@ def calculate_screen_width_at_depth(distance_mm, camera_matrix, frame_width):
 def main():
     """Main function to run the ArUco marker scale test."""
     
+    # Parse command line arguments
+    marker_size_mm = DEFAULT_MARKER_SIZE_MM
+    if len(sys.argv) > 1:
+        try:
+            marker_size_mm = float(sys.argv[1])
+            print(f"Using marker size: {marker_size_mm}mm (from command line)")
+        except ValueError:
+            print(f"Invalid marker size argument. Using default: {DEFAULT_MARKER_SIZE_MM}mm")
+            marker_size_mm = DEFAULT_MARKER_SIZE_MM
+    else:
+        print(f"Using default marker size: {marker_size_mm}mm")
+        print(f"To use a different size, run: python3 {sys.argv[0]} <size_mm>")
+        print(f"Common sizes: 45, 53, 65, 148, 210\n")
+    
     # Initialize video capture
     print("Opening webcam...")
     cap = cv2.VideoCapture(0)
@@ -96,7 +116,7 @@ def main():
     
     print(f"Webcam opened: {frame_width}x{frame_height}")
     print(f"Looking for ArUco marker ID {MARKER_ID} from dictionary DICT_6X6_250")
-    print(f"Assuming physical marker size: {MARKER_SIZE_MM}mm")
+    print(f"Physical marker size: {marker_size_mm}mm")
     print("\nPress 'q' to quit\n")
     
     # Initialize ArUco dictionary and detector parameters
@@ -105,7 +125,10 @@ def main():
     detector = aruco.ArucoDetector(aruco_dict, aruco_params)
     
     # Estimate camera matrix (simplified for typical webcam)
-    # For better accuracy, camera calibration should be performed
+    # WARNING: This is a rough approximation. For accurate distance measurements,
+    # proper camera calibration should be performed using OpenCV's calibration tools.
+    # The focal length approximation assumes a standard field of view, which may
+    # not match your specific camera, leading to potential distance inaccuracies.
     focal_length = frame_width  # Rough approximation
     center = (frame_width / 2, frame_height / 2)
     camera_matrix = np.array([
@@ -154,7 +177,7 @@ def main():
                 # Estimate pose and distance
                 distance, rvec, tvec = estimate_pose_and_distance(
                     marker_corners,
-                    MARKER_SIZE_MM,
+                    marker_size_mm,
                     camera_matrix,
                     dist_coeffs
                 )
