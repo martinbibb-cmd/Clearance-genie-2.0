@@ -105,7 +105,7 @@ python3 aruco_scale_test.py 210
 - **Target Marker ID:** 0
 - **Default Marker Size:** 45mm (configurable via command line)
 - **Supported Sizes:** 45mm, 53mm, 65mm, 148mm, 210mm (or any custom size)
-- **Pose Estimation Method:** SOLVEPNP_IPPE_SQUARE
+- **Pose Estimation Method:** SOLVEPNP_IPPE_SQUARE (with fallback to SOLVEPNP_ITERATIVE)
 - **Camera Model:** Simplified pinhole camera with focal length approximation
 
 ## Note

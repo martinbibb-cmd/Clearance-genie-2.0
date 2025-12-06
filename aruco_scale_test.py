@@ -46,14 +46,24 @@ def estimate_pose_and_distance(corners, marker_size_mm, camera_matrix, dist_coef
         [-half_size, -half_size, 0]
     ], dtype=np.float32)
     
-    # Solve PnP to get pose
-    success, rvec, tvec = cv2.solvePnP(
-        obj_points,
-        corners,
-        camera_matrix,
-        dist_coeffs,
-        flags=cv2.SOLVEPNP_IPPE_SQUARE
-    )
+    # Solve PnP to get pose - try IPPE_SQUARE first, fallback to ITERATIVE
+    try:
+        success, rvec, tvec = cv2.solvePnP(
+            obj_points,
+            corners,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_IPPE_SQUARE
+        )
+    except cv2.error:
+        # Fallback to ITERATIVE if IPPE_SQUARE is not available
+        success, rvec, tvec = cv2.solvePnP(
+            obj_points,
+            corners,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_ITERATIVE
+        )
     
     if success:
         # Distance is the Z component of translation vector
