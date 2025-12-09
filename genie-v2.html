@@ -323,7 +323,7 @@
                                 maxArea = area;
                                 // Save corners: TL, TR, BR, BL - ensure we have enough data
                                 bestRect = [];
-                                for(let j=0; j < approx.data32S.length - 1 && j < 8; j+=2) {
+                                for(let j=0; j + 1 < approx.data32S.length && j < 8; j+=2) {
                                     bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
                                 }
                                 // Only accept if we got all 4 corners
@@ -376,7 +376,7 @@
                 
                 // Map screen center offset to world coordinates (use video dimensions)
                 const x = (centerX - videoWidth/2) * (z / focalLen) * X_FLIP_FACTOR;
-                const y = (centerY - videoHeight/2) * (z / focalLen); // Invert Y axis
+                const y = -(centerY - videoHeight/2) * (z / focalLen); // Invert Y axis (screen Y down, 3D Y up)
 
                 // 4. Smooth & Apply
                 const lerp = 0.2;
