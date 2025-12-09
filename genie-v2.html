@@ -109,9 +109,14 @@
             markerGroup: null, 
             objectMesh: null,
             zoneMesh: null,
+            videoCapture: null, // Reused VideoCapture instance
             
             // Tracking Data
             lastPose: null,
+            
+            // Constants for marker detection
+            MIN_CONTOUR_AREA: 2000, // Minimum pixel area for marker detection
+            MAX_CORNER_DATA_SIZE: 8, // 4 corners × 2 coordinates (x, y)
             
             init: function() {
                 // Initialize ThreeJS immediately
@@ -308,12 +313,15 @@
                 // Efficient OpenCV contour detection for simple squares
                 // Real ArUco decoding is heavier, this simulates it for speed
                 let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
-                let cap = new cv.VideoCapture(video);
+                
+                // Reuse VideoCapture instance or create new one
+                if(!this.videoCapture) {
+                    this.videoCapture = new cv.VideoCapture(video);
+                }
                 
                 // Check if read was successful
-                if(!cap.read(src) || src.empty()) {
+                if(!this.videoCapture.read(src) || src.empty()) {
                     src.delete();
-                    cap.delete();
                     return null;
                 }
                 
@@ -334,7 +342,7 @@
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
-                    if (area > 2000) {
+                    if (area > this.MIN_CONTOUR_AREA) {
                         let peri = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
                         cv.approxPolyDP(cnt, approx, 0.05 * peri, true);
@@ -345,7 +353,7 @@
                                 // Save corners: TL, TR, BR, BL - ensure we have enough data
                                 bestRect = [];
                                 const dataLength = approx.data32S.length;
-                                for(let j=0; j + 1 < dataLength && j < 8; j+=2) {
+                                for(let j=0; j + 1 < dataLength && j < this.MAX_CORNER_DATA_SIZE; j+=2) {
                                     bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
                                 }
                                 // Only accept if we got all 4 corners
@@ -362,7 +370,6 @@
                 gray.delete(); 
                 contours.delete(); 
                 hierarchy.delete();
-                cap.delete();
 
                 if(bestRect) return bestRect;
                 return null;
@@ -434,7 +441,13 @@
                     this.stream.getTracks().forEach(track => track.stop());
                 }
                 
-                // 4. UI Switch
+                // 4. Cleanup VideoCapture
+                if(this.videoCapture) {
+                    this.videoCapture.delete();
+                    this.videoCapture = null;
+                }
+                
+                // 5. UI Switch
                 document.getElementById('live-controls').classList.add('hidden');
                 document.getElementById('result-controls').classList.remove('hidden');
                 document.getElementById('status-badge').classList.add('hidden');
