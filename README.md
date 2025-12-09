@@ -8,7 +8,22 @@ This repository contains the Clearance Genie app with professional ArUco marker-
 
 ## 📦 What's Included
 
-### ⭐⭐ **clearance-genie-aruco.html** - ARUCO MARKER CALIBRATION (RECOMMENDED)
+### ⭐⭐⭐ **genie-v2.html** - CLEAN SLATE V2 (NEW - RECOMMENDED)
+
+**The latest clean slate rebuild with improved AR tracking and perspective-correct rendering!**
+
+- **Three-Phase Workflow**: Setup → Live AR → Results for clear user experience
+- **Perspective-Correct Camera**: Uses THREE.js PerspectiveCamera for natural depth scaling
+- **Simplified Marker Detection**: Fast contour-based square detection for any marker
+- **Touch/Drag Positioning**: Intuitive drag controls to position equipment on wall
+- **Live AR Preview**: Semi-transparent 3D object that scales naturally as you move
+- **Lock & Check Mode**: Freeze camera and reveal clearance zones for final analysis
+- **Equipment Types**: Boiler (400x700mm), Flue Terminal (150x150mm), Radiator (600x600mm)
+- **Clearance Zones**: Red (<75mm), Green (>300mm) zones displayed after lock
+- **Memory Optimized**: Efficient OpenCV memory management with proper cleanup
+- **Mobile Optimized**: Uses video dimensions for accurate AR calculations
+
+### ⭐⭐ **clearance-genie-aruco.html** - ARUCO MARKER CALIBRATION
 
 **The most reliable calibration system using ArUco fiducial markers!**
 
@@ -72,6 +87,16 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 
 ### Calibration Workflow
 
+#### For genie-v2.html (Clean Slate V2):
+1. **Select Equipment**: Choose equipment type (Boiler/Flue/Radiator) and marker size
+2. **Point at Marker**: Aim camera at any square marker on the wall
+3. **Live AR Tracking**: Watch 3D object track and scale with marker in real-time
+4. **Drag to Position**: Touch and drag the semi-transparent object to correct position
+5. **Walk Back**: Step back to frame the wall - object scales naturally with perspective
+6. **Lock & Check**: Tap "Lock & Check" to freeze and reveal clearance zones
+7. **View Results**: See Red/Green zones and verify compliance
+
+#### For clearance-genie-aruco.html (Classic):
 1. **Print Marker**: Use aruco-markers.html to print your preferred size
 2. **Place Marker**: Position on the same wall plane as the flue/equipment
 3. **Start Calibration**: App begins live camera detection
@@ -88,8 +113,8 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 
 1. Download the repository
 2. Open `welcome.html` in Safari or Chrome
-3. Print an ArUco marker from `aruco-markers.html`
-4. Start using `clearance-genie-aruco.html`
+3. Print an ArUco marker from `aruco-markers.html` (or use any square paper/card)
+4. Start using `genie-v2.html` (recommended) or `clearance-genie-aruco.html`
 5. Done!
 
 ### Option 2: Deploy to Web (Recommended)
@@ -180,6 +205,22 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 
 ## 📞 Troubleshooting
 
+### For genie-v2.html (Clean Slate V2)
+
+**"Marker not detected"**
+→ Ensure good lighting, use any square object (paper, card, sticky note)
+
+**"Object doesn't track smoothly"**
+→ Hold marker steady, ensure good contrast between marker and background
+
+**"Can't drag the object"**
+→ Make sure the marker is being tracked (green badge at top)
+
+**"Clearance zones don't appear"**
+→ Click "Lock & Check" button to freeze and show zones
+
+### For clearance-genie-aruco.html (Classic)
+
 **"Marker not detected"**
 → Ensure good lighting, avoid reflections on glossy surfaces
 
@@ -196,10 +237,23 @@ ArUco is a mature open-source fiducial marker system used in robotics, drones, S
 
 ## 🏆 Summary
 
-Clearance Genie uses ArUco marker calibration for professional, accurate heating installation clearance checking.
+Clearance Genie offers two powerful options for heating installation clearance checking:
+
+**genie-v2.html (Clean Slate V2)** - Best for quick checks:
+- Simple 3-phase workflow: Setup → Live AR → Results
+- Works with any square marker (no special printing needed)
+- Perspective-correct AR with natural depth scaling
+- Touch/drag positioning for precise placement
+- Instant clearance zone visualization
+
+**clearance-genie-aruco.html (Classic)** - Best for detailed analysis:
+- Professional ArUco marker calibration
+- Curved clearance arcs with detailed measurements
+- GPS and metadata capture
+- Print markers in multiple sizes
 
 **Key Features:**
-- Print markers in 3 sizes (53mm, 148mm, 210mm)
+- Print markers in 3 sizes (53mm, 148mm, 210mm) or use any square
 - Automatic calibration with camera detection
 - Color-coded clearance zones
 - Works on mobile and desktop
@@ -207,7 +261,7 @@ Clearance Genie uses ArUco marker calibration for professional, accurate heating
 
 **Get Started:**
 1. Open `welcome.html` for instructions
-2. Print a marker from `aruco-markers.html`
-3. Start checking with `clearance-genie-aruco.html`
+2. Print a marker from `aruco-markers.html` (or use any square paper)
+3. Start checking with `genie-v2.html` (recommended) or `clearance-genie-aruco.html`
 
 **You've got this.** 💪

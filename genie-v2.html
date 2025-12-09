@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clearance Genie V2</title>
+    
+    <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onCvLoaded()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root { --primary: #667eea; --accent: #764ba2; --text: #2d3748; }
+        body { margin: 0; overflow: hidden; font-family: -apple-system, system-ui, sans-serif; background: #000; }
+        
+        /* UI Overlays */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+        .interactive { pointer-events: auto; }
+        
+        /* Cards & Menus */
+        .card { background: white; border-radius: 16px; padding: 20px; margin: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); pointer-events: auto; max-width: 400px; align-self: center; }
+        .hidden { display: none !important; }
+        
+        h1 { margin: 0 0 10px 0; color: var(--primary); font-size: 1.5rem; }
+        p { color: #718096; font-size: 0.9rem; margin-bottom: 15px; }
+        
+        /* Controls */
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; width: 100%; font-size: 1rem; cursor: pointer; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-secondary { background: #cbd5e0; color: var(--text); }
+        
+        select { width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; }
+        
+        /* Status Badge */
+        .badge { background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; align-self: center; margin-top: 20px; backdrop-filter: blur(4px); }
+        .badge.active { background: #48bb78; }
+        .badge.searching { background: #ecc94b; color: #000; }
+        
+        /* Canvases */
+        #camera-feed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        #touch-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; }
+    </style>
+</head>
+<body>
+
+    <video id="camera-feed" autoplay playsinline muted></video>
+    <canvas id="ar-canvas"></canvas>
+    <div id="touch-layer"></div>
+
+    <div id="ui-layer">
+        
+        <div id="status-badge" class="badge hidden">Initializing...</div>
+
+        <div id="menu-screen" class="card">
+            <h1>🔥 Clearance Genie</h1>
+            <p>To ensure accuracy, please select the exact size of your printed ArUco marker.</p>
+            
+            <label><strong>Equipment Type</strong></label>
+            <select id="equip-type">
+                <option value="boiler">Boiler (400x700mm)</option>
+                <option value="flue">Flue Terminal</option>
+                <option value="radiator">Radiator</option>
+            </select>
+
+            <label><strong>Marker Size</strong></label>
+            <select id="marker-size">
+                <option value="53">Credit Card (53mm)</option>
+                <option value="100">100mm Standard</option>
+                <option value="148">A5 Paper (148mm)</option>
+                <option value="210">A4 Paper (210mm)</option>
+            </select>
+
+            <button class="btn" onclick="App.start()">Start Calibration 📷</button>
+        </div>
+
+        <div id="live-controls" class="card hidden" style="margin-bottom: 40px;">
+            <p style="margin:0; text-align:center;">
+                👇 <strong>Drag</strong> object to position.<br>
+                🚶 <strong>Walk back</strong> to frame the wall.
+            </p>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-secondary" onclick="App.resetPosition()">Reset</button>
+                <button class="btn" onclick="App.lockAndAnalyze()">🔒 Lock & Check</button>
+            </div>
+        </div>
+
+        <div id="result-controls" class="card hidden">
+            <h1>✅ Clearance Check</h1>
+            <p>Zones: Green (>300mm), Amber (75-300mm), Red (<75mm).</p>
+            <button class="btn" onclick="location.reload()">New Scan</button>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // APP LOGIC
+        // ==========================================
+        const App = {
+            state: 'MENU', // MENU, LIVE, RESULT
+            config: { markerSize: 53, width: 400, height: 700, depth: 300 },
+            cvReady: false,
+            
+            // Vision & AR
+            stream: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            markerGroup: null, 
+            objectMesh: null,
+            zoneMesh: null,
+            videoCapture: null, // Reused VideoCapture instance
+            
+            // Tracking Data
+            lastPose: null,
+            
+            // Constants for marker detection
+            MIN_CONTOUR_AREA: 2000, // Minimum pixel area for marker detection
+            MAX_CORNER_DATA_SIZE: 8, // 4 corners × 2 coordinates (x, y)
+            
+            init: function() {
+                // Initialize ThreeJS immediately
+                this.initThreeJS();
+            },
+
+            start: async function() {
+                // Get User Config
+                const markerSizeValue = document.getElementById('marker-size').value;
+                this.config.markerSize = parseInt(markerSizeValue);
+                
+                // Validate marker size
+                if(isNaN(this.config.markerSize) || this.config.markerSize <= 0) {
+                    alert("Invalid marker size. Please select a valid option.");
+                    return;
+                }
+                
+                const type = document.getElementById('equip-type').value;
+                
+                // Set Dimensions based on type
+                if(type === 'boiler') { 
+                    this.config.width = 400; 
+                    this.config.height = 700; 
+                    this.config.depth = 300;
+                }
+                if(type === 'flue') { 
+                    this.config.width = 150; 
+                    this.config.height = 150; 
+                    this.config.depth = 100; 
+                }
+                if(type === 'radiator') { 
+                    this.config.width = 600; 
+                    this.config.height = 600; 
+                    this.config.depth = 100; 
+                }
+                
+                // Switch UI
+                document.getElementById('menu-screen').classList.add('hidden');
+                document.getElementById('live-controls').classList.remove('hidden');
+                document.getElementById('status-badge').classList.remove('hidden');
+                document.getElementById('status-badge').textContent = "🔍 Point at Marker...";
+                document.getElementById('status-badge').classList.add('searching');
+
+                // Start Camera
+                const video = document.getElementById('camera-feed');
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'environment', width: { ideal: 1920 } } 
+                    });
+                    video.srcObject = this.stream;
+                    video.play();
+                    
+                    // Start Loop
+                    this.state = 'LIVE';
+                    this.updateObjectMesh(); // Create the correct 3D box
+                    requestAnimationFrame(this.loop.bind(this));
+                } catch(e) {
+                    alert("Camera Error: " + e.message);
+                }
+            },
+
+            initThreeJS: function() {
+                const canvas = document.getElementById('ar-canvas');
+                this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+
+                this.scene = new THREE.Scene();
+                
+                // Perspective Camera (The key to fixing "Giant Box")
+                // 75 degree FOV is a standard mobile approximation
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+                this.scene.add(this.camera);
+
+                // Lights
+                const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+                const dir = new THREE.DirectionalLight(0xffffff, 0.5);
+                dir.position.set(0, 0, 1);
+                this.scene.add(ambient);
+                this.scene.add(dir);
+
+                // Marker Anchor Group (Everything is relative to this)
+                this.markerGroup = new THREE.Group();
+                this.scene.add(this.markerGroup);
+
+                // Setup Touch Events for Dragging
+                const touchLayer = document.getElementById('touch-layer');
+                let isDragging = false;
+                let startX, startY;
+                let objStartX, objStartY;
+
+                const handleStart = (e) => {
+                    if(this.state !== 'LIVE' || !this.objectMesh) return;
+                    isDragging = true;
+                    startX = e.touches ? e.touches[0].clientX : e.clientX;
+                    startY = e.touches ? e.touches[0].clientY : e.clientY;
+                    objStartX = this.objectMesh.position.x;
+                    objStartY = this.objectMesh.position.y;
+                };
+
+                const handleMove = (e) => {
+                    if(!isDragging || !this.lastPose || !this.objectMesh) return;
+                    e.preventDefault(); // Stop scrolling
+                    const x = e.touches ? e.touches[0].clientX : e.clientX;
+                    const y = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    // Convert screen pixels to MM based on current depth
+                    const scale = Math.abs(this.lastPose.z) / this.lastPose.focalLength;
+                    
+                    const dx = (x - startX) * scale;
+                    const dy = (y - startY) * scale;
+
+                    // Update Position (Invert Y because screen Y is down, 3D Y is up)
+                    this.objectMesh.position.x = objStartX + dx;
+                    this.objectMesh.position.y = objStartY - dy;
+                };
+
+                touchLayer.addEventListener('touchstart', handleStart);
+                touchLayer.addEventListener('touchmove', handleMove);
+                touchLayer.addEventListener('mousedown', handleStart);
+                touchLayer.addEventListener('mousemove', handleMove);
+                window.addEventListener('mouseup', () => isDragging = false);
+                window.addEventListener('touchend', () => isDragging = false);
+            },
+
+            updateObjectMesh: function() {
+                // Remove old
+                if(this.objectMesh) this.markerGroup.remove(this.objectMesh);
+                
+                // 1. The Equipment Box (Semi-transparent for positioning)
+                const geometry = new THREE.BoxGeometry(this.config.width, this.config.height, this.config.depth);
+                const material = new THREE.MeshPhongMaterial({ color: 0x667eea, opacity: 0.7, transparent: true });
+                this.objectMesh = new THREE.Mesh(geometry, material);
+                
+                // Offset Z so it sits ON the wall (z=0 is wall surface)
+                this.objectMesh.position.z = this.config.depth / 2;
+                
+                // 2. Clearance Zones (Hidden initially, shown on Lock)
+                // We create a group of meshes for the zones
+                this.zoneMesh = new THREE.Group();
+                
+                // Red Zone (<75mm)
+                const redGeo = new THREE.BoxGeometry(this.config.width + 150, this.config.height + 150, 10);
+                const redMat = new THREE.MeshBasicMaterial({ color: 0xff0000, opacity: 0.3, transparent: true });
+                const redMesh = new THREE.Mesh(redGeo, redMat);
+                redMesh.visible = false; // Hide until lock
+                this.zoneMesh.add(redMesh);
+                
+                // Green Zone (>300mm outline)
+                const greenGeo = new THREE.BoxGeometry(this.config.width + 600, this.config.height + 600, 10);
+                const greenEdges = new THREE.EdgesGeometry(greenGeo);
+                const greenLine = new THREE.LineSegments(greenEdges, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+                greenLine.visible = false;
+                this.zoneMesh.add(greenLine);
+
+                this.objectMesh.add(this.zoneMesh);
+                this.markerGroup.add(this.objectMesh);
+            },
+
+            loop: function() {
+                if(this.state !== 'LIVE') return;
+
+                const video = document.getElementById('camera-feed');
+                
+                if (video.readyState === video.HAVE_ENOUGH_DATA && this.cvReady) {
+                    // Resize canvases if needed
+                    if(this.renderer.domElement.width !== video.videoWidth) {
+                        this.renderer.setSize(video.videoWidth, video.videoHeight);
+                        this.camera.aspect = video.videoWidth / video.videoHeight;
+                        this.camera.updateProjectionMatrix();
+                    }
+
+                    // 1. Detect Marker
+                    const pose = this.detectMarker(video);
+
+                    // 2. Update AR Position
+                    if(pose) {
+                        this.updateAR(pose);
+                        document.getElementById('status-badge').textContent = "✓ Marker Locked";
+                        document.getElementById('status-badge').className = "badge active";
+                    } else {
+                        document.getElementById('status-badge').textContent = "🔍 Searching...";
+                        document.getElementById('status-badge').className = "badge searching";
+                    }
+
+                    // 3. Render
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                requestAnimationFrame(this.loop.bind(this));
+            },
+
+            detectMarker: function(video) {
+                // Efficient OpenCV contour detection for simple squares
+                // Real ArUco decoding is heavier, this simulates it for speed
+                let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+                
+                // Reuse VideoCapture instance or create new one
+                if(!this.videoCapture) {
+                    this.videoCapture = new cv.VideoCapture(video);
+                }
+                
+                // Check if read was successful
+                if(!this.videoCapture.read(src) || src.empty()) {
+                    src.delete();
+                    return null;
+                }
+                
+                let gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                
+                // Threshold
+                cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+                
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+                cv.findContours(gray, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+                let bestRect = null;
+                let maxArea = 0;
+
+                // Find largest square-ish contour
+                for (let i = 0; i < contours.size(); ++i) {
+                    let cnt = contours.get(i);
+                    let area = cv.contourArea(cnt);
+                    if (area > this.MIN_CONTOUR_AREA) {
+                        let peri = cv.arcLength(cnt, true);
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(cnt, approx, 0.05 * peri, true);
+                        
+                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                            if (area > maxArea) {
+                                maxArea = area;
+                                // Save corners: TL, TR, BR, BL - ensure we have enough data
+                                bestRect = [];
+                                const dataLength = approx.data32S.length;
+                                for(let j=0; j + 1 < dataLength && j < this.MAX_CORNER_DATA_SIZE; j+=2) {
+                                    bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
+                                }
+                                // Only accept if we got all 4 corners
+                                if(bestRect.length !== 4) bestRect = null;
+                            }
+                        }
+                        approx.delete();
+                    }
+                    cnt.delete(); // Clean up contour
+                }
+
+                // Cleanup
+                src.delete(); 
+                gray.delete(); 
+                contours.delete(); 
+                hierarchy.delete();
+
+                if(bestRect) return bestRect;
+                return null;
+            },
+
+            updateAR: function(corners) {
+                // --- THE PERSPECTIVE MATH ---
+                
+                const video = document.getElementById('camera-feed');
+                const videoWidth = video.videoWidth || window.innerWidth;
+                const videoHeight = video.videoHeight || window.innerHeight;
+                
+                // Constants for coordinate transformation
+                const X_FLIP_FACTOR = -1; // Flip X coordinate for camera mirror effect
+                
+                // 1. Calculate apparent width in pixels (average of top/bottom edges)
+                const w1 = Math.hypot(corners[0].x - corners[1].x, corners[0].y - corners[1].y);
+                const w2 = Math.hypot(corners[3].x - corners[2].x, corners[3].y - corners[2].y);
+                const avgPx = (w1 + w2) / 2;
+
+                // 2. Estimate Z (Depth)
+                // Focal Length Estimate for mobile (Vertical FOV ~60-75deg)
+                // f = (VideoHeight / 2) / tan(FOV/2)
+                const vFov = this.camera.fov * Math.PI / 180;
+                const focalLen = (videoHeight / 2) / Math.tan(vFov / 2);
+
+                // Z = - (RealSize * Focal) / ApparentPx
+                const z = -(this.config.markerSize * focalLen) / avgPx;
+
+                // 3. Estimate XY
+                const centerX = (corners[0].x + corners[2].x) / 2;
+                const centerY = (corners[0].y + corners[2].y) / 2;
+                
+                // Map screen center offset to world coordinates (use video dimensions)
+                const x = (centerX - videoWidth/2) * (z / focalLen) * X_FLIP_FACTOR;
+                const y = -(centerY - videoHeight/2) * (z / focalLen); // Invert Y axis (screen Y down, 3D Y up)
+
+                // 4. Smooth & Apply
+                const lerp = 0.2;
+                this.markerGroup.position.x += (x - this.markerGroup.position.x) * lerp;
+                this.markerGroup.position.y += (y - this.markerGroup.position.y) * lerp;
+                this.markerGroup.position.z += (z - this.markerGroup.position.z) * lerp;
+
+                // Save for dragging logic
+                this.lastPose = { z: z, focalLength: focalLen };
+            },
+
+            resetPosition: function() {
+                if(this.objectMesh) {
+                    this.objectMesh.position.set(0, 0, this.config.depth/2);
+                }
+            },
+
+            lockAndAnalyze: function() {
+                this.state = 'RESULT';
+                
+                // 1. Show Clearances
+                if(this.zoneMesh) {
+                    this.zoneMesh.children.forEach(c => c.visible = true);
+                }
+                
+                // 2. Make Object Solid/Wireframe to see through less
+                if(this.objectMesh) {
+                    this.objectMesh.material.opacity = 0.9;
+                }
+                
+                // 3. Freeze Camera - stop the stream tracks
+                if(this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // 4. Cleanup VideoCapture
+                if(this.videoCapture) {
+                    this.videoCapture.delete();
+                    this.videoCapture = null;
+                }
+                
+                // 5. UI Switch
+                document.getElementById('live-controls').classList.add('hidden');
+                document.getElementById('result-controls').classList.remove('hidden');
+                document.getElementById('status-badge').classList.add('hidden');
+                
+                // Render one last high-quality frame
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+
+        function onCvLoaded() {
+            App.cvReady = true;
+            App.init();
+        }
+    </script>
+</body>
+</html>
