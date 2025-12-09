@@ -30,7 +30,7 @@
         /* Overlays */
         .overlay-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #threejsCanvas { pointer-events: auto; z-index: 10; } /* 3D on top */
-        #overlayCanvas2 { pointer-events: none; z-index: 5; } /* 2D Debug/Lines below 3D */
+        #overlayCanvas { pointer-events: none; z-index: 5; } /* 2D Debug/Lines below 3D */
 
         /* UI Elements */
         .btn {
@@ -246,8 +246,9 @@
         // Note: Real production code should use a proper ArUco dictionary check
         let contours = new cv.MatVector();
         let hierarchy = new cv.Mat();
-        cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
-        cv.findContours(gray, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+        let threshold = new cv.Mat();
+        cv.adaptiveThreshold(gray, threshold, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+        cv.findContours(threshold, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
         let detected = false;
         let bestPoly = null;
@@ -264,6 +265,7 @@
                 if (approx.rows === 4 && cv.isContourConvex(approx)) {
                     if (area > maxArea) {
                         maxArea = area;
+                        if (bestPoly) bestPoly.delete(); // Delete previous bestPoly to prevent memory leak
                         bestPoly = approx.clone(); // Clone to prevent deletion issues
                         detected = true;
                     }
@@ -299,7 +301,7 @@
         renderer.render(scene, camera);
 
         // Cleanup
-        src.delete(); gray.delete(); contours.delete(); hierarchy.delete();
+        src.delete(); gray.delete(); threshold.delete(); contours.delete(); hierarchy.delete();
         
         requestAnimationFrame(processFrame);
     }
@@ -332,7 +334,8 @@
         // Map screen pixels to 3D world coordinates at that Z-depth
         // Formula: WorldX = (ScreenX - ScreenCenterX) * (Z / FocalLength)
         // Note: Three.js Y is up (positive), Screen Y is down (positive), so we flip Y
-        const worldX = (centerX - screenW/2) * (zDepth / focalLength) * -1; // -1 to mirror correctly
+        const MIRROR_CORRECTION = -1; // Flip X axis to match camera mirror behavior
+        const worldX = (centerX - screenW/2) * (zDepth / focalLength) * MIRROR_CORRECTION;
         const worldY = (centerY - screenH/2) * (zDepth / focalLength); // flip Y axis
 
         // Update the Marker Group
