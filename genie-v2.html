@@ -192,7 +192,7 @@
                 };
 
                 const handleMove = (e) => {
-                    if(!isDragging || !this.lastPose) return;
+                    if(!isDragging || !this.lastPose || !this.objectMesh) return;
                     e.preventDefault(); // Stop scrolling
                     const x = e.touches ? e.touches[0].clientX : e.clientX;
                     const y = e.touches ? e.touches[0].clientY : e.clientY;
@@ -292,6 +292,7 @@
                 // Check if read was successful
                 if(!cap.read(src) || src.empty()) {
                     src.delete();
+                    cap.delete();
                     return null;
                 }
                 
@@ -331,10 +332,15 @@
                         }
                         approx.delete();
                     }
+                    cnt.delete(); // Clean up contour
                 }
 
                 // Cleanup
-                src.delete(); gray.delete(); contours.delete(); hierarchy.delete();
+                src.delete(); 
+                gray.delete(); 
+                contours.delete(); 
+                hierarchy.delete();
+                cap.delete();
 
                 if(bestRect) return bestRect;
                 return null;
@@ -394,10 +400,14 @@
                 }
                 
                 // 2. Make Object Solid/Wireframe to see through less
-                this.objectMesh.material.opacity = 0.9;
+                if(this.objectMesh) {
+                    this.objectMesh.material.opacity = 0.9;
+                }
                 
-                // 3. Freeze Camera
-                document.getElementById('camera-feed').pause();
+                // 3. Freeze Camera - stop the stream tracks
+                if(this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
                 
                 // 4. UI Switch
                 document.getElementById('live-controls').classList.add('hidden');
