@@ -251,23 +251,26 @@
     function saveSettings() {
         const customSize = parseInt(document.getElementById('settingsCustomSize').value);
         
-        if (customSize && !isNaN(customSize)) {
-            if (customSize < 10 || customSize > 300) {
-                alert('Please enter a size between 10mm and 300mm.');
-                return;
-            }
-            state.customMarkerSize = customSize;
-            
-            // Update the dropdown to show custom size
-            const select = document.getElementById('markerSize');
-            const customOption = Array.from(select.options).find(opt => opt.value === 'custom');
-            if (customOption) {
-                customOption.text = `Custom (${customSize}mm)`;
-            }
-            
-            alert(`Custom marker size saved: ${customSize}mm`);
+        if (isNaN(customSize)) {
+            alert('Please enter a valid number.');
+            return;
         }
         
+        if (customSize < 10 || customSize > 300) {
+            alert('Please enter a size between 10mm and 300mm.');
+            return;
+        }
+        
+        state.customMarkerSize = customSize;
+        
+        // Update the dropdown to show custom size
+        const select = document.getElementById('markerSize');
+        const customOption = select.querySelector('option[value="custom"]');
+        if (customOption) {
+            customOption.text = `Custom (${customSize}mm)`;
+        }
+        
+        alert(`Custom marker size saved: ${customSize}mm`);
         closeSettings();
     }
 
@@ -300,7 +303,11 @@
         
         if (markerSelect.value === 'custom') {
             const customSize = parseInt(customInput.value);
-            if (!customSize || isNaN(customSize) || customSize < 10 || customSize > 300) {
+            if (isNaN(customSize)) {
+                alert("Please enter a valid custom marker size.");
+                return;
+            }
+            if (customSize < 10 || customSize > 300) {
                 alert("Please enter a valid custom marker size (10-300mm).");
                 return;
             }
