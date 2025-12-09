@@ -120,12 +120,33 @@
 
             start: async function() {
                 // Get User Config
-                this.config.markerSize = parseInt(document.getElementById('marker-size').value);
+                const markerSizeValue = document.getElementById('marker-size').value;
+                this.config.markerSize = parseInt(markerSizeValue);
+                
+                // Validate marker size
+                if(isNaN(this.config.markerSize) || this.config.markerSize <= 0) {
+                    alert("Invalid marker size. Please select a valid option.");
+                    return;
+                }
+                
                 const type = document.getElementById('equip-type').value;
                 
                 // Set Dimensions based on type
-                if(type === 'boiler') { this.config.width = 400; this.config.height = 700; }
-                if(type === 'flue') { this.config.width = 150; this.config.height = 150; this.config.depth = 100; }
+                if(type === 'boiler') { 
+                    this.config.width = 400; 
+                    this.config.height = 700; 
+                    this.config.depth = 300;
+                }
+                if(type === 'flue') { 
+                    this.config.width = 150; 
+                    this.config.height = 150; 
+                    this.config.depth = 100; 
+                }
+                if(type === 'radiator') { 
+                    this.config.width = 600; 
+                    this.config.height = 600; 
+                    this.config.depth = 100; 
+                }
                 
                 // Switch UI
                 document.getElementById('menu-screen').classList.add('hidden');
@@ -323,7 +344,8 @@
                                 maxArea = area;
                                 // Save corners: TL, TR, BR, BL - ensure we have enough data
                                 bestRect = [];
-                                for(let j=0; j + 1 < approx.data32S.length && j < 8; j+=2) {
+                                const dataLength = approx.data32S.length;
+                                for(let j=0; j + 1 < dataLength && j < 8; j+=2) {
                                     bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
                                 }
                                 // Only accept if we got all 4 corners
