@@ -361,10 +361,10 @@
                                 const pose = this.calculatePose(corners, video.videoWidth, video.videoHeight);
                                 
                                 // Filter 4: ANTI-TELEPORT (Sanity Check)
-                                // If we have a lock, and the new position is > 1000mm away, ignore it (glitch)
+                                // If we have a lock, and the new position is > 500mm away, ignore it (glitch)
                                 if(this.hasLock) {
                                     const dist = pose.position.distanceTo(this.lastValidPosition);
-                                    if(dist < 500) { // Max 50cm jump allowed per frame
+                                    if(dist < 500) { // Max 500mm (50cm) jump allowed per frame
                                         bestPose = pose;
                                         this.lastValidPosition.copy(pose.position);
                                     }
@@ -376,6 +376,7 @@
                         }
                         approx.delete();
                     }
+                    cnt.delete(); // Clean up contour to prevent memory leak
                 }
 
                 return bestPose;
