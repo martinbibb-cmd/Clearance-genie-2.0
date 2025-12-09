@@ -51,6 +51,65 @@
         }
         .status-searching { background: rgba(243, 156, 18, 0.9); }
         .status-locked { background: rgba(46, 204, 113, 0.9); }
+        
+        /* Settings Menu Styles */
+        .settings-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.9); border: none;
+            padding: 10px; border-radius: 50%; cursor: pointer;
+            font-size: 20px; width: 45px; height: 45px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .settings-btn:hover { transform: scale(1.1); }
+        
+        .settings-modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .settings-modal.active { display: flex; }
+        
+        .settings-content {
+            background: white; border-radius: 12px;
+            padding: 25px; max-width: 400px; width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .settings-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 20px;
+        }
+        
+        .close-btn {
+            background: none; border: none; font-size: 24px;
+            cursor: pointer; color: #999; padding: 0;
+            width: 30px; height: 30px; line-height: 1;
+        }
+        .close-btn:hover { color: #333; }
+        
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        
+        .setting-group label {
+            display: block; font-weight: 600;
+            margin-bottom: 8px; color: #333;
+        }
+        
+        .setting-group input[type="number"] {
+            width: 100%; padding: 10px; border: 2px solid #ddd;
+            border-radius: 6px; font-size: 14px;
+        }
+        
+        .setting-group input[type="number"]:focus {
+            outline: none; border-color: #667eea;
+        }
+        
+        .setting-description {
+            font-size: 12px; color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -58,6 +117,10 @@
 <div class="container">
     <div class="card">
         <h2 style="text-align:center; color:#667eea;">🔥 Clearance Genie AR</h2>
+        
+        <!-- Settings Button -->
+        <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+        
         <div id="step1">
             <h3>1. Select Equipment</h3>
             <div class="equipment-grid">
@@ -69,12 +132,16 @@
             
             <div style="margin: 15px 0;">
                 <label><strong>Marker Size (mm):</strong></label>
-                <select id="markerSize" style="width:100%; padding:10px; margin-top:5px;">
+                <select id="markerSize" style="width:100%; padding:10px; margin-top:5px;" onchange="handleMarkerSizeChange()">
                     <option value="53">Credit Card (53mm)</option>
                     <option value="100">100mm</option>
                     <option value="148">A5 (148mm)</option>
                     <option value="210">A4 (210mm)</option>
+                    <option value="custom">Custom Size...</option>
                 </select>
+                <input type="number" id="customMarkerSize" placeholder="Enter custom size (10-300mm)" 
+                       style="width:100%; padding:10px; margin-top:10px; display:none;" 
+                       min="10" max="300">
             </div>
 
             <button class="btn" onclick="startCamera()">Start Camera 📷</button>
@@ -112,11 +179,46 @@
     </div>
 </div>
 
+<!-- Settings Modal -->
+<div id="settingsModal" class="settings-modal">
+    <div class="settings-content">
+        <div class="settings-header">
+            <h3 style="margin: 0; color: #667eea;">⚙️ Settings</h3>
+            <button class="close-btn" onclick="closeSettings()">×</button>
+        </div>
+        
+        <div class="setting-group">
+            <label>Custom ArUco Marker Size</label>
+            <input type="number" id="settingsCustomSize" placeholder="Enter size in mm" 
+                   min="10" max="300" value="">
+            <div class="setting-description">
+                Enter the exact size of your ArUco marker (10-300mm). 
+                This ensures accurate distance calculations.
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+        
+        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+            <strong style="display: block; margin-bottom: 8px; font-size: 14px;">Common Sizes:</strong>
+            <div style="font-size: 12px; color: #666; line-height: 1.6;">
+                • Credit Card: 53mm<br>
+                • Standard: 100mm<br>
+                • A5 Paper: 148mm<br>
+                • A4 Paper: 210mm
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- CONFIGURATION ---
     let state = {
         type: null,
         markerSize: 53, // mm
+        customMarkerSize: null, // User-defined custom size
         isTracking: false,
         cameraStream: null,
         lastValidPose: null, // Stores last known marker position
@@ -129,6 +231,69 @@
     // Three.js Globals
     let renderer, scene, camera, markerGroup, equipmentMesh;
 
+    // --- SETTINGS FUNCTIONS ---
+    function validateMarkerSize(size) {
+        if (isNaN(size)) {
+            return { valid: false, message: 'Please enter a valid number.' };
+        }
+        if (size < 10 || size > 300) {
+            return { valid: false, message: 'Please enter a size between 10mm and 300mm.' };
+        }
+        return { valid: true };
+    }
+
+    function openSettings() {
+        const modal = document.getElementById('settingsModal');
+        const customSizeInput = document.getElementById('settingsCustomSize');
+        
+        // Load current custom size if set
+        if (state.customMarkerSize) {
+            customSizeInput.value = state.customMarkerSize;
+        }
+        
+        modal.classList.add('active');
+    }
+
+    function closeSettings() {
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    function saveSettings() {
+        const customSize = parseInt(document.getElementById('settingsCustomSize').value);
+        
+        const validation = validateMarkerSize(customSize);
+        if (!validation.valid) {
+            alert(validation.message);
+            return;
+        }
+        
+        state.customMarkerSize = customSize;
+        
+        // Update the dropdown to show custom size
+        const select = document.getElementById('markerSize');
+        const customOption = select.querySelector('option[value="custom"]');
+        if (customOption) {
+            customOption.textContent = `Custom (${customSize}mm)`;
+        }
+        
+        alert(`Custom marker size saved: ${customSize}mm`);
+        closeSettings();
+    }
+
+    function handleMarkerSizeChange() {
+        const select = document.getElementById('markerSize');
+        const customInput = document.getElementById('customMarkerSize');
+        
+        if (select.value === 'custom') {
+            customInput.style.display = 'block';
+            if (state.customMarkerSize) {
+                customInput.value = state.customMarkerSize;
+            }
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
     // --- STEP 1: UI LOGIC ---
     function selectType(type, el) {
         state.type = type;
@@ -138,7 +303,22 @@
 
     async function startCamera() {
         if(!state.type) return alert("Please select equipment type first.");
-        state.markerSize = parseInt(document.getElementById('markerSize').value);
+        
+        const markerSelect = document.getElementById('markerSize');
+        const customInput = document.getElementById('customMarkerSize');
+        
+        if (markerSelect.value === 'custom') {
+            const customSize = parseInt(customInput.value);
+            const validation = validateMarkerSize(customSize);
+            if (!validation.valid) {
+                alert(validation.message);
+                return;
+            }
+            state.markerSize = customSize;
+            state.customMarkerSize = customSize;
+        } else {
+            state.markerSize = parseInt(markerSelect.value);
+        }
         
         document.getElementById('step1').classList.add('hidden');
         document.getElementById('step2').classList.remove('hidden');
@@ -203,7 +383,9 @@
         let color = 0x667eea;
 
         if(state.type === 'flue') { dims = { w: 100, h: 100, d: 50 }; color = 0xe74c3c; } // Red for flue
-        if(state.type === 'radiator') { dims = { w: 1000, h: 600, d: 100 }; color = 0x3498db; }
+        else if(state.type === 'radiator') { dims = { w: 1000, h: 600, d: 100 }; color = 0x3498db; } // Blue for radiator
+        else if(state.type === 'cylinder') { dims = { w: 450, h: 900, d: 450 }; color = 0xf39c12; } // Orange for cylinder
+        else if(state.type === 'boiler') { dims = { w: 400, h: 600, d: 300 }; color = 0x667eea; } // Purple for boiler
         
         // Create Mesh
         const geometry = new THREE.BoxGeometry(dims.w, dims.h, dims.d);
