@@ -288,7 +288,12 @@
                 // Real ArUco decoding is heavier, this simulates it for speed
                 let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
                 let cap = new cv.VideoCapture(video);
-                cap.read(src);
+                
+                // Check if read was successful
+                if(!cap.read(src) || src.empty()) {
+                    src.delete();
+                    return null;
+                }
                 
                 let gray = new cv.Mat();
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
@@ -315,9 +320,13 @@
                         if (approx.rows === 4 && cv.isContourConvex(approx)) {
                             if (area > maxArea) {
                                 maxArea = area;
-                                // Save corners: TL, TR, BR, BL
+                                // Save corners: TL, TR, BR, BL - ensure we have enough data
                                 bestRect = [];
-                                for(let j=0; j<8; j+=2) bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
+                                for(let j=0; j<8 && j+1<approx.data32S.length; j+=2) {
+                                    bestRect.push({x: approx.data32S[j], y: approx.data32S[j+1]});
+                                }
+                                // Only accept if we got all 4 corners
+                                if(bestRect.length !== 4) bestRect = null;
                             }
                         }
                         approx.delete();
@@ -334,6 +343,10 @@
             updateAR: function(corners) {
                 // --- THE PERSPECTIVE MATH ---
                 
+                const video = document.getElementById('camera-feed');
+                const videoWidth = video.videoWidth || window.innerWidth;
+                const videoHeight = video.videoHeight || window.innerHeight;
+                
                 // 1. Calculate apparent width in pixels (average of top/bottom edges)
                 const w1 = Math.hypot(corners[0].x - corners[1].x, corners[0].y - corners[1].y);
                 const w2 = Math.hypot(corners[3].x - corners[2].x, corners[3].y - corners[2].y);
@@ -341,9 +354,9 @@
 
                 // 2. Estimate Z (Depth)
                 // Focal Length Estimate for mobile (Vertical FOV ~60-75deg)
-                // f = (ScreenHeight / 2) / tan(FOV/2)
+                // f = (VideoHeight / 2) / tan(FOV/2)
                 const vFov = this.camera.fov * Math.PI / 180;
-                const focalLen = (window.innerHeight / 2) / Math.tan(vFov / 2);
+                const focalLen = (videoHeight / 2) / Math.tan(vFov / 2);
 
                 // Z = - (RealSize * Focal) / ApparentPx
                 const z = -(this.config.markerSize * focalLen) / avgPx;
@@ -352,9 +365,9 @@
                 const centerX = (corners[0].x + corners[2].x) / 2;
                 const centerY = (corners[0].y + corners[2].y) / 2;
                 
-                // Map screen center offset to world coordinates
-                const x = (centerX - window.innerWidth/2) * (z / focalLen) * -1; // -1 to flip X
-                const y = (centerY - window.innerHeight/2) * (z / focalLen); // Invert Y axis
+                // Map screen center offset to world coordinates (use video dimensions)
+                const x = (centerX - videoWidth/2) * (z / focalLen) * -1; // -1 to flip X
+                const y = (centerY - videoHeight/2) * (z / focalLen); // Invert Y axis
 
                 // 4. Smooth & Apply
                 const lerp = 0.2;
